@@ -1,5 +1,12 @@
-#include "GLDefines.h"
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
 
+    file authors:
+    Jan Christian Meyer
+*/
+
+#include "GLDefines.h"
 
 GLvector2f::GLvector2f() : x(0.0f), y(0.0f)
 {

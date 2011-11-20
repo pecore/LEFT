@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #ifndef _MAP_H_
 #define _MAP_H_
 
@@ -21,7 +29,7 @@ public:
 
   void draw();
   void collide();
-  bool isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, GLplane * & crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb);
+  bool isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, int & ncross, GLplane ** crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb);
 
   void addCollidable(Collidable * c) { 
     if(mCollidableCount < MAP_COLLIDABLES_MAX) 

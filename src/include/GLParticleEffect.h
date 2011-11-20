@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #ifndef _GLPARTICLEEFFECT_H_
 #define _GLPARTICLEEFFECT_H_
 

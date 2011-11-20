@@ -1,7 +1,13 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "GLSprite.h"
 #include "png.h"
-
-#include "Debug.h"
 
 GLSprite::GLSprite()
 {

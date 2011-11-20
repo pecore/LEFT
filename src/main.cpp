@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include <windows.h>
 #include <time.h>
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -20,7 +28,7 @@ unsigned long long gTimer = 0;
 unsigned long long gTimerCounter = 0;
 GLfloat gFPS = 0.0f;
 
-int gDebugValue;
+GLfloat gDebugValue;
 
 Map        * gMap = 0;
 RobotModel * gRobot = 0;
@@ -32,14 +40,16 @@ int gBallCount = 0;
 bool gKeydown[256];
 GLvector2f gMousePos;
 
+LARGE_INTEGER gPerformanceFrequency;
 const unsigned int gFramerate = 60;
 unsigned __int64 gFrameCounter = 0;
 GLFONT gFont;
 GLuint gFontTex;
 
-GLplane gDebugVectors[256];
-int gDebugVectorCount = 0;
 int gDebugIndex;
+GLParticle * Debug::DebugParticle = 0;
+GLplaneList Debug::DebugVectors;
+bool Debug::DebugActive = false;
 
 void updateMousePosition(GLWindow * window)
 {
@@ -74,32 +84,31 @@ void renderScene()
 
   gMap->draw();
   gMap->collide();
-  
   gRobot->draw();
   gCross->draw();
+
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
-
-  if(false) for(int i = 0; i < gDebugVectorCount; i++)
-    Debug::drawVector(gDebugVectors[i].base, gDebugVectors[i].dir);
+  Debug::drawVectors();
 
   DWORD tickdelta = gTimer - GetTickCount();
   gTimer = GetTickCount();
-
   if(gTimer / 1000 > gTimerCounter) {
     int delta = (gTimer / 1000) - gTimerCounter;
     gTimerCounter = gTimer / 1000;
     gFPS = (GLfloat) gFrameCounter / delta;
     gFrameCounter = 0;
   }
-  char s[64]; sprintf(s, "%.2f FPS %d", gFPS, gDebugValue);
+ 
+  int x = gWindow->x();
+  int y = gWindow->y();
+  glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
 
+  char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC", gFPS, gDebugValue); int i = strlen(s);
+  memset(&s[i], 0x20, 512 - i); s[511] = 0; 
   glFontBegin(&gFont);
-  glFontTextOut(s, 100.0f, 1000.0f, 0);
+  glFontTextOut(s, x, y + 15.0f, 0);
   glFontEnd();
-  
-  glViewport(-gWindow->x(), -gWindow->y(), GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
-
 
 
   if(tickdelta < (1000 / gFramerate)) Sleep((1000 / gFramerate) - tickdelta);
@@ -110,9 +119,11 @@ void renderScene()
 
 void explodeMap(GLplane * p, GLvector2f center)
 {
-  DWORD ticks = GetTickCount();
+  LARGE_INTEGER perfstart, perfend;
+  QueryPerformanceCounter(&perfstart);
   gMap->addCircleSegment(center, 150.0f);
-  gDebugValue = GetTickCount() - ticks;
+  QueryPerformanceCounter(&perfend);
+  gDebugValue = ((GLfloat)(perfend.QuadPart - perfstart.QuadPart) * 1000.0f) / (GLfloat)gPerformanceFrequency.QuadPart;
 }
 
 int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
@@ -154,8 +165,6 @@ void showPolygon(int index) {
       vertx[i] = new GLfloat[collision.size() * 2];
       verty[i] = new GLfloat[collision.size() * 2];
     }
-    
-    gDebugVectorCount = 0;
 
     int nvert[256];
     int n = 256;
@@ -164,9 +173,8 @@ void showPolygon(int index) {
     if(index >= n) return;
 
     for(int i = 0; i < nvert[index]; i++) {
-      gDebugVectors[i] = GLplane(GLvector2f(vertx[index][i], verty[index][i]), GLvector2f(0.0f, 0.0f)); 
+      Debug::DebugVectors.push_back(new GLplane(GLvector2f(vertx[index][i], verty[index][i]), GLvector2f(0.0f, 0.0f))); 
     }
-    gDebugVectorCount = nvert[index];
 
     for(int i = 0; i < 256; i++) {
       delete vertx[i];
@@ -197,7 +205,8 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
     switch(wParam) {
     case VK_ESCAPE:
       gRunning = false;
-      PostQuitMessage(0);	
+      PostQuitMessage(0);
+#if 0
     case VK_ADD:
       gDebugIndex++;
       showPolygon(gDebugIndex);
@@ -206,6 +215,10 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
       if(gDebugIndex > 0)
         gDebugIndex--;
       showPolygon(gDebugIndex);
+      break;
+#endif
+    case VK_F1:
+      Debug::DebugActive = !Debug::DebugActive;
       break;
     }
     return 0;								
@@ -235,7 +248,6 @@ DWORD WINAPI run(void *)
 
   glGenTextures(1, &gFontTex);
   gRunning = glFontCreate(&gFont, "couriernew.glf", gFontTex);
-  showPolygon(0);
 
   if(gRunning) {
     gRobot = new RobotModel();
@@ -248,7 +260,7 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
-    for(int i = 0; i < 1; i++) {
+    for(int i = 0; i < 16; i++) {
       gBalls[gBallCount] = new GLParticle(8, 8, frand(), frand(), frand(), PARTICLE_FORM_SOLID);
       gBalls[gBallCount]->moveTo(1000.0f, 1000.0f);
       gBalls[gBallCount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
@@ -268,9 +280,15 @@ DWORD WINAPI run(void *)
     delete gBalls[i];
   }
 
-  glFontDestroy(&gFont);
-
   delete gMap;
+
+  glFontDestroy(&gFont);
+  delete Debug::DebugParticle;
+  GLplane * p = 0;
+  foreach(GLplaneList, p, Debug::DebugVectors) {
+    delete p;
+  }
+
   delete gCross;
   delete gRobot;
   return 0;
@@ -282,6 +300,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	MSG msg;
   timeBeginPeriod(1);
   srand( (unsigned int)GetTickCount() );
+  QueryPerformanceFrequency(&gPerformanceFrequency);
 
   gWindow = new GLWindow("Left", GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 16, false, (WNDPROC) WndProc);
   

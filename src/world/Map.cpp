@@ -1,9 +1,13 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "Map.h"
-
 #include "Debug.h"
-
-extern GLvector2f * gDebugVectors;
-extern int gDebugVectorCount;
 
 Map::Map() : mMap(0), mCollision(0), mCollidableCount(0)
 {
@@ -180,17 +184,17 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
   
   int nvert[256];
   int n = 256, lastn = 0;
-  
+  int ncross;
+
   Lock(mMutex);
   {
     makePolygons(mCollision, nvert, vertx, verty, n);
   
     GLplane * p;    
-    GLplane * cross;
+    GLplane * cross[16];
     GLfloat ca, cb;
     bool bbase = false;
     bool bdest = false;
-    cross = 0;
 
     GLplaneList::iterator iter = segment.begin();
     while(iter != segment.end()) {
@@ -226,13 +230,27 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
 
       bbase = false;
       bdest = false;
-      cross = 0;
 
-      if(isPlaneInsideOf(p, mCollision, false, ncombined, combinedx, combinedy, cross, bbase, bdest, ca, cb)) {
+      if(isPlaneInsideOf(p, mCollision, false, ncombined, combinedx, combinedy, ncross, cross, bbase, bdest, ca, cb)) {
+        if(ncross == 2) {
+          mCollision.remove(cross[0]);
+          mCollision.remove(cross[1]);
+          Debug::DebugVectors.push_back(new GLplane(cross[0]->base, GLvector2f(0.0f, 50.0f)));
+          Debug::DebugVectors.push_back(new GLplane(cross[1]->dest, GLvector2f(0.0f, 50.0f)));
+
+          // FIXME
+          mCollision.push_back(new GLplane(cross[0]->base, cross[1]->dest - cross[0]->base));
+          //GLvector2f c = p->base + p->dir.normal() * ca;
+          //mMap.push_back(new GLtriangle((bbase ? b : p)->base, (bbase ? p : b)->dest, c));
+          delete cross[0];
+          delete cross[1];
+        } else if(ncross) {
+          ncross = ncross;
+        }
         iter = segment.erase(iter);
         delete p;
-      } else if(cross) {
-        GLplane * b = cross;
+      } else if(ncross) {
+        GLplane * b = cross[0];
         mCollision.remove(b);
         mCollision.push_back(new GLplane((bbase ? b : p)->base, (bbase ? p : b)->dest - (bbase ? b : p)->base));
 
@@ -240,6 +258,7 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
         mMap.push_back(new GLtriangle((bbase ? b : p)->base, (bbase ? p : b)->dest, c));
         iter = segment.erase(iter);
         delete p;
+        delete b;
       } else {
         iter++;
       }
@@ -253,16 +272,17 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
   combinedy = verty[0];
 
   {
+    GLplane * p;    
+    GLplane * cross[16];
+    GLfloat ca, cb;
+    bool bbase = false;
+    bool bdest = false;
+
     GLplaneList::iterator iter = mCollision.begin();
     while(iter != mCollision.end()) {
       GLplane * p = *iter;
 
-      GLplane * cross = 0;
-      GLfloat ca, cb;
-      bool bbase = false;
-      bool bdest = false;
-
-      if(isPlaneInsideOf(p, segmentcopy, false, ncombined, combinedx, combinedy, cross, bbase, bdest, ca, cb)) {
+      if(isPlaneInsideOf(p, segmentcopy, false, ncombined, combinedx, combinedy, ncross, cross, bbase, bdest, ca, cb)) {
          iter = mCollision.erase(iter);
          delete p;
       } else {
@@ -271,6 +291,7 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
     }
   }
   Unlock(mMutex);
+  mCollision.splice(mCollision.end(), segment);
 
   for(int i = 0; i < 256; i++) {
     delete vertx[i];
@@ -286,7 +307,7 @@ void Map::addCircleSegment(GLvector2f pos, GLfloat size)
     }
   }
 
-  mCollision.splice(mCollision.end(), segment);
+  
 }
 
 void Map::collide()
@@ -332,13 +353,13 @@ int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
   return c;
 }
 
-bool Map::isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, GLplane * & crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb)
+bool Map::isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, int & ncross, GLplane ** crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb)
 {
   bbase = pnpoly(nvert, vertx, verty, plane->base.x, plane->base.y);
   bdest = pnpoly(nvert, vertx, verty, plane->dest.x, plane->dest.y);
-  crossplane = 0;
+  ncross = 0;
 
-  if(bbase ^ bdest) {
+  if(bbase || bdest) {
     GLplane * p;
     foreach(GLplaneList, p, segment) {
       GLfloat cplane, cp;
@@ -346,7 +367,7 @@ bool Map::isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int
 
       GLvector2f::crossing(plane->base, plane->dir.normal(), p->base, p->dir.normal() * -1.0f, cplane, cp);
       if(cplane >= 0.0f && cplane <= plane->dir.len() && cp >= 0.0f && cp <= p->dir.len()) {
-        crossplane = p;
+        crossplane[ncross++] = p;
         ca = cplane;
         cb = cp;
       }

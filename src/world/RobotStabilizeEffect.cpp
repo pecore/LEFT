@@ -1,8 +1,14 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "RobotStabilizeEffect.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-
-#define frand() ((GLfloat) rand() / (GLfloat)RAND_MAX)
 
 RobotStabilizeEffect::RobotStabilizeEffect(GLfloat x, GLfloat y, GLfloat radius) : GLParticleEffect(6, 6)
 {

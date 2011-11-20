@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "RobotRocketEffect.h"
 #define _USE_MATH_DEFINES
 #include <math.h>

@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "GLParticleEffect.h"
 
 GLParticleEffect::GLParticleEffect(int width, int height)
