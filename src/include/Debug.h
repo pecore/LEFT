@@ -35,19 +35,25 @@ public:
     }
     DebugVectors.clear();
   }
-  static void drawVectors() {
+  static void drawVectors(GLvector2f pos) {
     if(!DebugActive) return;
     GLplane * p = 0;
     foreach(GLplaneList, p, DebugVectors) {
-      drawVector(p->base, p->dir);
+      drawVector(p->base, p->dir, pos);
     }
   }
 
   static GLParticle * DebugParticle;
-  static void drawVector(GLvector2f base, GLvector2f dir) {
+  static void drawVector(GLvector2f base, GLvector2f dir, GLvector2f pos) {
     if(!DebugActive) return;
-    if(DebugParticle == 0) DebugParticle = new GLParticle(6, 6, 1.0f, 1.0f, 1.0f, PARTICLE_FORM_SOLID);
-    int repeat = 10;
+    if(pos.x != 0.0f && pos.y != 0.0f) 
+    if((base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
+    ||  base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
+    && (base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
+    ||  base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) return;
+    if(DebugParticle == 0) DebugParticle = new GLParticle(2, 2, 1.0f, 1.0f, 1.0f, PARTICLE_FORM_SOLID);
+    
+    int repeat = 32;
     bool showdir = false;
 
     for(int i = 0; i < repeat; i++) {

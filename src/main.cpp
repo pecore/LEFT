@@ -6,6 +6,8 @@
     Jan Christian Meyer
 */
 
+#define LEFT_VERSION "0.52#0"
+
 #include <windows.h>
 #include <time.h>
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -71,7 +73,6 @@ void updateMousePosition(GLWindow * window)
 void renderScene()	
 {
   updateMousePosition(gWindow);
-  gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -89,7 +90,7 @@ void renderScene()
 
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
-  Debug::drawVectors();
+  Debug::drawVectors(gRobot->pos());
 
   DWORD tickdelta = gTimer - GetTickCount();
   gTimer = GetTickCount();
@@ -102,9 +103,10 @@ void renderScene()
  
   int x = gWindow->x();
   int y = gWindow->y();
+  gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
   glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
 
-  char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC", gFPS, gDebugValue); int i = strlen(s);
+  char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
   memset(&s[i], 0x20, 512 - i); s[511] = 0; 
   glFontBegin(&gFont);
   glFontTextOut(s, x, y + 15.0f, 0);
@@ -247,7 +249,7 @@ DWORD WINAPI run(void *)
   }
 
   glGenTextures(1, &gFontTex);
-  gRunning = glFontCreate(&gFont, "couriernew.glf", gFontTex);
+  gRunning = glFontCreate(&gFont, "data\\couriernew.glf", gFontTex);
 
   if(gRunning) {
     gRobot = new RobotModel();
@@ -302,7 +304,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   srand( (unsigned int)GetTickCount() );
   QueryPerformanceFrequency(&gPerformanceFrequency);
 
-  gWindow = new GLWindow("Left", GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 16, false, (WNDPROC) WndProc);
+  char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
+  gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 16, false, (WNDPROC) WndProc);
   
   if(gWindow) {
     gRunning = gWindow->isInitialized();

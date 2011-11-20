@@ -317,7 +317,7 @@ void Map::collide()
   Lock(mMutex);
   GLplane * p = 0;
   foreach(GLplaneList, p, mCollision) {
-    Debug::drawVector(p->base, p->dir);
+    Debug::drawVector(p->base, p->dir, mCollidables[0]->pos());
 
     for(int i = 0; i < mCollidableCount; i++) {  
       GLfloat radius = (mCollidables[i]->h() > mCollidables[i]->w() ? mCollidables[i]->h() : mCollidables[i]->w()) / 2.0f;

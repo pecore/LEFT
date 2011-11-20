@@ -17,9 +17,9 @@
 
 RobotModel::RobotModel()
 {
-  mBodySprite = new GLSprite("robotv3.png");
+  mBodySprite = new GLSprite("data\\robotv3.png");
   //mBodySprite->setScale(32.0f);
-  mWeaponArmSprite = new GLSprite("arm.png");
+  mWeaponArmSprite = new GLSprite("data\\arm.png");
 
   mPos.x = GL_SCREEN_FWIDTH / 2.0f - mBodySprite->w() / 2.0f;
   mPos.y = GL_SCREEN_FHEIGHT / 2.0f - mBodySprite->h() / 2.0f;
