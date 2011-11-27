@@ -29,7 +29,7 @@ GLWindow * gWindow = 0;
 unsigned long long gTimer = 0;
 unsigned long long gTimerCounter = 0;
 GLfloat gFPS = 0.0f;
-
+GLfloat gCameraZoom = 1.0f;
 GLfloat gDebugValue;
 
 Map        * gMap = 0;
@@ -50,8 +50,9 @@ GLuint gFontTex;
 
 int gDebugIndex;
 GLParticle * Debug::DebugParticle = 0;
-GLplaneList Debug::DebugVectors;
+std::list<Debug::DebugVectorType> Debug::DebugVectors;
 bool Debug::DebugActive = false;
+HANDLE Debug::DebugMutex;
 
 void updateMousePosition(GLWindow * window)
 {
@@ -65,6 +66,7 @@ void updateMousePosition(GLWindow * window)
         delta.y = (windowrect.bottom - windowrect.top) - clientrect.bottom;
         gMousePos.x = gWindow->x() + (GLfloat)cursorpos.x - (clientrect.left + delta.x);
         gMousePos.y = gWindow->y() + GL_SCREEN_FHEIGHT - (cursorpos.y - (clientrect.top + delta.y));
+        gDebugValue = (gMousePos - gRobot->pos()).angle();
       }
     }
   }
@@ -101,9 +103,10 @@ void renderScene()
     gFrameCounter = 0;
   }
  
+  gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
   int x = gWindow->x();
   int y = gWindow->y();
-  gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
+  //GLfloat xoffset = gCameraZoom * 
   glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
 
   char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
@@ -148,8 +151,12 @@ int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
       GLvector2f::crossing(pos, crossHair, p->base, p->dir.normal() * -1.0f, distance, planedistance);
 
       if(planedistance > 0.0f && planedistance < p->dir.len()) {
-        if(distance > 0.0f) {       
-          explodeMap(p, pos + (crossHair * distance));
+        if(distance > 0.0f) {
+          GLvector2f target = pos + (crossHair * distance);
+          if(target.x > GL_MAP_THRESHOLD && target.x < (GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD && target.y > GL_MAP_THRESHOLD && target.y < (GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD) {
+            Debug::clear();
+            explodeMap(p, target);
+          }
           break;
         }
       }
@@ -175,7 +182,7 @@ void showPolygon(int index) {
     if(index >= n) return;
 
     for(int i = 0; i < nvert[index]; i++) {
-      Debug::DebugVectors.push_back(new GLplane(GLvector2f(vertx[index][i], verty[index][i]), GLvector2f(0.0f, 0.0f))); 
+      //Debug::DebugVectors.push_back(new GLplane(GLvector2f(vertx[index][i], verty[index][i]), GLvector2f(0.0f, 0.0f))); 
     }
 
     for(int i = 0; i < 256; i++) {
@@ -221,7 +228,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
 #endif
     case VK_F1:
       Debug::DebugActive = !Debug::DebugActive;
-      break;
+      return 0;
     }
     return 0;								
   case WM_KEYUP:
@@ -286,10 +293,7 @@ DWORD WINAPI run(void *)
 
   glFontDestroy(&gFont);
   delete Debug::DebugParticle;
-  GLplane * p = 0;
-  foreach(GLplaneList, p, Debug::DebugVectors) {
-    delete p;
-  }
+  Debug::clear();
 
   delete gCross;
   delete gRobot;
@@ -303,6 +307,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   timeBeginPeriod(1);
   srand( (unsigned int)GetTickCount() );
   QueryPerformanceFrequency(&gPerformanceFrequency);
+  Debug::DebugMutex = CreateMutex(NULL, FALSE, "LeftDebugMutex");
 
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
   gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 16, false, (WNDPROC) WndProc);
@@ -331,6 +336,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
   WaitForSingleObject(renderThread, INFINITE);
   
+  CloseHandle(Debug::DebugMutex);
   delete gWindow;
 
   timeEndPeriod(1);

@@ -20,7 +20,7 @@ public:
   Map();
   ~Map();
 
-  static void makePolygons(GLplaneList segment, int *nvert, float **vertx, float **verty, int & n);
+  static void makePolygons(GLplaneList & segment, int *nvert, float **vertx, float **verty, int & n, GLplane * start = 0);
 
   GLplaneList collision() { return mCollision; }
 

@@ -18,6 +18,7 @@
 #define GL_SCREEN_IHEIGHT 720
 #define GL_SCREEN_FHEIGHT 720.0f
 #define GL_SCREEN_FACTOR 5
+#define GL_MAP_THRESHOLD 500
 
 class GLWindow {
 public:

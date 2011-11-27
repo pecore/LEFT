@@ -95,8 +95,7 @@ GLfloat GLvector2f::dot(const GLvector2f & right)
 
 GLfloat GLvector2f::angle()
 {
-  if(x == 0.0f) return (y > 0) ? -(M_PI * 2.0f) : (M_PI * 2.0f);
-  return (x > 0) ? atan(y/x) : (y/x > 0) ? M_PI + atan(y/x) : -M_PI + atan(y/x);
+  return atan2(y, x);
 }
 
 GLfloat GLvector2f::len() 

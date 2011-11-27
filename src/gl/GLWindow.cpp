@@ -161,7 +161,7 @@ bool GLWindow::initOpenGL()
 {
   glMatrixMode(GL_PROJECTION);		
 	glLoadIdentity();									
-  glViewport(0, 0, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT);
+  glViewport(0, 0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
   glOrtho(0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, 0, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR, 0, 128);
 
 	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
