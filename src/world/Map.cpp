@@ -6,6 +6,7 @@
     Jan Christian Meyer
 */
 
+#pragma warning( disable: 4503 )
 #include "Map.h"
 #include "Debug.h"
 
@@ -49,336 +50,102 @@ void Map::draw()
 
 void Map::generate()
 {
-  genCircleSegment(GLvector2f(1000.0f, 1000.0f), 300.0f, mMap, mCollision);
-  addCircleSegment(GLvector2f(1300.0f, 1000.0f), 300.0f);
-  addCircleSegment(GLvector2f(1600.0f, 1000.0f), 300.0f);
-  addCircleSegment(GLvector2f(1900.0f, 1000.0f), 300.0f);
-  addCircleSegment(GLvector2f(2200.0f, 1000.0f), 300.0f);
-  addCircleSegment(GLvector2f(2500.0f, 1000.0f), 300.0f);
+  Polygon_2 p, q;
+  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, mMap, p);
+  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, mMap, q);
+  CGAL::join(p, q, mCGALMap);
 
-  addCircleSegment(GLvector2f(2500.0f, 1300.0f), 300.0f);
-  addCircleSegment(GLvector2f(2500.0f, 1600.0f), 300.0f);
-  addCircleSegment(GLvector2f(2500.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1600.0f, 1000.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1900.0f, 1000.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2200.0f, 1000.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2500.0f, 1000.0f), 300.0f);
 
-  addCircleSegment(GLvector2f(2200.0f, 1900.0f), 300.0f);
-  addCircleSegment(GLvector2f(1900.0f, 1900.0f), 300.0f);
-  addCircleSegment(GLvector2f(1600.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2500.0f, 1300.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2500.0f, 1600.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2500.0f, 1900.0f), 300.0f);
+
+  addCirclePolygon(GLvector2f(2200.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1900.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1600.0f, 1900.0f), 300.0f);
                               
-  addCircleSegment(GLvector2f(1300.0f, 1900.0f), 300.0f);
-  addCircleSegment(GLvector2f(1300.0f, 1600.0f), 450.0f);
-}                             
+  addCirclePolygon(GLvector2f(1300.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1300.0f, 1600.0f), 450.0f);
 
-void Map::genCircleSegment(GLvector2f pos, GLfloat size, GLtriangleList & triangles, GLplaneList & planes)
+  updateCollision();
+}                           
+
+void Map::updateCollision()
+{
+  Lock(mMutex);
+  if(mCollision.size() > 0) {
+    GLplane * p = 0;
+    foreach(GLplaneList, p, mCollision) {
+      delete p;
+    }
+    mCollision.clear();
+  }
+
+  if(!mCGALMap.is_unbounded()) {
+    Polygon_2 outer = mCGALMap.outer_boundary();
+    Polygon_2::Vertex_const_iterator vit;
+    for(vit = outer.vertices_begin(); vit != outer.vertices_end(); ++vit) {
+      Point_2 current = *vit, next;
+      if(++vit != outer.vertices_end())
+      next = *vit; else next = *outer.vertices_begin(); vit--;
+      
+      GLvector2f A(current.x(), current.y());
+      GLvector2f B(next.x(), next.y());
+      mCollision.push_back(new GLplane(A, B - A));
+    }
+  }
+
+  if(mCGALMap.number_of_holes() > 0) {
+    Polygon_with_holes_2::Hole_const_iterator hit;
+    for(hit = mCGALMap.holes_begin(); hit != mCGALMap.holes_end(); ++hit) {
+      Polygon_2 p = *hit;
+
+      Polygon_2::Vertex_const_iterator vit;
+      for(vit = p.vertices_begin(); vit != p.vertices_end(); ++vit) {
+        Point_2 current = *vit, next;
+        if(++vit != p.vertices_end())
+        next = *vit; else next = *p.vertices_begin(); vit--;
+        
+        GLvector2f A(current.x(), current.y());
+        GLvector2f B(next.x(), next.y());
+        mCollision.push_back(new GLplane(A, B - A));
+      }
+    }
+  }
+  Unlock(mMutex);
+}
+
+void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon_2 & polygon)
 {
   const GLfloat segments_per_100 = 8;
   int segments = (int) ((size / 100.0f) * segments_per_100);
 
   GLvector2f radius(size, 0.0f);
-  GLvector2f lastradius = radius;
-  GLvector2f A, B, CB;
+  GLvector2f p, last = pos + radius;
 
   GLfloat delta = 2.0f * M_PI / segments;
-  for(GLfloat angle = delta; angle < 2.0f * M_PI - delta; angle += delta) {
-    CB = radius.rotate(angle) * (0.9f + frand()/5);
-    A = pos + lastradius;
-    B = pos + CB;
-    lastradius = CB;
-
-    triangles.push_back(new GLtriangle(A, B, pos));
-    planes.push_back(new GLplane(A, B - A));
-    Debug::add(new GLplane(A, B - A), GLvector3f(1.0f, 0, 0), 2);
+  for(GLfloat angle = 0.0f; angle < 2.0f * M_PI - delta; angle += delta) {
+    last = p;
+    p = pos + (radius.rotate(angle) * (0.9f + frand()/5));
+    
+    polygon.push_back(Point_2(p.x, p.y));
+    if(angle > 0.0f) {
+      triangles.push_back(new GLtriangle(pos, p, last));
+    }
   }
-  triangles.push_back(new GLtriangle(B, pos + radius, pos));
-  planes.push_back(new GLplane(B, (pos + radius) - B));
-  Debug::add(new GLplane(B, (pos + radius) - B), GLvector3f(1.0f, 0, 0), 2);
+  triangles.push_back(new GLtriangle(pos, p, pos + radius));
 }
 
-void Map::makePolygons(GLplaneList & segment, int *nvert, float **vertx, float **verty, int & n, GLplane * start)
+void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
 {
-  int count = 0, sumcount = 0;
-  int max = n;
-  bool single = (start != 0);
-  if(!single) {
-    start = *segment.begin();
-    n = 0;
-  }
-
-  vertx[n][count] = start->base.x;
-  verty[n][count++] = start->base.y;
-  vertx[n][count] = start->dest.x;
-  verty[n][count++] = start->dest.y;
-
-  while(sumcount < segment.size()) {
-    GLplane * p;
-    bool found;
-    if(!count) return;
-
-    found = false;
-    foreach(GLplaneList, p, segment) {
-      if(p == start) continue;
-      bool contains = false;
-      for(int i = 0; count > 1 && i < count; i++) {
-        if((p->dest.x == vertx[n][i] && p->dest.y == verty[n][i])) {
-          contains = true;
-        }
-      } if(contains) continue;
-
-      if(p->base.x == vertx[n][count - 1] && p->base.y == verty[n][count - 1]) {
-        vertx[n][count] = p->dest.x;
-        verty[n][count++] = p->dest.y;
-        found = true;
-      }
-    }
-
-    if(!found) {
-      if(count == 0) return;
-      nvert[n] = count;
-      sumcount += count;
-      count = 0;
-      
-      //if(n > 0) {
-      //  for(int i = 0; i < nvert[n]; i++) {
-      //    Debug::add(new GLplane(GLvector2f(vertx[n][i], verty[n][i]), GLvector2f(0.0f, 5.0f * i)), GLvector3f(1.0f, 1.0f, 1.0f), 12);
-      //  }
-      //}
-
-      {
-        bool foundclosure = false;
-        GLplane closure;
-        closure.base = GLvector2f(vertx[n][nvert[n]-1], verty[n][nvert[n]-1]);
-        closure.dest = start->base;
-        closure.dir = closure.dest - closure.base;
-        foreach(GLplaneList, p, segment) {
-          if(p->base == closure.base && p->dest == closure.dest) {
-            foundclosure = true;
-            //Debug::add(new GLplane(p->base, GLvector2f(0.0f, 50.0f)), GLvector3f(1.0f, 1.0f, 0.0f), 10);
-            //Debug::add(new GLplane(p->dest, GLvector2f(0.0f, 50.0f)), GLvector3f(1.0f, 1.0f, 0.0f), 10);
-          }
-        }
-        
-        if(!foundclosure) {
-          foundclosure = foundclosure;
-          segment.push_back(new GLplane(closure));
-          Debug::add(new GLplane(closure), GLvector3f(1.0f, 0, 1.0f), 5);
-          //Debug::add(new GLplane(start->base, GLvector2f(0.0f, 80.0f)), GLvector3f(1.0f, 0, 0.0f), 5);
-          //Debug::add(new GLplane(start->dest, GLvector2f(0.0f, 80.0f)), GLvector3f(1.0f, 0, 0.0f), 5);
-          //for(int i = 0; i < nvert[n]; i++) {
-          //  Debug::add(new GLplane(GLvector2f(vertx[n][i], verty[n][i]), GLvector2f(0.0f, 30.0f)), GLvector3f(0.1f * i, 0, 0.0f), 5);
-          //}
-        }
-      }
-
-      if(single) {
-        n++;
-        return;
-      }
-
-      foreach(GLplaneList, p, segment) {
-        bool contains = false;
-
-        for(int j = 0; j < n+1; j++) {
-          for(int i = 0; i < nvert[j]; i++) {
-            if((p->dest.x == vertx[j][i] && p->dest.y == verty[j][i])) {
-              contains = true;
-            }
-          }
-        }
-
-        if(!contains) {
-          start = p;
-          vertx[n+1][count] = start->base.x;
-          verty[n+1][count++] = start->base.y;
-          vertx[n+1][count] = start->dest.x;
-          verty[n+1][count++] = start->dest.y;
-          break;
-        }
-      }
-      n++;
-    }
-
-    if(n >= max - 1) {
-      return;
-    }
-  }
-  return;
-}
-
-void Map::addCircleSegment(GLvector2f pos, GLfloat size)
-{
-  GLplaneList segment;
-  GLplaneList segmentcopy;
-  genCircleSegment(pos, size, mMap, segment);
-
-  {
-    GLplane * p = 0;
-    foreach(GLplaneList, p, segment) {
-      segmentcopy.push_back(new GLplane(*p));
-    }
-  }
-
-  GLfloat ** vertx = new GLfloat*[256], * combinedx;
-  GLfloat ** verty = new GLfloat*[256], * combinedy;
-  GLfloat tmpx[1024], tmpy[1024];
-  int ntmp = 0, ncombined = 0;
-
-  for(int i = 0; i < 256; i++) {
-    vertx[i] = new GLfloat[mCollision.size() * 2];
-    verty[i] = new GLfloat[mCollision.size() * 2];
-  }
-  
-  int nvert[256];
-  int n = 256, lastn = 0;
-  int ncross;
-
-  Lock(mMutex);
-  {
-    makePolygons(mCollision, nvert, vertx, verty, n);
-  
-    GLplane * p;    
-    GLplane * cross[16];
-    GLfloat ca, cb;
-    bool bbase = false;
-    bool bdest = false;
-
-    GLplaneList::iterator iter = segment.begin();
-    while(iter != segment.end()) {
-      p = *iter;
-      
-      bbase = false;
-      bdest = false;
-      if(!ntmp || lastn != n) {
-        lastn = n;
-        if(n > 1) {
-          ncombined = 0;
-          for(int i = 0; i < n; i++) {
-            tmpx[ntmp] = 0;
-            tmpy[ntmp++] = 0;
-            for(int j = 0; j < nvert[i]; j++) {
-              tmpx[ntmp] = vertx[i][j];
-              tmpy[ntmp++] = verty[i][j];
-            }
-            tmpx[ntmp] = vertx[i][0];
-            tmpy[ntmp++] = verty[i][0];
-          }
-          tmpx[ntmp] = 0;
-          tmpy[ntmp++] = 0;
-          ncombined = ntmp;
-          combinedx = tmpx;
-          combinedy = tmpy;
-        } else {
-          ncombined = nvert[0];
-          combinedx = vertx[0];
-          combinedy = verty[0];
-        }
-      }
-
-      bbase = false;
-      bdest = false;
-
-      if(isPlaneInsideOf(p, mCollision, false, ncombined, combinedx, combinedy, ncross, cross, bbase, bdest, ca, cb)) {
-#if 0
-        if(ncross == 2) {
-          mCollision.remove(cross[0]);
-          mCollision.remove(cross[1]);
-
-          Debug::add(new GLplane(cross[0]->base, GLvector2f(0.0f, 25.0f)), GLvector3f(0, 0, 1.0f), 5);
-          Debug::add(new GLplane(cross[0]->dest, GLvector2f(0.0f, 50.0f)), GLvector3f(0, 0, 1.0f), 5);
-          Debug::add(new GLplane(cross[1]->base, GLvector2f(0.0f, 25.0f)), GLvector3f(0, 1.0f, 0), 5);
-          Debug::add(new GLplane(cross[1]->dest, GLvector2f(0.0f, 50.0f)), GLvector3f(0, 1.0f, 0), 5);
-          
-          GLplane * a = 0;
-          GLplane * b = 0;
-
-          if(abs(cross[0]->dir.angle()) < M_PI / 2.0f && abs(cross[1]->dir.angle()) > M_PI / 2.0f) {
-            a = cross[1];
-            b = cross[0];
-          } else 
-          if(abs(cross[1]->dir.angle()) < M_PI / 2.0f && abs(cross[0]->dir.angle()) > M_PI / 2.0f) {
-            a = cross[0];
-            b = cross[1];
-          }
-
-          if(a && b) {
-            GLplane * tmp = new GLplane(a->base, b->dest - a->base);
-            mCollision.push_back(tmp);
-            //makePolygons(mCollision, nvert, vertx, verty, n, tmp);
-          }
-
-          // FIXME
-          //GLvector2f c = p->base + p->dir.normal() * ca;
-          //mMap.push_back(new GLtriangle((bbase ? b : p)->base, (bbase ? p : b)->dest, c));
-          delete cross[0];
-          delete cross[1];
-        } else if(ncross) {
-           ncross = ncross;
-        }
-#endif
-        iter = segment.erase(iter);
-        delete p;
-      } else if(ncross) {
-        GLplane * b = cross[0];
-        mCollision.remove(b);
-        mCollision.push_back(new GLplane((bbase ? b : p)->base, (bbase ? p : b)->dest - (bbase ? b : p)->base));
-
-        GLvector2f c = p->base + p->dir.normal() * ca;
-        mMap.push_back(new GLtriangle((bbase ? b : p)->base, (bbase ? p : b)->dest, c));
-        iter = segment.erase(iter);
-        delete p;
-        delete b;
-      } else {
-        iter++;
-      }
-    }
-  }
-
-  n = 256;
-  Debug::DebugActive = false;
-  makePolygons(segmentcopy, nvert, vertx, verty, n);
-  Debug::DebugActive = true;
-  ncombined = nvert[0];
-  combinedx = vertx[0];
-  combinedy = verty[0];
-
-  {
-    GLplane * p;    
-    GLplane * cross[16];
-    GLfloat ca, cb;
-    bool bbase = false;
-    bool bdest = false;
-
-    GLplaneList::iterator iter = mCollision.begin();
-    while(iter != mCollision.end()) {
-      GLplane * p = *iter;
-
-      if(isPlaneInsideOf(p, segmentcopy, false, ncombined, combinedx, combinedy, ncross, cross, bbase, bdest, ca, cb)) {
-         iter = mCollision.erase(iter);
-         delete p;
-      } else {
-        iter++;
-      }
-    }
-  }
-  mCollision.splice(mCollision.end(), segment);
-  n = 256;
-  makePolygons(mCollision, nvert, vertx, verty, n);
-  Unlock(mMutex);
-  
-  
-  for(int i = 0; i < 256; i++) {
-    delete vertx[i];
-    delete verty[i];
-  }
-  delete[] vertx;
-  delete[] verty;
-
-  {
-    GLplane * p = 0;
-    foreach(GLplaneList, p, segmentcopy) {
-      delete p;
-    }
-  }
-
-  
+  Polygon_2 p, joined;
+  Polygon_with_holes_2 copy = mCGALMap;
+  genCirclePolygon(pos, size, mMap, p);
+  CGAL::join(copy, p, mCGALMap);
 }
 
 void Map::collide()
@@ -414,6 +181,7 @@ void Map::collide()
   Unlock(mMutex);
 }
 
+#if 0
 int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
 {
   int i, j, c = 0;
@@ -447,3 +215,4 @@ bool Map::isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int
 
   return bbase && bdest;
 }
+#endif

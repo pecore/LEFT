@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.52#0"
+#define LEFT_VERSION "0.53"
 
 #include <windows.h>
 #include <time.h>
@@ -29,7 +29,6 @@ GLWindow * gWindow = 0;
 unsigned long long gTimer = 0;
 unsigned long long gTimerCounter = 0;
 GLfloat gFPS = 0.0f;
-GLfloat gCameraZoom = 1.0f;
 GLfloat gDebugValue;
 
 Map        * gMap = 0;
@@ -66,7 +65,6 @@ void updateMousePosition(GLWindow * window)
         delta.y = (windowrect.bottom - windowrect.top) - clientrect.bottom;
         gMousePos.x = gWindow->x() + (GLfloat)cursorpos.x - (clientrect.left + delta.x);
         gMousePos.y = gWindow->y() + GL_SCREEN_FHEIGHT - (cursorpos.y - (clientrect.top + delta.y));
-        gDebugValue = (gMousePos - gRobot->pos()).angle();
       }
     }
   }
@@ -92,7 +90,6 @@ void renderScene()
 
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
-  Debug::drawVectors(gRobot->pos());
 
   DWORD tickdelta = gTimer - GetTickCount();
   gTimer = GetTickCount();
@@ -106,7 +103,6 @@ void renderScene()
   gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
   int x = gWindow->x();
   int y = gWindow->y();
-  //GLfloat xoffset = gCameraZoom * 
   glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
 
   char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
@@ -126,7 +122,8 @@ void explodeMap(GLplane * p, GLvector2f center)
 {
   LARGE_INTEGER perfstart, perfend;
   QueryPerformanceCounter(&perfstart);
-  gMap->addCircleSegment(center, 150.0f);
+  gMap->addCirclePolygon(center, 150.0f);
+  gMap->updateCollision();
   QueryPerformanceCounter(&perfend);
   gDebugValue = ((GLfloat)(perfend.QuadPart - perfstart.QuadPart) * 1000.0f) / (GLfloat)gPerformanceFrequency.QuadPart;
 }
@@ -154,7 +151,6 @@ int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
         if(distance > 0.0f) {
           GLvector2f target = pos + (crossHair * distance);
           if(target.x > GL_MAP_THRESHOLD && target.x < (GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD && target.y > GL_MAP_THRESHOLD && target.y < (GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD) {
-            Debug::clear();
             explodeMap(p, target);
           }
           break;
@@ -165,33 +161,6 @@ int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
 
   return 0;
 }
-
-void showPolygon(int index) {
-    GLplaneList collision = gMap->collision();
-    GLfloat ** vertx = new GLfloat*[256];
-    GLfloat ** verty = new GLfloat*[256];
-    for(int i = 0; i < 256; i++) {
-      vertx[i] = new GLfloat[collision.size() * 2];
-      verty[i] = new GLfloat[collision.size() * 2];
-    }
-
-    int nvert[256];
-    int n = 256;
-    Map::makePolygons(collision, nvert, vertx, verty, n);
-
-    if(index >= n) return;
-
-    for(int i = 0; i < nvert[index]; i++) {
-      //Debug::DebugVectors.push_back(new GLplane(GLvector2f(vertx[index][i], verty[index][i]), GLvector2f(0.0f, 0.0f))); 
-    }
-
-    for(int i = 0; i < 256; i++) {
-      delete vertx[i];
-      delete verty[i];
-    }
-    delete[] vertx;
-    delete[] verty;
-  }
 
 LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			// Additional Message Information
 {
