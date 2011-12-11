@@ -111,6 +111,7 @@
 				FavorSizeOrSpeed="1"
 				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
+				RuntimeLibrary="2"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -125,6 +126,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="opengl32.lib glu32.lib zdll.lib winmm.lib"
 				AdditionalLibraryDirectories=".\lib"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>

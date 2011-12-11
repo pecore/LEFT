@@ -10,8 +10,16 @@
 #define _MAP_H_
 
 #include "GLDefines.h"
-#include "Collidable.h"
 
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Boolean_set_operations_2.h>
+#include <CGAL/Cartesian.h>
+typedef CGAL::Cartesian<GLfloat>            Kernel;
+typedef Kernel::Point_2                     Point_2;
+typedef CGAL::Polygon_2<Kernel>             Polygon_2;
+typedef CGAL::Polygon_with_holes_2<Kernel>  Polygon_with_holes_2;
+
+#include "Collidable.h"
 #define MAP_COLLIDABLES_MAX 2048
 typedef std::list<Collidable *> CollidableList;
 
@@ -20,8 +28,6 @@ public:
   Map();
   ~Map();
 
-  static void makePolygons(GLplaneList & segment, int *nvert, float **vertx, float **verty, int & n, GLplane * start = 0);
-
   GLplaneList collision() { return mCollision; }
 
   void lock() { Lock(mMutex); }
@@ -29,20 +35,22 @@ public:
 
   void draw();
   void collide();
-  bool isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, int & ncross, GLplane ** crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb);
-
+  
   void addCollidable(Collidable * c) { 
     if(mCollidableCount < MAP_COLLIDABLES_MAX) 
       mCollidables[mCollidableCount++] = c; 
   }
 
-  void addCircleSegment(GLvector2f pos, GLfloat size);
+  void updateCollision();
+  void addCirclePolygon(GLvector2f pos, GLfloat size);
 
 private:
   HANDLE mMutex;
 
   GLtriangleList mMap;
   GLplaneList mCollision;
+  Polygon_with_holes_2 mCGALMap;
+
   Collidable * mCollidables[MAP_COLLIDABLES_MAX];
   int mCollidableCount;
 
@@ -56,8 +64,7 @@ private:
   GLfloat * mTmpVertY;
 
   void generate();
-  void genCircleSegment(GLvector2f pos, GLfloat size, GLtriangleList & triangles, GLplaneList & planes);
-
+  void genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon_2 & polygon);
 };
 
 

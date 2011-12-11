@@ -85,7 +85,7 @@ public:
     for(int i = 0; i < repeat; i++) {
       GLvector2f dest = base + dir / (showdir ? ((i+1 == repeat) ? 1.5f : 2.0f) : 1.0f) * (GLfloat)i / (GLfloat)(repeat - 1);
       DebugParticle->moveTo(dest.x, dest.y);
-      DebugParticle->setColor(color, 0.5f);
+      DebugParticle->setColor(color, 1.0f);
       DebugParticle->draw();
     }
     Unlock(DebugMutex);
