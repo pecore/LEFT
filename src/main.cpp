@@ -123,8 +123,8 @@ void explodeMap(GLplane * p, GLvector2f center)
   LARGE_INTEGER perfstart, perfend;
   QueryPerformanceCounter(&perfstart);
   gMap->addCirclePolygon(center, 150.0f);
-  gMap->updateCollision();
   QueryPerformanceCounter(&perfend);
+  gMap->updateCollision();
   gDebugValue = ((GLfloat)(perfend.QuadPart - perfstart.QuadPart) * 1000.0f) / (GLfloat)gPerformanceFrequency.QuadPart;
 }
 
@@ -311,3 +311,4 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   timeEndPeriod(1);
 	return 0;	
 }
+

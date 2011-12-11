@@ -142,10 +142,9 @@ void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triang
 
 void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
 {
-  Polygon_2 p, joined;
-  Polygon_with_holes_2 copy = mCGALMap;
+  Polygon_2 p;
   genCirclePolygon(pos, size, mMap, p);
-  CGAL::join(copy, p, mCGALMap);
+  CGAL::join(mCGALMap, p, mCGALMap);
 }
 
 void Map::collide()
@@ -180,39 +179,3 @@ void Map::collide()
   }
   Unlock(mMutex);
 }
-
-#if 0
-int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
-{
-  int i, j, c = 0;
-  for (i = 0, j = nvert-1; i < nvert; j = i++) {
-    if ( ((verty[i]>testy) != (verty[j]>testy)) && (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
-       c = !c;
-  }
-  return c;
-}
-
-bool Map::isPlaneInsideOf(GLplane * plane, GLplaneList segment, bool inside, int nvert, GLfloat * vertx, GLfloat * verty, int & ncross, GLplane ** crossplane, bool & bbase, bool & bdest, GLfloat & ca, GLfloat & cb)
-{
-  bbase = pnpoly(nvert, vertx, verty, plane->base.x, plane->base.y);
-  bdest = pnpoly(nvert, vertx, verty, plane->dest.x, plane->dest.y);
-  ncross = 0;
-
-  if(bbase || bdest) {
-    GLplane * p;
-    foreach(GLplaneList, p, segment) {
-      GLfloat cplane, cp;
-      GLfloat planedistance;
-
-      GLvector2f::crossing(plane->base, plane->dir.normal(), p->base, p->dir.normal() * -1.0f, cplane, cp);
-      if(cplane >= 0.0f && cplane <= plane->dir.len() && cp >= 0.0f && cp <= p->dir.len()) {
-        crossplane[ncross++] = p;
-        ca = cplane;
-        cb = cp;
-      }
-    }
-  }
-
-  return bbase && bdest;
-}
-#endif
