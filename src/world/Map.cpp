@@ -50,10 +50,15 @@ void Map::draw()
 
 void Map::generate()
 {
-  Polygon_2 p, q;
-  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, mMap, p);
-  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, mMap, q);
-  CGAL::join(p, q, mCGALMap);
+  Clipper c;
+  Polygons p, q;
+  p.resize(1); q.resize(1);
+
+  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, mMap, *(p.begin()));
+  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, mMap, *(q.begin()));
+  c.AddPolygons(p, ptSubject);
+  c.AddPolygons(q, ptClip);
+  c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
 
   addCirclePolygon(GLvector2f(1600.0f, 1000.0f), 300.0f);
   addCirclePolygon(GLvector2f(1900.0f, 1000.0f), 300.0f);
@@ -85,54 +90,36 @@ void Map::updateCollision()
     mCollision.clear();
   }
 
-  if(!mCGALMap.is_unbounded()) {
-    Polygon_2 outer = mCGALMap.outer_boundary();
-    Polygon_2::Vertex_const_iterator vit;
-    for(vit = outer.vertices_begin(); vit != outer.vertices_end(); ++vit) {
-      Point_2 current = *vit, next;
-      if(++vit != outer.vertices_end())
-      next = *vit; else next = *outer.vertices_begin(); vit--;
+  Polygons::iterator pit;
+  for(pit = mCMap.begin(); pit != mCMap.end(); ++pit) {
+    Polygon p = *pit;
+    Polygon::iterator vit;
+    for(vit = p.begin(); vit != p.end(); ++vit) {
+      IntPoint current = *vit, next;
+      if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
       
-      GLvector2f A(current.x(), current.y());
-      GLvector2f B(next.x(), next.y());
+      GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
+      GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
       mCollision.push_back(new GLplane(A, B - A));
-    }
-  }
-
-  if(mCGALMap.number_of_holes() > 0) {
-    Polygon_with_holes_2::Hole_const_iterator hit;
-    for(hit = mCGALMap.holes_begin(); hit != mCGALMap.holes_end(); ++hit) {
-      Polygon_2 p = *hit;
-
-      Polygon_2::Vertex_const_iterator vit;
-      for(vit = p.vertices_begin(); vit != p.vertices_end(); ++vit) {
-        Point_2 current = *vit, next;
-        if(++vit != p.vertices_end())
-        next = *vit; else next = *p.vertices_begin(); vit--;
-        
-        GLvector2f A(current.x(), current.y());
-        GLvector2f B(next.x(), next.y());
-        mCollision.push_back(new GLplane(A, B - A));
-      }
     }
   }
   Unlock(mMutex);
 }
 
-void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon_2 & polygon)
+void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon)
 {
-  const GLfloat segments_per_100 = 8;
-  int segments = (int) ((size / 100.0f) * segments_per_100);
+  const GLfloat segments_per_100 = 12;
+  int segments = (int) ((size / 100.0f) * segments_per_100) | 0x01;
 
   GLvector2f radius(size, 0.0f);
   GLvector2f p, last = pos + radius;
 
   GLfloat delta = 2.0f * M_PI / segments;
-  for(GLfloat angle = 0.0f; angle < 2.0f * M_PI - delta; angle += delta) {
+  for(GLfloat angle = 0.0f; angle < (2.0f * M_PI) - delta; angle += delta) {
     last = p;
     p = pos + (radius.rotate(angle) * (0.9f + frand()/5));
     
-    polygon.push_back(Point_2(p.x, p.y));
+    polygon.push_back(IntPoint((long64)(p.x * CLIPPER_PRECISION), (long64)(p.y * CLIPPER_PRECISION)));
     if(angle > 0.0f) {
       triangles.push_back(new GLtriangle(pos, p, last));
     }
@@ -142,9 +129,13 @@ void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triang
 
 void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
 {
-  Polygon_2 p;
-  genCirclePolygon(pos, size, mMap, p);
-  CGAL::join(mCGALMap, p, mCGALMap);
+  Clipper c;
+  Polygons p;
+  p.resize(1);
+  genCirclePolygon(pos, size, mMap, p[0]);
+  c.AddPolygons(mCMap, ptSubject);
+  c.AddPolygons(p, ptClip);
+  c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
 }
 
 void Map::collide()
@@ -154,7 +145,7 @@ void Map::collide()
   Lock(mMutex);
   GLplane * p = 0;
   foreach(GLplaneList, p, mCollision) {
-    Debug::drawVector(p->base, p->dir, mCollidables[0]->pos(), GLvector3f(0.0f, 1.0f, 1.0f));
+    Debug::drawVector(p->base, p->dir, mCollidables[0]->pos(), GLvector3f(1.0f, 1.0f, 1.0f));
 
     for(int i = 0; i < mCollidableCount; i++) {  
       GLfloat radius = (mCollidables[i]->h() > mCollidables[i]->w() ? mCollidables[i]->h() : mCollidables[i]->w()) / 2.0f;

@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.53"
+#define LEFT_VERSION "0.54"
 
 #include <windows.h>
 #include <time.h>
