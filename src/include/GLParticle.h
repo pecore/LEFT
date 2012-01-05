@@ -11,14 +11,16 @@
 
 #include "GLSprite.h"
 
-#define PARTICLE_FORM_CIRCLE 0
-#define PARTICLE_FORM_CROSS  1
-#define PARTICLE_FORM_SOLID  2
+typedef enum {
+  glpCircle = 0,
+  glpCross,
+  glpSolid
+} particle_t;
 
 class GLParticle : public GLSprite {
 public:
   GLParticle();
-  GLParticle(int width, int height, GLfloat r = 1.0f, GLfloat g = 1.0f, GLfloat b = 1.0f, int form = PARTICLE_FORM_CIRCLE);
+  GLParticle(int width, int height, GLfloat r = 1.0f, GLfloat g = 1.0f, GLfloat b = 1.0f, GLfloat a = 1.0f, particle_t form = glpCircle);
   ~GLParticle();
 
   GLvector2f velocity() { return mVelocity; };

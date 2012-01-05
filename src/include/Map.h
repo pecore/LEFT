@@ -18,13 +18,19 @@ using namespace ClipperLib;
 #include "Collidable.h"
 #define MAP_COLLIDABLES_MAX 2048
 typedef std::list<Collidable *> CollidableList;
+#define SHADER_VERTEX_MAX 460
 
 class Map {
 public:
   Map();
   ~Map();
 
-  GLplaneList collision() { return mCollision; }
+  GLplaneList collision() { 
+    Lock(mMutex);
+    GLplaneList c = mCollision;
+    Unlock(mMutex);
+    return c;
+  }
 
   void lock() { Lock(mMutex); }
   void unlock() { Unlock(mMutex); }
@@ -46,6 +52,7 @@ private:
   Polygons mCMap;
   GLtriangleList mMap;
   GLplaneList mCollision;
+  GLfloat mShaderCollision[SHADER_VERTEX_MAX];
 
   Collidable * mCollidables[MAP_COLLIDABLES_MAX];
   int mCollidableCount;

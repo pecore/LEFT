@@ -47,6 +47,7 @@ public:
 
   GLfloat angle();
   GLfloat len();
+  GLfloat fastlen();
   GLvector2f normal();
   GLfloat dot(const GLvector2f & right);
   static void crossing(const GLvector2f & baseA, const GLvector2f & dirA, const GLvector2f & baseB, const GLvector2f & dirB, GLfloat & coeffA, GLfloat & coeffB);

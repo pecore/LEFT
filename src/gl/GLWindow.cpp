@@ -8,6 +8,7 @@
 
 #include "GLWindow.h"
 #include "GLDefines.h"
+#include "Debug.h"
 
 GLWindow::GLWindow(const char * title, int width, int height, int bits, bool fullscreen, WNDPROC wndproc)
 {
@@ -154,26 +155,92 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
 
 GLWindow::~GLWindow()
 {
+  glDeleteProgram(mLightShaderObject);
   free();
 }
 
 bool GLWindow::initOpenGL()							
 {
-  glMatrixMode(GL_PROJECTION);		
-	glLoadIdentity();									
-  glViewport(0, 0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
-  glOrtho(0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, 0, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR, 0, 128);
+  bool result = true;
+  GLuint fragmentShader;
 
-	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
-	glLoadIdentity();									// Reset The Modelview Matrix
+  static const char * fragmentShaderSource =
+    "uniform sampler2D tex;"
+    "void main (void) {"
+	  "  vec4 texel, color = gl_Color;"
+    "  if(gl_Color.rgb == vec3(0.4, 0.3, 0.3)) { "
+    "    color = gl_Color;"
+    "  } else "
+    "  if(gl_Color.rgb == vec3(0.0, 0.0, 0.0)) { "
+    "    color = vec4(0.0, 0.0, 0.0, gl_Color.a);"
+    "  } else {"
+    "    texel = texture2D(tex, gl_TexCoord[0].xy);"
+    "    color *= texel;"
+    "  }"
+    "  vec2 ray = vec2(640.0, 360.0) - gl_FragCoord.xy;"
+    "  float distance = 1.0 - (length(ray) / 640.0);"
+    "  if(gl_FragCoord.y < 15.0) distance = 1.0;"
+    "  gl_FragColor = color * (distance * distance);"
+    "}";
 
-  glEnable(GL_TEXTURE_2D);
-	glShadeModel(GL_SMOOTH);							
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);	
-	glClearDepth(1.0f);
+  if(glewInit()) {
+    result = false;
+  }
 
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
-  return true;										
+  if(result) {
+    GLint length = strlen(fragmentShaderSource);
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, (const GLcharARB **) &fragmentShaderSource, &length);
+    glCompileShader(fragmentShader);
+
+    GLint compiled;
+    glGetObjectParameterivARB(fragmentShader, GL_COMPILE_STATUS, &compiled);
+    if(!compiled) {
+      GLchar* log = new GLchar[2048];
+      glGetShaderInfoLog(fragmentShader, 2048, NULL, log);
+      Debug::Log("Could not compile:\n %s", log);
+      delete[] log;
+
+      glDeleteShader(fragmentShader);
+      result = false;
+    }
+  }
+
+  if(result) {
+    mLightShaderObject = glCreateProgram();
+    glAttachShader(mLightShaderObject, fragmentShader);
+    glLinkProgram(mLightShaderObject);    
+
+    GLint linked;
+    glGetProgramiv(mLightShaderObject, GL_LINK_STATUS, &linked);
+    if(!linked) {
+      Debug::Log("Could not link, saving log.");
+      GLchar* log = new GLchar[65636];
+      glGetProgramInfoLog(mLightShaderObject, 65636, NULL, log);
+      Debug::LogToFile("linkerlog.txt", "Could not link:\n %s", log);
+      delete[] log;
+    }
+    glDeleteShader(fragmentShader);
+  }
+  
+  if(result) {
+    glMatrixMode(GL_PROJECTION);		
+	  glLoadIdentity();									
+    glViewport(0, 0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
+    glOrtho(0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, 0, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR, 0, 128);
+
+	  glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
+	  glLoadIdentity();									// Reset The Modelview Matrix
+
+    glEnable(GL_TEXTURE_2D);
+	  glShadeModel(GL_SMOOTH);							
+	  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);	
+	  glClearDepth(1.0f);
+
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+  }
+
+  return result;										
 }
 
 void GLWindow::free()

@@ -86,7 +86,6 @@ void renderScene()
   gMap->draw();
   gMap->collide();
   gRobot->draw();
-  gCross->draw();
 
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
@@ -100,17 +99,58 @@ void renderScene()
     gFrameCounter = 0;
   }
  
+  GLvector2f pos = gRobot->pos();
+  GLfloat radius = 1280.0f;
+
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+  GLplane * p;
+  glBegin(GL_QUADS);
+  GLplaneList collision = gMap->collision();
+  foreach(GLplaneList, p, collision) {
+    if((p->base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
+    ||  p->base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
+    || (p->base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
+    ||  p->base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
+    if((p->dest.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
+    ||  p->dest.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
+    || (p->dest.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
+    ||  p->dest.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
+
+    // project quad for each plane
+    GLvector2f base = p->base;
+    GLvector2f dest = p->dest;
+    GLvector2f baseproj = p->base - pos;
+    GLvector2f destproj = p->dest - pos;
+    GLvector2f bproj = p->base + baseproj.normal() * (radius - baseproj.len());
+    GLvector2f dproj = p->dest + destproj.normal() * (radius - destproj.len());  
+
+    if(base.y < gWindow->y() + 15.0f) base.y = gWindow->y() + 15.0f;
+    if(bproj.y < gWindow->y() + 15.0f) bproj.y = gWindow->y() + 15.0f;
+    if(dest.y < gWindow->y() + 15.0f) dest.y = gWindow->y() + 15.0f;
+    if(dproj.y < gWindow->y() + 15.0f) dproj.y = gWindow->y() + 15.0f;
+
+    glColor4f(0.0f, 0.0f, 0.0f, 0.99f);
+    glVertex3f(base.x, base.y,  0.0f);
+    glVertex3f(bproj.x, bproj.y,  0.0f);
+    glVertex3f(dproj.x, dproj.y,  0.0f);
+    glVertex3f(dest.x, dest.y,  0.0f);
+  }
+  glEnd();
+  glDisable(GL_BLEND);
+  gCross->draw();
+
   gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
   int x = gWindow->x();
   int y = gWindow->y();
   glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
+  glUseProgram(gWindow->getLightShaderObject());
 
   char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
   memset(&s[i], 0x20, 512 - i); s[511] = 0; 
   glFontBegin(&gFont);
   glFontTextOut(s, x, y + 15.0f, 0);
   glFontEnd();
-
 
   if(tickdelta < (1000 / gFramerate)) Sleep((1000 / gFramerate) - tickdelta);
   gTimer += tickdelta;
@@ -123,8 +163,8 @@ void explodeMap(GLplane * p, GLvector2f center)
   LARGE_INTEGER perfstart, perfend;
   QueryPerformanceCounter(&perfstart);
   gMap->addCirclePolygon(center, 150.0f);
-  QueryPerformanceCounter(&perfend);
   gMap->updateCollision();
+  QueryPerformanceCounter(&perfend);
   gDebugValue = ((GLfloat)(perfend.QuadPart - perfstart.QuadPart) * 1000.0f) / (GLfloat)gPerformanceFrequency.QuadPart;
 }
 
@@ -234,12 +274,12 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
-    gCross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, PARTICLE_FORM_CROSS);
+    gCross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
   }
 
   if(gRunning) {
     for(int i = 0; i < 16; i++) {
-      gBalls[gBallCount] = new GLParticle(8, 8, frand(), frand(), frand(), PARTICLE_FORM_SOLID);
+      gBalls[gBallCount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
       gBalls[gBallCount]->moveTo(1000.0f, 1000.0f);
       gBalls[gBallCount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
       gMap->addCollidable(gBalls[gBallCount]);
@@ -283,11 +323,13 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   
   if(gWindow) {
     gRunning = gWindow->isInitialized();
-    wglMakeCurrent(0, 0);
-    renderThread = CreateThread(NULL, 0, &run, 0, 0, 0);
-    if(renderThread == INVALID_HANDLE_VALUE) {
-      delete gWindow;
-      return 0;
+    if(gRunning) {
+      wglMakeCurrent(0, 0);
+      renderThread = CreateThread(NULL, 0, &run, 0, 0, 0);
+      if(renderThread == INVALID_HANDLE_VALUE) {
+        delete gWindow;
+        return 0;
+      }
     }
   }
 

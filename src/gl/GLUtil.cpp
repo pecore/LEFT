@@ -103,6 +103,20 @@ GLfloat GLvector2f::len()
   return sqrt(x * x + y * y);
 }
 
+GLfloat GLvector2f::fastlen() 
+{
+    union {
+      int tmp;
+      float f;
+    } u;
+ 
+    u.f = x * x + y * y; 
+    u.tmp -= 1 << 23; 
+    u.tmp >>= 1;      
+    u.tmp += 1 << 29;
+    return u.f;
+}
+
 GLvector2f GLvector2f::normal() 
 {
   GLfloat length = len(); 
@@ -120,21 +134,12 @@ void GLvector2f::crossing(const GLvector2f & baseA, const GLvector2f & dirA, con
   } else {
     coeffA = (baseB.x - baseA.x) / dirA.x; 
   }
-#if 0
-  if(dirA.y != 0.0f) {
-    GLfloat f = dirA.x / dirA.y;
-    coeffB = ( (baseB.x - baseA.x) - (f * (baseB.y - baseA.y)) ) / ( dirB.x - (f * dirB.y) );
-  } else {
-    coeffB = (baseB.y - baseA.y) / dirB.y;
-  }
-#else
   if(dirA.x != 0.0f) {
     GLfloat f = dirA.y / dirA.x;
     coeffB = ( (baseB.y - baseA.y) - (f * (baseB.x - baseA.x)) ) / ( dirB.y - (f * dirB.x) );
   } else {
     coeffB = (baseB.x - baseA.x) / dirB.x;
   }
-#endif
 }
 
 GLvector3f::GLvector3f() : x(0.0f), y(0.0f), z(0.0f)

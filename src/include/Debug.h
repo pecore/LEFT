@@ -26,6 +26,18 @@ public:
 #endif
   }
 
+  static void LogToFile(const char * filename, const char * fmt, ...) {
+#ifdef _DEBUG
+    char msg[256];
+    va_list args;
+    va_start(args, fmt);
+    FILE * fp = fopen(filename, "w");
+    vfprintf(fp, fmt, args);
+    fclose(fp);
+    va_end(args);
+#endif
+  }
+
   typedef struct {
     GLplane * p;
     GLvector3f color;
@@ -75,7 +87,7 @@ public:
     
     if(DebugParticle == 0 || DebugParticle->w() != size) {
       delete DebugParticle;
-      DebugParticle = new GLParticle(size, size, 1.0f, 1.0f, 1.0f, PARTICLE_FORM_SOLID);
+      DebugParticle = new GLParticle(size, size, 1.0f, 1.0f, 1.0f, glpSolid);
     }
 
     int repeat = 5;

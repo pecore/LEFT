@@ -26,7 +26,7 @@ GLParticle::GLParticle()
   mInitialized = false;
 }
 
-GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, int form)
+GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, GLfloat a, particle_t form)
 {
   mFilename = "";
   mSizeX = mWidth = width;
@@ -36,7 +36,7 @@ GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, i
   mr = r;
   mg = g;
   mb = b; 
-  ma = 1.0f;
+  ma = a;
 
   generate();
   mInitialized = prepare();
@@ -91,16 +91,15 @@ char GLParticle::getAlpha(int x, int y)
   bool col = false;
   bool row = false;
 
-  // circle
   switch(mForm) {
-  case PARTICLE_FORM_CIRCLE:
+  case glpCircle:
     if(distance <= max_distance) {
       alpha = 1.0f - (distance / max_distance);
     } else {
       alpha = 0.0f;
     }
     break;
-  case PARTICLE_FORM_CROSS:
+  case glpCross:
     col = (y > (mHeight / 2) - 3.0f && y < (mHeight / 2) + 3.0f);
     row = (x > (mWidth  / 2) - 3.0f && x < (mWidth  / 2) + 3.0f);
     
@@ -111,8 +110,8 @@ char GLParticle::getAlpha(int x, int y)
       }
     }
     break;
-  case PARTICLE_FORM_SOLID:
-    alpha = 1.0f;
+  case glpSolid:
+    alpha = ma;
     break;
   }
 

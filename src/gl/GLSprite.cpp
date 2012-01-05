@@ -78,6 +78,7 @@ void GLSprite::draw()
     glTexCoord2f(0.0f, 1.0f); 
     glVertex3f(mPos.x - (mWidth / 2), mPos.y + (mHeight / 2),  0.0f);
   glEnd();
+  glBindTexture(GL_TEXTURE_2D, 0);
   glColor3f(1.0f, 1.0f, 1.0f);
   glDisable(GL_BLEND);
   
@@ -97,6 +98,7 @@ bool GLSprite::prepare()
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mSizeX, mSizeY, 0, GL_RGBA, GL_UNSIGNED_BYTE, mpData);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  glBindTexture(GL_TEXTURE_2D, 0);
 
   delete mpData;
   mpData = 0;

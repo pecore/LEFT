@@ -41,6 +41,7 @@
 				AdditionalOptions="/Zi"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
+				PreprocessorDefinitions="GLEW_STATIC"
 				RuntimeLibrary="3"
 			/>
 			<Tool
@@ -111,6 +112,7 @@
 				FavorSizeOrSpeed="1"
 				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
+				PreprocessorDefinitions="GLEW_STATIC"
 				RuntimeLibrary="2"
 			/>
 			<Tool
@@ -236,6 +238,10 @@
 			>
 			<File
 				RelativePath=".\src\gl\clipper.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\gl\glew.c"
 				>
 			</File>
 			<File

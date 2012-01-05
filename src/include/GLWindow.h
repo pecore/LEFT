@@ -10,6 +10,7 @@
 #define _GLWINDOW_H
 
 #include <windows.h>
+#include "GL\glew.h"
 #include <gl\gl.h>
 #include <gl\glu.h>
 
@@ -28,6 +29,8 @@ public:
   HDC DC() { return mhDC; };
   HGLRC RC() { return mhRC; };
   HWND hWnd() { return mhWnd; };
+
+  GLuint getLightShaderObject() { return mLightShaderObject; }
 
   bool initOpenGL();
   void swapBuffers() { SwapBuffers(mhDC); };
@@ -50,6 +53,8 @@ private:
   HWND mhWnd;
   HINSTANCE	mhInstance;
   bool mInitialized;
+
+  GLuint mLightShaderObject;
 
   int mScreenX;
   int mScreenY;

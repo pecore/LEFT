@@ -76,11 +76,11 @@ void RobotModel::control(const bool * keydown, GLvector2f mousepos)
   if(!mStable) {
     // Turn Robot
     if(keydown['A']) {
-      mAngle += 3.0f;
+      mAngle += 4.5f;
       if(mAngle > 60.0f) mAngle = 60.0f;
     }
     if(keydown['D']) {
-      mAngle -= 3.0f;
+      mAngle -= 4.5f;
       if(mAngle < -60.0f) mAngle = -60.0f;
     }
 
@@ -97,7 +97,7 @@ void RobotModel::control(const bool * keydown, GLvector2f mousepos)
 
   // Auto Adjust Angle
   if(mStable || (!keydown['A'] && !keydown['D'])) {
-    GLfloat step = 1.0f;
+    GLfloat step = 2.0f;
     if(mStable) step = abs(mAngle / 6.0f);
     if(mAngle < 0.0f)  mAngle += step;
     else               mAngle -= step;
