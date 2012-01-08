@@ -71,9 +71,18 @@ void Map::drawShadows(GLvector2f window)
     GLvector2f pos = s->pos;   
 
     renderTarget(true);
-    mSpot->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
-    mSpot->moveTo(pos.x, pos.y);
-    mSpot->draw();
+    
+    GLParticle * spot = s->particle;
+    if(spot) {
+      spot->setRotation(spot->pos().x, spot->pos().y, s->angle);
+      spot->setScale(0.3);
+    }
+    else spot = mSpot;
+
+    spot->setColor((GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb) * s->intensity, 1.0f);
+    spot->moveTo(pos.x, pos.y);
+    //mSpot->setScale(s->intensity);
+    spot->draw();
 
     foreach(GLplaneList, p, mCollision) {
       GLvector2f base = p->base;

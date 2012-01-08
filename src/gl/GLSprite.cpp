@@ -12,6 +12,7 @@
 GLSprite::GLSprite()
 {
   mFilename = "";
+  mScale = 1.0f;
 
   mpData = 0;
   mAngle = 0.0f;
@@ -26,6 +27,7 @@ GLSprite::GLSprite(const char * filename, int width, int height)
   mFilename = filename;
   mWidth = width;
   mHeight = height;
+  mScale = 1.0f;
 
   mpData = 0;
   mPos.x = 0.0f;
@@ -56,6 +58,8 @@ void GLSprite::colorMask()
 void GLSprite::draw()
 {
   if(!mInitialized) return;
+  GLfloat width = mWidth * mScale;
+  GLfloat height = mHeight * mScale;
 
   glPushMatrix();
   glTranslatef(mRotation.x, mRotation.y, 0.0f);
@@ -68,16 +72,16 @@ void GLSprite::draw()
   glBindTexture(GL_TEXTURE_2D, mpTextures[0]);
   glBegin(GL_QUADS);
 		glTexCoord2f(0.0f, 0.0f); 
-    glVertex3f(mPos.x - (mWidth / 2), mPos.y - (mHeight / 2),  0.0f);
+    glVertex3f(mPos.x - (width / 2), mPos.y - (height / 2),  0.0f);
 		
     glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(mPos.x + (mWidth / 2), mPos.y - (mHeight / 2),  0.0f);
+    glVertex3f(mPos.x + (width / 2), mPos.y - (height / 2),  0.0f);
 
     glTexCoord2f(1.0f, 1.0f); 
-    glVertex3f(mPos.x + (mWidth / 2), mPos.y + (mHeight / 2),  0.0f);
+    glVertex3f(mPos.x + (width / 2), mPos.y + (height / 2),  0.0f);
 		
     glTexCoord2f(0.0f, 1.0f); 
-    glVertex3f(mPos.x - (mWidth / 2), mPos.y + (mHeight / 2),  0.0f);
+    glVertex3f(mPos.x - (width / 2), mPos.y + (height / 2),  0.0f);
   glEnd();
   glBindTexture(GL_TEXTURE_2D, 0);
   glColor3f(1.0f, 1.0f, 1.0f);

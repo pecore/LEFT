@@ -24,16 +24,23 @@ extern unsigned int gProjectileCount;
 
 class LightSource {
 public:
-  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity) : pos(_pos), rgb(_rgb), intensity(_intensity) {
-    particle = 0;
+  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : pos(_pos), rgb(_rgb), intensity(_intensity) {
+    if(form != glpLight) {
+      particle = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, rgb.x, rgb.y, rgb.z, 1.0f, form);
+    } else {
+      particle = 0;
+    }
   }
   ~LightSource() {
-    delete particle;
+    if(particle) {
+      delete particle;
+    }
   }
   
   GLvector2f pos;
   GLvector3f rgb;
   GLfloat intensity;
+  GLfloat angle;
 
   GLParticle * particle;
 };

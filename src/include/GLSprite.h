@@ -28,9 +28,8 @@ public:
 
   void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   void setRotation(GLfloat x, GLfloat y, GLfloat angle) { mRotation.x = x; mRotation.y = y; mAngle = angle; };
-  void setScale(GLfloat width) {
-    mHeight = width * mHeight / mWidth;
-    mWidth = width;
+  void setScale(GLfloat scale) {
+    mScale = scale;
   }
 
   virtual void draw();
@@ -40,6 +39,7 @@ protected:
   GLvector2f mPos;
   GLvector2f mRotation;
   GLfloat mAngle;
+  GLfloat mScale;
 
   const char * mFilename;
   GLfloat mWidth;

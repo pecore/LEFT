@@ -15,6 +15,7 @@
 class Map;
 class GLSprite;
 class RobotRocketEffect;
+class LightSource;
 
 class Projectile : public Collidable {
 public:
@@ -53,7 +54,7 @@ private:
   Map * mMap;
   GLSprite * mSprite;
   RobotRocketEffect * mRocketEffect;
-  
+  LightSource * mLight;
 };
 
 #endif

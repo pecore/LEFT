@@ -151,37 +151,7 @@ int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
 {
   GLvector2f crossHair = GL_SCREEN_BOTTOMLEFT + GLvector2f(x, y);
   GLvector2f pos = gRobot->pos();
-
   gMap->addProjectile(new RocketProjectile(pos, (crossHair - pos).normal() * 5.0f, gMap));
-
-#if 0
-  GLplane * p;
-  GLplaneList collision = gMap->collision();
-  foreach(GLplaneList, p, collision) {
-    GLfloat ca, cb;
-    GLvector2f screen = GLvector2f(gRobot->pos().x - GL_SCREEN_IWIDTH / 2, gRobot->pos().y - GL_SCREEN_IHEIGHT / 2);
-    if(gRobot->pos().x < GL_SCREEN_IWIDTH / 2) screen.x = 0.0f;
-    if(gRobot->pos().y < GL_SCREEN_IHEIGHT / 2) screen.y = 0.0f;
-
-    if(p->base.x > screen.x && p->base.x < screen.x + GL_SCREEN_IWIDTH && p->base.y > screen.y && p->base.y < screen.y + GL_SCREEN_IHEIGHT)
-    {
-      GLfloat distance;
-      GLfloat planedistance;
-      GLvector2f::crossing(pos, crossHair, p->base, p->dir.normal() * -1.0f, distance, planedistance);
-
-      if(planedistance > 0.0f && planedistance < p->dir.len()) {
-        if(distance > 0.0f) {
-          GLvector2f target = pos + (crossHair * distance);
-          if(target.x > GL_MAP_THRESHOLD && target.x < (GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD && target.y > GL_MAP_THRESHOLD && target.y < (GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD) {
-            explodeMap(p, target);
-          }
-          break;
-        }
-      }
-    }
-  }
-#endif
-
   return 0;
 }
 
@@ -258,7 +228,7 @@ DWORD WINAPI run(void *)
     gRobot = new RobotModel();
     gRobot->moveTo(1100.0f, 1000.0f);
     gMap->addCollidable(gRobot);
-    gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 0.5f);
+    gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
     gMap->LightSources().push_back(gRobotLight);
   }
 
