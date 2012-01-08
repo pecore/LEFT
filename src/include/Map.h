@@ -25,7 +25,7 @@ extern unsigned int gProjectileCount;
 class LightSource {
 public:
   LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity) : pos(_pos), rgb(_rgb), intensity(_intensity) {
-    particle = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IWIDTH, 1.0f, 1.0f, 1.0f, intensity, glpLight);
+    particle = 0;
   }
   ~LightSource() {
     delete particle;
@@ -115,6 +115,7 @@ private:
   GLtriangleList mMap;
   GLplaneList mCollision;
 
+  GLParticle * mSpot;
   LightSourceList mLightSources;
   CollidableList mCollidables;
   int mCollidableCount;

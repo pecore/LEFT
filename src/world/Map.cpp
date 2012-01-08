@@ -13,6 +13,7 @@
 Map::Map() : mMap(0), mCollision(0), mCollidableCount(0)
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
+  mSpot = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IWIDTH, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -70,9 +71,9 @@ void Map::drawShadows(GLvector2f window)
     GLvector2f pos = s->pos;   
 
     renderTarget(true);
-    s->particle->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
-    s->particle->moveTo(pos.x, pos.y);
-    s->particle->draw();
+    mSpot->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
+    mSpot->moveTo(pos.x, pos.y);
+    mSpot->draw();
 
     foreach(GLplaneList, p, mCollision) {
       GLvector2f base = p->base;
