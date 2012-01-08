@@ -92,6 +92,7 @@ DWORD WINAPI stream_run(void * data)
 	alSourcePlay(uiSource);
 
   while(iState == AL_PLAYING) {
+    Sleep(16);
     alGetSourcei(uiSource, AL_SOURCE_STATE, &iState);
   }
 
