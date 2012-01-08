@@ -3,6 +3,7 @@
 #include "Map.h"
 #include "GLSprite.h"
 #include "RobotRocketEffect.h"
+#include "ALDefines.h"
 
 RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
@@ -40,6 +41,7 @@ bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
      mPos.y > GL_MAP_THRESHOLD) mMap->addCirclePolygon(mPos, 100.0f);
   mMap->LightSources().remove(mLight);
   mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
+  PlayStreamThread::play(0);
   delete mLight;
   return false;
 }

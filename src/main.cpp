@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.55"
+#define LEFT_VERSION "0.56"
 
 #include <windows.h>
 #include <time.h>
@@ -14,6 +14,7 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 #include "GLWindow.h"
 #include "GLDefines.h"
+#include "ALDefines.h"
 #include "Map.h"
 #include "RobotModel.h"
 
@@ -238,6 +239,10 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
+    PlayStreamThread::init();
+  }
+
+  if(gRunning) {
     gCross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
   }
 
@@ -265,10 +270,10 @@ DWORD WINAPI run(void *)
   }
 
   delete gMap;
-
   glFontDestroy(&gFont);
   delete Debug::DebugParticle;
   Debug::clear();
+  PlayStreamThread::shutdown();
 
   delete gCross;
   delete gRobot;

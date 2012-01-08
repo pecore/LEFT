@@ -55,7 +55,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zdll.lib winmm.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib zdll.lib winmm.lib openal32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				AdditionalLibraryDirectories=".\lib"
 				IgnoreAllDefaultLibraries="false"
@@ -126,7 +126,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zdll.lib winmm.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib zdll.lib winmm.lib openal32.lib"
 				AdditionalLibraryDirectories=".\lib"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames=""
@@ -165,6 +165,14 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\src\include\ALDefines.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\include\aldlist.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\clipper.hpp"
 				>
 			</File>
@@ -173,7 +181,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\CWaves.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\Debug.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\include\Framework.h"
 				>
 			</File>
 			<File
@@ -198,6 +214,10 @@
 			</File>
 			<File
 				RelativePath=".\src\include\GLWindow.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\include\LoadOAL.h"
 				>
 			</File>
 			<File
@@ -237,7 +257,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\src\al\aldlist.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\gl\clipper.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\al\CWaves.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\al\Framework.cpp"
 				>
 			</File>
 			<File
@@ -269,11 +301,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\al\LoadOAL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\main.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\src\world\Map.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\al\PlayStreamThread.cpp"
 				>
 			</File>
 			<File
