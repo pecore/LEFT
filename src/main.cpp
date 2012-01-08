@@ -59,16 +59,20 @@ HANDLE Debug::DebugMutex;
 
 void updateMousePosition(GLWindow * window)
 {
+  static int fx = GetSystemMetrics(SM_CXSIZEFRAME);
+  static int fy = GetSystemMetrics(SM_CYSIZEFRAME);
+  static int sc = GetSystemMetrics(SM_CYCAPTION);
+
   POINT cursorpos;
   if(GetCursorPos(&cursorpos)) {
     RECT clientrect, windowrect;
     if(GetClientRect(window->hWnd(), &clientrect)) {
       if(GetWindowRect(window->hWnd(), &windowrect)) {
         POINT delta;
-        delta.x = (windowrect.right - windowrect.left) - clientrect.right;
-        delta.y = (windowrect.bottom - windowrect.top) - clientrect.bottom;
-        gMousePos.x = gWindow->x() + (GLfloat)cursorpos.x - (clientrect.left + delta.x);
-        gMousePos.y = gWindow->y() + GL_SCREEN_FHEIGHT - (cursorpos.y - (clientrect.top + delta.y));
+        int x = windowrect.left + clientrect.left + fx; 
+        int y = windowrect.top + clientrect.top + fy;
+        gMousePos.x = gWindow->x() + cursorpos.x - x;
+        gMousePos.y = (gWindow->y() + GL_SCREEN_FHEIGHT) - (cursorpos.y - y);
       }
     }
   }
