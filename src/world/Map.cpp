@@ -10,7 +10,7 @@
 #include "Map.h"
 #include "Debug.h"
 
-Map::Map() : mMap(0), mCollision(0), mCollidableCount(0)
+Map::Map() : mMap(0), mCollision(0)
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
   mSpot = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IWIDTH, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
@@ -63,7 +63,6 @@ void Map::drawShadows(GLvector2f window)
 {
   GLplane * p;
   GLfloat radius = 1280.0f;
-  Debug::clear();
 
   Lock(mMutex);
   LightSource * s = 0;
@@ -88,15 +87,6 @@ void Map::drawShadows(GLvector2f window)
       GLvector2f base = p->base;
       GLvector2f dest = p->dest;
       GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
-
-#if 0
-      GLvector2f surf = base + p->dir / 2.0f; // midpoint of surface
-      GLvector2f snorm = GLvector2f((dest.y - base.y), -(dest.x - base.x)).normal(); // surface normal
-      Debug::add(new GLplane(surf, snorm * 15.0f), GLvector3f(1.0f, 0.0f, 0.0f), 4);
-      scolor.x = (int(color.x) & int((*o)[i].color.x)) * (*o)[i].opacity; if(scolor.x < 0) scolor.x = 0;
-      scolor.y = (int(color.y) & int((*o)[i].color.y)) * (*o)[i].opacity; if(scolor.y < 0) scolor.y = 0;
-      scolor.z = (int(color.z) & int((*o)[i].color.z)) * (*o)[i].opacity; if(scolor.z < 0) scolor.z = 0;
-#endif
 
       GLvector2f baseproj = base - pos;
       GLvector2f destproj = dest - pos;
@@ -133,6 +123,33 @@ void Map::drawShadows(GLvector2f window)
   
   Unlock(mMutex);
 }
+
+void Map::drawProjectiles()
+{
+  Projectile * proj = 0;
+  foreach(ProjectileList, proj, mProjectiles) {
+    proj->draw();
+  }
+}
+
+void Map::drawAnimations()
+{
+  AnimationList toerase;
+  Animation * anim = 0;
+  foreach(AnimationList, anim, mAnimations) {
+    if(!anim->sprite->draw(anim->frameCount++)) {
+      toerase.push_back(anim);
+    }
+  }
+  if(toerase.size() > 0) {
+    foreach(AnimationList, anim, toerase) {
+      mAnimations.remove(anim);
+      delete anim->sprite;
+      delete anim;
+    }
+  }
+}
+
 
 void Map::generate()
 {
@@ -226,7 +243,7 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
 
 void Map::collide()
 {
-  if(mCollidableCount == 0) return;
+  if(mCollidables.size() == 0) return;
   CollidableList toremove;
   bool update = false;
 
@@ -290,4 +307,40 @@ void Map::collide()
 
   Unlock(mMutex);
   if(update) updateCollision();
+}
+
+void Map::addCollidable(Collidable * c)
+{ 
+  mCollidables.push_back(c);
+}
+
+void Map::addProjectile(Projectile * proj)
+{
+  mProjectiles.push_back(proj);
+  addCollidable((Collidable *) proj);
+}
+
+void Map::removeProjectile(Projectile * proj)
+{
+  mProjectiles.remove(proj);
+  delete proj;
+}
+
+bool Map::isProjectile(Collidable * c)
+{
+  Projectile * proj = 0;
+  foreach(ProjectileList, proj, mProjectiles) {
+    if(proj == c) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void Map::playAnimation(GLAnimatedSprite * sprite)
+{
+  Animation * anim = new Animation;
+  anim->frameCount = 0;
+  anim->sprite = sprite;
+  mAnimations.push_back(anim);
 }

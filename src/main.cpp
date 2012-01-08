@@ -106,6 +106,7 @@ void renderScene()
   gMap->drawShadows(GL_SCREEN_BOTTOMLEFT);
   gMap->collide();
   gMap->drawProjectiles();
+  gMap->drawAnimations();
   gRobot->draw();
  
   for(int i = 0; i < gBallCount; i++)

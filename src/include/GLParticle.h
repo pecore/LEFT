@@ -15,7 +15,8 @@ typedef enum {
   glpCircle = 0,
   glpCross,
   glpSolid,
-  glpLight
+  glpLight,
+  glpLeftLight
 } particle_t;
 
 class GLParticle : public GLSprite {

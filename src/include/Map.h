@@ -22,6 +22,11 @@ extern unsigned int gProjectileCount;
 
 #include "GLParticle.h"
 
+struct Animation {
+  int frameCount;
+  GLAnimatedSprite * sprite;
+};
+
 class LightSource {
 public:
   LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : pos(_pos), rgb(_rgb), intensity(_intensity) {
@@ -47,6 +52,7 @@ public:
 typedef std::list<LightSource *> LightSourceList;
 typedef std::list<Collidable *> CollidableList;
 typedef std::list<Projectile *> ProjectileList;
+typedef std::list<Animation *> AnimationList;
 
 class Map {
 public:
@@ -65,39 +71,15 @@ public:
 
   void draw();
   void drawShadows(GLvector2f window);
+  void drawProjectiles();
+  void drawAnimations();
   void collide();
   
-  void addCollidable(Collidable * c) { 
-    mCollidables.push_back(c);
-    mCollidableCount++;
-  }
-
-  void addProjectile(Projectile * proj) {
-    mProjectiles.push_back(proj);
-    addCollidable((Collidable *) proj);
-  }
-
-  void removeProjectile(Projectile * proj) {
-    mProjectiles.remove(proj);
-    delete proj;
-  }
-
-  bool isProjectile(Collidable * c) {
-    Projectile * proj = 0;
-    foreach(ProjectileList, proj, mProjectiles) {
-      if(proj == c) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void drawProjectiles() {
-    Projectile * proj = 0;
-    foreach(ProjectileList, proj, mProjectiles) {
-      proj->draw();
-    }
-  }
+  void addCollidable(Collidable * c);
+  void addProjectile(Projectile * proj);
+  void removeProjectile(Projectile * proj);
+  bool isProjectile(Collidable * c);
+  void playAnimation(GLAnimatedSprite * sprite);
 
   LightSourceList & LightSources() { return mLightSources; }
   ProjectileList & Projectiles() { return mProjectiles; }
@@ -125,8 +107,8 @@ private:
   GLParticle * mSpot;
   LightSourceList mLightSources;
   CollidableList mCollidables;
-  int mCollidableCount;
   ProjectileList mProjectiles;
+  AnimationList mAnimations;
 
   void generate();
   void genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon, bool random = true, GLfloat _segments_per_100 = 12);

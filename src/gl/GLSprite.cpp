@@ -199,75 +199,60 @@ bool GLSprite::load()
   return true;
 }
 
-#if 0
-bool GLSprite::load()
+GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloat width, GLfloat height)
 {
-  BITMAPINFO bminfo;
-  HANDLE dibhandle;
-  const HDC hDC = wglGetCurrentDC();  
-  
-  if(mpData) delete mpData;
-  mpData = 0;
+  mSprite = new GLSprite(filename);
+  assert(mSprite->isInitialized());
+  mWidth = width;
+  mHeight = height;
+  mPos = pos;
+}
 
-  bminfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);  
-  bminfo.bmiHeader.biBitCount = 0;
-  dibhandle = LoadImage(0, mFilename, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION | LR_LOADFROMFILE);
-  if(dibhandle) {
-    GetDIBits(hDC, (HBITMAP)dibhandle, 0,0, NULL, &bminfo, DIB_RGB_COLORS);
+GLAnimatedSprite::~GLAnimatedSprite()
+{
+  delete mSprite;
+}
 
-    mSizeX = bminfo.bmiHeader.biWidth;
-    mSizeY = bminfo.bmiHeader.biHeight;
-    bminfo.bmiHeader.biBitCount = 24; 
-    bminfo.bmiHeader.biCompression = BI_RGB;  
-
-    const DWORD tmpsize = mSizeX * mSizeY * 3;
-    unsigned char * tmp = new unsigned char[tmpsize];
-    if(tmp) {
-      if(GetDIBits(hDC, (HBITMAP)dibhandle, 0, mSizeY, tmp, &bminfo, DIB_RGB_COLORS)) {
-        if((mWidth == -1) || (mHeight == -1)) {
-          mWidth = mSizeX;
-          mHeight = mSizeY;
-        }
-        const DWORD size = mSizeX * mSizeY * 4;
-        mpData = new unsigned char[size];
-        if(mpData) {
-          for(unsigned int i = 0, j = 0; i < tmpsize && j < size; i+=3, j+=4) {
-            mpData[j]     = tmp[i + 2];
-            mpData[j + 1] = tmp[i + 1];
-            mpData[j + 2] = tmp[i];
-            if(mpData[j] == 0xFF && mpData[j + 1] == 0x00 && mpData[j + 2] == 0xFF) {
-              mpData[j]     = 0xFF;
-              mpData[j + 1] = 0x00;
-              mpData[j + 2] = 0x00;
-              mpData[j + 3] = 0x00;
-            } else if(mpData[j] == 0x0F && mpData[j + 1] == 0x00 && mpData[j + 2] == 0x0F) {
-              mpData[j]     = 0xFF;
-              mpData[j + 1] = 0x00;
-              mpData[j + 2] = 0x00;
-              mpData[j + 3] = 0x00;
-            } else {
-              mpData[j + 3] = 0xFF;
-            }
-          }
-        } else {
-          DeleteObject(dibhandle);
-          return false;
-        }
-      } else {
-        DeleteObject(dibhandle);
-        return false;
-      }
-      
-      delete tmp;
-    } else {
-      DeleteObject(dibhandle);
-      return false;
-    }
-  } else {
+bool GLAnimatedSprite::draw(int index)
+{
+  GLfloat width = mWidth;
+  GLfloat height = mHeight;
+  int colcount = mSprite->w() / mWidth;
+  int rowcount = mSprite->h() / mHeight;
+  if(index >= colcount * rowcount) {
     return false;
   }
+  int xindex = index % colcount;
+  int yindex = index / colcount;
 
-  DeleteObject(dibhandle);
+  glPushMatrix();
+  glTranslatef(mRotation.x, mRotation.y, 0.0f);
+  glRotatef(mAngle, 0.0f, 0.0f, 1.0f);
+  glTranslatef(-mRotation.x, -mRotation.y, 0.0f);
+  glPopMatrix();
+
+  GLvector2f tsize(mWidth / mSprite->w(), mHeight / mSprite->h());
+  GLvector2f tindex(xindex * tsize.x, yindex * tsize.y);
+
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+  glBindTexture(GL_TEXTURE_2D, mSprite->texture());
+  glBegin(GL_QUADS);
+		glTexCoord2f(tindex.x, tindex.y); 
+    glVertex3f(mPos.x - (width / 2), mPos.y - (height / 2),  0.0f);
+		
+    glTexCoord2f(tindex.x + tsize.x, tindex.y);
+    glVertex3f(mPos.x + (width / 2), mPos.y - (height / 2),  0.0f);
+
+    glTexCoord2f(tindex.x + tsize.x, tindex.y + tsize.y); 
+    glVertex3f(mPos.x + (width / 2), mPos.y + (height / 2),  0.0f);
+		
+    glTexCoord2f(tindex.x, tindex.y + tsize.y); 
+    glVertex3f(mPos.x - (width / 2), mPos.y + (height / 2),  0.0f);
+  glEnd();
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glColor3f(1.0f, 1.0f, 1.0f);
+  glDisable(GL_BLEND);
+
   return true;
-}   
-#endif
+}

@@ -19,7 +19,7 @@ public:
   bool isInitialized() { return mInitialized; };
 
   unsigned char * data() { return mpData; };
-  GLuint texture() { return mpTextures[1]; };
+  GLuint texture() { return mpTextures[0]; };
 
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
@@ -59,10 +59,19 @@ protected:
 
 class GLAnimatedSprite {
 public:
+  GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloat width, GLfloat height);
+  ~GLAnimatedSprite();
 
+  bool draw(int index);
 
 private:
   GLSprite * mSprite;
+  GLfloat mWidth;
+  GLfloat mHeight;
+
+  GLvector2f mPos;
+  GLvector2f mRotation;
+  GLfloat mAngle;
 };
 
 #endif

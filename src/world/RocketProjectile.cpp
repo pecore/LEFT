@@ -37,8 +37,9 @@ bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
   if(mPos.x < (GL_SCREEN_FWIDTH * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD &&
      mPos.x > GL_MAP_THRESHOLD &&
      mPos.y < (GL_SCREEN_FHEIGHT * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD &&
-     mPos.y > GL_MAP_THRESHOLD) mMap->addCirclePolygon(mPos, 150.0f);
+     mPos.y > GL_MAP_THRESHOLD) mMap->addCirclePolygon(mPos, 100.0f);
   mMap->LightSources().remove(mLight);
+  mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
   delete mLight;
   return false;
 }
