@@ -27,6 +27,7 @@ public:
   GLvector3f rgb;
 };
 typedef std::list<LightSource *> LightSourceList;
+typedef std::list<Collidable *> CollidableList;
 
 class Map {
 public:
@@ -48,8 +49,15 @@ public:
   void collide();
   
   void addCollidable(Collidable * c) { 
-    if(mCollidableCount < MAP_COLLIDABLES_MAX) 
-      mCollidables[mCollidableCount++] = c; 
+    mCollidables.push_back(c);
+    mCollidableCount++;
+  }
+  
+  void removeCollidable(Collidable * c) { 
+    if(mCollidableCount > 0) {
+      mCollidables.remove(c);
+      mCollidableCount--;
+    }
   }
 
   LightSourceList & LightSources() { return mLightSources; }
@@ -76,7 +84,7 @@ private:
   GLplaneList mCollision;
 
   LightSourceList mLightSources;
-  Collidable * mCollidables[MAP_COLLIDABLES_MAX];
+  CollidableList mCollidables;
   int mCollidableCount;
 
   void generate();

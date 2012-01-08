@@ -87,8 +87,7 @@ void renderScene()
   gRobot->integrate(0.1f);
   gCross->moveTo(gMousePos.x, gMousePos.y);
 
-  //gMap->draw();
-  gMap->drawShadows(GLvector2f(gWindow->x(), gWindow->y()));
+  gMap->drawShadows(GL_SCREEN_BOTTOMLEFT);
   gMap->collide();
   gRobot->draw();
 

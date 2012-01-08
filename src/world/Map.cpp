@@ -219,11 +219,12 @@ void Map::collide()
   Lock(mMutex);
   GLplane * p = 0;
   foreach(GLplaneList, p, mCollision) {
-    Debug::drawVector(p->base, p->dir, mCollidables[0]->pos(), GLvector3f(1.0f, 1.0f, 1.0f));
+    Debug::drawVector(p->base, p->dir, GL_SCREEN_CENTER, GLvector3f(1.0f, 1.0f, 1.0f));
 
-    for(int i = 0; i < mCollidableCount; i++) {  
-      GLfloat radius = (mCollidables[i]->h() > mCollidables[i]->w() ? mCollidables[i]->h() : mCollidables[i]->w()) / 2.0f;
-      GLvector2f pos = mCollidables[i]->pos();
+    Collidable * c = 0;
+    foreach(CollidableList, c, mCollidables) {
+      GLfloat radius = (c->h() > c->w() ? c->h() : c->w()) / 2.0f;
+      GLvector2f pos = c->pos();
 
       if((p->base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
       ||  p->base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
@@ -237,7 +238,7 @@ void Map::collide()
 
       if(planedistance >= 0.0f && planedistance <= p->dir.len()) {
         if((distance > -radius && distance <= 0.0f) || (distance > 0.0f && distance <= radius)) {
-          mCollidables[i]->collide(n, distance);
+          c->collide(n, distance);
         }
       }
     }
