@@ -31,6 +31,8 @@ public:
   HWND hWnd() { return mhWnd; };
 
   GLuint getLightShaderObject() { return mLightShaderObject; }
+  GLint getLightSourcesLocation() { return mLightSourcesLocation; }
+  GLint getLightMapLocation() { return mLightMapLocation; }
 
   bool initOpenGL();
   void swapBuffers() { SwapBuffers(mhDC); };
@@ -55,6 +57,8 @@ private:
   bool mInitialized;
 
   GLuint mLightShaderObject;
+  GLint mLightSourcesLocation;
+  GLint mLightMapLocation;
 
   int mScreenX;
   int mScreenY;

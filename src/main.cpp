@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.54"
+#define LEFT_VERSION "0.55"
 
 #include <windows.h>
 #include <time.h>
@@ -34,9 +34,11 @@ GLfloat gDebugValue;
 Map        * gMap = 0;
 RobotModel * gRobot = 0;
 GLParticle * gCross = 0;
+LightSource * gRobotLight = 0;
 
 GLParticle * gBalls[1024];
 int gBallCount = 0;
+LightSource * gLightBalls[1024];
 
 bool gKeydown[256];
 GLvector2f gMousePos;
@@ -77,13 +79,16 @@ void renderScene()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
   
-  for(int i = 0; i < gBallCount; i++)
+  for(int i = 0; i < gBallCount; i++) {
     gBalls[i]->move();
+    gLightBalls[i]->pos = gBalls[i]->pos();
+  }
   gRobot->control(gKeydown, gMousePos);
   gRobot->integrate(0.1f);
   gCross->moveTo(gMousePos.x, gMousePos.y);
 
-  gMap->draw();
+  //gMap->draw();
+  gMap->drawShadows(GLvector2f(gWindow->x(), gWindow->y()));
   gMap->collide();
   gRobot->draw();
 
@@ -98,53 +103,15 @@ void renderScene()
     gFPS = (GLfloat) gFrameCounter / delta;
     gFrameCounter = 0;
   }
- 
-  GLvector2f pos = gRobot->pos();
-  GLfloat radius = 1280.0f;
 
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glEnable(GL_BLEND);
-  GLplane * p;
-  glBegin(GL_QUADS);
-  GLplaneList collision = gMap->collision();
-  foreach(GLplaneList, p, collision) {
-    if((p->base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
-    ||  p->base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
-    || (p->base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
-    ||  p->base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
-    if((p->dest.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
-    ||  p->dest.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
-    || (p->dest.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
-    ||  p->dest.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
-
-    // project quad for each plane
-    GLvector2f base = p->base;
-    GLvector2f dest = p->dest;
-    GLvector2f baseproj = p->base - pos;
-    GLvector2f destproj = p->dest - pos;
-    GLvector2f bproj = p->base + baseproj.normal() * (radius - baseproj.len());
-    GLvector2f dproj = p->dest + destproj.normal() * (radius - destproj.len());  
-
-    if(base.y < gWindow->y() + 15.0f) base.y = gWindow->y() + 15.0f;
-    if(bproj.y < gWindow->y() + 15.0f) bproj.y = gWindow->y() + 15.0f;
-    if(dest.y < gWindow->y() + 15.0f) dest.y = gWindow->y() + 15.0f;
-    if(dproj.y < gWindow->y() + 15.0f) dproj.y = gWindow->y() + 15.0f;
-
-    glColor4f(0.0f, 0.0f, 0.0f, 0.99f);
-    glVertex3f(base.x, base.y,  0.0f);
-    glVertex3f(bproj.x, bproj.y,  0.0f);
-    glVertex3f(dproj.x, dproj.y,  0.0f);
-    glVertex3f(dest.x, dest.y,  0.0f);
-  }
-  glEnd();
-  glDisable(GL_BLEND);
+  gRobotLight->pos = gRobot->pos();
   gCross->draw();
 
   gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
   int x = gWindow->x();
   int y = gWindow->y();
   glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
-  glUseProgram(gWindow->getLightShaderObject());
+  Debug::drawVectors(gRobot->pos());
 
   char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
   memset(&s[i], 0x20, 512 - i); s[511] = 0; 
@@ -243,8 +210,10 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
   case WM_KEYUP:
     gKeydown[wParam] = false;
     return 0;
-  case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
+    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(1.0f, 1.0f, 1.0f)));
+    break;
+  case WM_LBUTTONDOWN:
   case WM_MBUTTONDOWN:
   case WM_XBUTTONDOWN:
     return onMouseDown(wParam, lParam & 0xFFFF, GL_SCREEN_IHEIGHT - ((lParam >> 16) & 0xFFFF));
@@ -271,6 +240,8 @@ DWORD WINAPI run(void *)
     gRobot = new RobotModel();
     gRobot->moveTo(1100.0f, 1000.0f);
     gMap->addCollidable(gRobot);
+    gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f));
+    gMap->LightSources().push_back(gRobotLight);
   }
 
   if(gRunning) {
@@ -278,10 +249,12 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < 4; i++) {
       gBalls[gBallCount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
       gBalls[gBallCount]->moveTo(1000.0f, 1000.0f);
       gBalls[gBallCount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
+      gLightBalls[gBallCount] = new LightSource(gBalls[gBallCount]->pos(), gBalls[gBallCount]->getColor() / 5.0f);
+      gMap->LightSources().push_back(gLightBalls[gBallCount]);
       gMap->addCollidable(gBalls[gBallCount]);
       gBallCount++;
     }
@@ -296,6 +269,7 @@ DWORD WINAPI run(void *)
 
   for(int i = 0; i < gBallCount; i++) {
     delete gBalls[i];
+    delete gLightBalls[i];
   }
 
   delete gMap;
@@ -304,6 +278,7 @@ DWORD WINAPI run(void *)
   delete Debug::DebugParticle;
   Debug::clear();
 
+  delete gRobotLight;
   delete gCross;
   delete gRobot;
   return 0;
@@ -319,7 +294,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   Debug::DebugMutex = CreateMutex(NULL, FALSE, "LeftDebugMutex");
 
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
-  gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 16, false, (WNDPROC) WndProc);
+  gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, false, (WNDPROC) WndProc);
   
   if(gWindow) {
     gRunning = gWindow->isInitialized();

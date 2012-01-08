@@ -13,6 +13,21 @@
 Map::Map() : mMap(0), mCollision(0), mCollidableCount(0)
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
+  mSpot = new GLParticle(1200, 1200, 0.4f, 0.3f, 0.3f, 1.0f, glpLight);
+
+  glGenTextures(1, &mFramebufferTexture);
+  glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glGenFramebuffersEXT(1, &mFramebuffer);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mFramebuffer);
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, mFramebufferTexture, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, NULL);
+  
   generate();
 }
 
@@ -28,23 +43,82 @@ Map::~Map()
   foreach(GLplaneList, p, mCollision) {
     delete p;
   }
+  if(mSpot) delete mSpot;
+
+  glDeleteFramebuffersEXT(1, &mFramebuffer);
+  glDeleteTextures(1, &mFramebufferTexture);
 }
 
 void Map::draw()
 {
   Lock(mMutex);
+  drawTriangleList(GLvector2f(0.0f, 0.0f), mMap, GLvector3f(0.4f, 0.3f, 0.3f), 0.0f);
+  Unlock(mMutex);
+}
 
-  glBegin(GL_TRIANGLES);
-  GLtriangle * t = 0;
-  foreach(GLtriangleList, t, mMap) {
-    glColor3f(0.4f, 0.3f, 0.3f);
-    glVertex3f(t->A.x, t->A.y, 0.0f);
-    glVertex3f(t->B.x, t->B.y, 0.0f);
-    glVertex3f(t->C.x, t->C.y, 0.0f);
+void Map::drawShadows(GLvector2f window)
+{
+  GLplane * p;
+  GLfloat radius = 1280.0f;
+  Debug::clear();
+
+  Lock(mMutex);
+  LightSource * s = 0;
+  foreach(LightSourceList, s, mLightSources) {
+    GLvector2f pos = s->pos;   
+
+    renderTarget(true);
+    mSpot->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
+    mSpot->moveTo(pos.x, pos.y);
+    mSpot->draw();
+
+    foreach(GLplaneList, p, mCollision) {
+      GLvector2f base = p->base;
+      GLvector2f dest = p->dest;
+      GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
+
+#if 0
+      GLvector2f surf = base + p->dir / 2.0f; // midpoint of surface
+      GLvector2f snorm = GLvector2f((dest.y - base.y), -(dest.x - base.x)).normal(); // surface normal
+      Debug::add(new GLplane(surf, snorm * 15.0f), GLvector3f(1.0f, 0.0f, 0.0f), 4);
+      scolor.x = (int(color.x) & int((*o)[i].color.x)) * (*o)[i].opacity; if(scolor.x < 0) scolor.x = 0;
+      scolor.y = (int(color.y) & int((*o)[i].color.y)) * (*o)[i].opacity; if(scolor.y < 0) scolor.y = 0;
+      scolor.z = (int(color.z) & int((*o)[i].color.z)) * (*o)[i].opacity; if(scolor.z < 0) scolor.z = 0;
+#endif
+
+      GLvector2f baseproj = base - pos;
+      GLvector2f destproj = dest - pos;
+      GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
+      GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
+
+      glBegin(GL_QUADS);
+      glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
+      glVertex3f(base.x, base.y,  0.0f);
+      glVertex3f(bproj.x, bproj.y,  0.0f);
+      glVertex3f(dproj.x, dproj.y,  0.0f);
+      glVertex3f(dest.x, dest.y,  0.0f);
+      glEnd();
+    }
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+    renderTarget(false);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
+    glBegin(GL_QUADS);
+      glTexCoord2f(0.0f, 0.0f); 
+      glVertex3f(window.x, window.y,  0.0f);
+      glTexCoord2f(1.0f, 0.0f);
+      glVertex3f(window.x + GL_SCREEN_FWIDTH, window.y,  0.0f);
+      glTexCoord2f(1.0f, 1.0f); 
+      glVertex3f(window.x + GL_SCREEN_FWIDTH, window.y + GL_SCREEN_FHEIGHT,  0.0f);
+      glTexCoord2f(0.0f, 1.0f); 
+      glVertex3f(window.x, window.y + GL_SCREEN_FHEIGHT,  0.0f);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_BLEND);
   }
-  glColor3f(1.0f, 1.0f, 1.0f);
-  glEnd();
-
+  
   Unlock(mMutex);
 }
 
@@ -106,18 +180,18 @@ void Map::updateCollision()
   Unlock(mMutex);
 }
 
-void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon)
+void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon, bool random, GLfloat _segments_per_100)
 {
-  const GLfloat segments_per_100 = 12;
+  const GLfloat segments_per_100 = _segments_per_100;
   int segments = (int) ((size / 100.0f) * segments_per_100) | 0x01;
 
   GLvector2f radius(size, 0.0f);
   GLvector2f p, last = pos + radius;
 
   GLfloat delta = 2.0f * M_PI / segments;
-  for(GLfloat angle = 0.0f; angle < (2.0f * M_PI) - delta; angle += delta) {
+  for(GLfloat angle = 0.0f; angle < (2.0f * M_PI); angle += delta) {
     last = p;
-    p = pos + (radius.rotate(angle) * (0.9f + frand()/5));
+    p = pos + (radius.rotate(angle) * (random?(0.9f + frand()/5):1.0f));
     
     polygon.push_back(IntPoint((long64)(p.x * CLIPPER_PRECISION), (long64)(p.y * CLIPPER_PRECISION)));
     if(angle > 0.0f) {

@@ -45,6 +45,7 @@ GLSprite::~GLSprite()
   if(mpData) { 
     delete mpData;
   }
+  glDeleteTextures(1, &mpTextures[0]);
   mpData = 0;
 }
 

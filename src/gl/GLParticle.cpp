@@ -113,6 +113,14 @@ char GLParticle::getAlpha(int x, int y)
   case glpSolid:
     alpha = ma;
     break;
+  case glpLight:
+    if(distance <= max_distance) {
+      alpha = 5000.0f / (distance * distance);
+    } else {
+      alpha = 0.0f;
+    }
+    if(alpha > 1.0f) alpha = 1.0f; 
+    break;
   }
 
   return (char)(alpha * 255.0f); 

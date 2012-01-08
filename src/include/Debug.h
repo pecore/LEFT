@@ -47,7 +47,7 @@ public:
   static HANDLE DebugMutex;
   static bool DebugActive;
   static std::list<DebugVectorType> DebugVectors;
-  static void add(GLplane * p, GLvector3f color, int size) {
+  static void add(GLplane * p, GLvector3f color = GLvector3f(1.0f, 1.0f, 1.0f), int size = 10) {
     if(!DebugActive) return;
     Lock(DebugMutex);
     DebugVectorType d;
@@ -90,7 +90,7 @@ public:
       DebugParticle = new GLParticle(size, size, 1.0f, 1.0f, 1.0f, glpSolid);
     }
 
-    int repeat = 5;
+    int repeat = 20;
     bool showdir = false;
 
     Lock(DebugMutex);

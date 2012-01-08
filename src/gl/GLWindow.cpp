@@ -162,30 +162,37 @@ GLWindow::~GLWindow()
 bool GLWindow::initOpenGL()							
 {
   bool result = true;
-  GLuint fragmentShader;
-
-  static const char * fragmentShaderSource =
-    "uniform sampler2D tex;"
-    "void main (void) {"
-	  "  vec4 texel, color = gl_Color;"
-    "  if(gl_Color.rgb == vec3(0.4, 0.3, 0.3)) { "
-    "    color = gl_Color;"
-    "  } else "
-    "  if(gl_Color.rgb == vec3(0.0, 0.0, 0.0)) { "
-    "    color = vec4(0.0, 0.0, 0.0, gl_Color.a);"
-    "  } else {"
-    "    texel = texture2D(tex, gl_TexCoord[0].xy);"
-    "    color *= texel;"
-    "  }"
-    "  vec2 ray = vec2(640.0, 360.0) - gl_FragCoord.xy;"
-    "  float distance = 1.0 - (length(ray) / 640.0);"
-    "  if(gl_FragCoord.y < 15.0) distance = 1.0;"
-    "  gl_FragColor = color * (distance * distance);"
-    "}";
 
   if(glewInit()) {
     result = false;
   }
+
+#if 0
+  GLuint fragmentShader;
+  static const char * fragmentShaderSource =
+    "uniform sampler2D tex;"
+    "uniform vec2 lightsources[128];"
+    "void main (void) {"
+	  "  vec4 texel, color = gl_Color;"
+    "  if(gl_Color.rgb == vec3(0.4, 0.3, 0.3)) { "
+    "    int i = 0;"
+    "    float tmp;"
+    "    float coeff = 0.0;"
+    "    while( lightsources[i] != vec2(0.0, 0.0) ) {"
+    "      vec2 ray = lightsources[i] - gl_FragCoord.xy;"
+    "      float distance = length(ray);"
+    "      tmp = -1.0 / 300.0 * distance + 1.1;"
+    "      if(tmp > 0.0) coeff += tmp;"
+    "      i++;"
+    "    }"
+    "    color *= coeff;"
+    "  } else {"
+    "    texel = texture2D(tex, gl_TexCoord[0].xy);"
+    "    color *= texel;"
+    "  }"
+
+    "  gl_FragColor = color;"
+    "}";
 
   if(result) {
     GLint length = strlen(fragmentShaderSource);
@@ -222,7 +229,13 @@ bool GLWindow::initOpenGL()
     }
     glDeleteShader(fragmentShader);
   }
-  
+
+  if(result) {
+    mLightSourcesLocation = glGetUniformLocation(mLightShaderObject, "lightsources");
+    mLightMapLocation = glGetUniformLocation(mLightShaderObject, "lightmap");
+  }
+#endif
+
   if(result) {
     glMatrixMode(GL_PROJECTION);		
 	  glLoadIdentity();									

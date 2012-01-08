@@ -17,8 +17,16 @@ using namespace ClipperLib;
 
 #include "Collidable.h"
 #define MAP_COLLIDABLES_MAX 2048
-typedef std::list<Collidable *> CollidableList;
-#define SHADER_VERTEX_MAX 460
+
+#include "GLParticle.h"
+
+class LightSource {
+public:
+  LightSource(GLvector2f _pos, GLvector3f _rgb) : pos(_pos), rgb(_rgb) { }
+  GLvector2f pos;
+  GLvector3f rgb;
+};
+typedef std::list<LightSource *> LightSourceList;
 
 class Map {
 public:
@@ -36,6 +44,7 @@ public:
   void unlock() { Unlock(mMutex); }
 
   void draw();
+  void drawShadows(GLvector2f window);
   void collide();
   
   void addCollidable(Collidable * c) { 
@@ -43,22 +52,35 @@ public:
       mCollidables[mCollidableCount++] = c; 
   }
 
+  LightSourceList & LightSources() { return mLightSources; }
+
   void updateCollision();
   void addCirclePolygon(GLvector2f pos, GLfloat size);
 
 private:
   HANDLE mMutex;
 
+  GLParticle * mSpot;
+  GLuint mFramebufferTexture;
+  GLuint mFramebuffer;
+  void renderTarget(bool texture) {
+    if(texture) {
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mFramebuffer);
+      glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, mFramebufferTexture, 0);
+      glClear(GL_COLOR_BUFFER_BIT);
+    } else glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  }
+
   Polygons mCMap;
   GLtriangleList mMap;
   GLplaneList mCollision;
-  GLfloat mShaderCollision[SHADER_VERTEX_MAX];
 
+  LightSourceList mLightSources;
   Collidable * mCollidables[MAP_COLLIDABLES_MAX];
   int mCollidableCount;
 
   void generate();
-  void genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon);
+  void genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon, bool random = true, GLfloat _segments_per_100 = 12);
 };
 
 #endif
