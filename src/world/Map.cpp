@@ -13,7 +13,6 @@
 Map::Map() : mMap(0), mCollision(0), mCollidableCount(0)
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
-  mSpot = new GLParticle(1200, 1200, 0.4f, 0.3f, 0.3f, 1.0f, glpLight);
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -43,7 +42,10 @@ Map::~Map()
   foreach(GLplaneList, p, mCollision) {
     delete p;
   }
-  if(mSpot) delete mSpot;
+  LightSource * s = 0;
+  foreach(LightSourceList, s, mLightSources) {
+    delete s;
+  }
 
   glDeleteFramebuffersEXT(1, &mFramebuffer);
   glDeleteTextures(1, &mFramebufferTexture);
@@ -68,9 +70,9 @@ void Map::drawShadows(GLvector2f window)
     GLvector2f pos = s->pos;   
 
     renderTarget(true);
-    mSpot->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
-    mSpot->moveTo(pos.x, pos.y);
-    mSpot->draw();
+    s->particle->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, 1.0f);
+    s->particle->moveTo(pos.x, pos.y);
+    s->particle->draw();
 
     foreach(GLplaneList, p, mCollision) {
       GLvector2f base = p->base;
@@ -215,6 +217,16 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
 void Map::collide()
 {
   if(mCollidableCount == 0) return;
+  CollidableList toremove;
+  bool update = false;
+
+  // handle Projectiles
+  Projectile * proj = 0;
+  foreach(ProjectileList, proj, mProjectiles) {
+    proj->move();
+  }
+
+  GLfloat record = 200.0f;
 
   Lock(mMutex);
   GLplane * p = 0;
@@ -238,10 +250,34 @@ void Map::collide()
 
       if(planedistance >= 0.0f && planedistance <= p->dir.len()) {
         if((distance > -radius && distance <= 0.0f) || (distance > 0.0f && distance <= radius)) {
-          c->collide(n, distance);
+          if(isProjectile(c)) {
+            c = c;
+          }
+          if(!c->collide(n, distance)) {
+            toremove.push_back(c);
+            if(isProjectile(c)) {
+              removeProjectile((Projectile *) c);
+              gProjectileCount--;
+            }
+            continue;
+          }
         }
       }
     }
+
+    if(toremove.size() > 0) {
+      Collidable * c = 0;
+      foreach(CollidableList, c, toremove) {
+        mCollidables.remove(c);
+      }
+      update = true;
+    }
   }
+
+  if(record != 200.0f) {
+    record = record;
+  }
+
   Unlock(mMutex);
+  if(update) updateCollision();
 }

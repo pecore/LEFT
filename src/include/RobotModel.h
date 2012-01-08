@@ -21,7 +21,7 @@ public:
 
   GLfloat w() { return mBodySprite->w(); };
   GLfloat h() { return mBodySprite->h(); };
-  void collide(GLvector2f n, GLfloat distance);
+  bool collide(GLvector2f n, GLfloat distance);
 
   void integrate(GLfloat dt);
   void moveTo(GLfloat x, GLfloat y);

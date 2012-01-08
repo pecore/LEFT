@@ -106,11 +106,12 @@ void RobotModel::control(const bool * keydown, GLvector2f mousepos)
   mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
 }
 
-void RobotModel::collide(GLvector2f n, GLfloat distance)
+bool RobotModel::collide(GLvector2f n, GLfloat distance)
 {
   mPos -= n * ((mBodySprite->h() / 2.0f) - distance);
   mVelocity -= n * 2.0f * mVelocity.dot(n);
   mVelocity *= 0.5f;
+  return true;
 }
 
 void RobotModel::integrate(GLfloat dt)

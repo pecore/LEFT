@@ -17,7 +17,7 @@ public:
   virtual GLfloat w() = 0;
   virtual GLfloat h() = 0;
 
-  virtual void collide(GLvector2f n, GLfloat distance) = 0;
+  virtual bool collide(GLvector2f n, GLfloat distance) = 0;
 };
 
 #endif

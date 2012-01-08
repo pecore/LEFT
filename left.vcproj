@@ -288,6 +288,10 @@
 				RelativePath=".\src\world\RobotStabilizeEffect.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\src\world\RocketProjectile.cpp"
+				>
+			</File>
 			<Filter
 				Name="png"
 				>

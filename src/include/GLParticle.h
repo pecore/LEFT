@@ -34,7 +34,7 @@ public:
   void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; };
   void setVelocity(GLvector2f & v) { mVelocity = v; };
 
-  void collide(GLvector2f n, GLfloat distance);
+  bool collide(GLvector2f n, GLfloat distance);
   void draw() { this->GLSprite::draw(); };
 
 protected:

@@ -24,7 +24,7 @@ public:
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
   GLfloat h() { return mHeight; };
-  void collide(GLvector2f n, GLfloat distance) { };
+  bool collide(GLvector2f n, GLfloat distance) { return true; };
 
   void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   void setRotation(GLfloat x, GLfloat y, GLfloat angle) { mRotation.x = x; mRotation.y = y; mAngle = angle; };
@@ -55,6 +55,14 @@ protected:
   bool load();
   bool prepare();
   virtual void colorMask();
+};
+
+class GLAnimatedSprite {
+public:
+
+
+private:
+  GLSprite * mSprite;
 };
 
 #endif

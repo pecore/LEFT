@@ -10,8 +10,9 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-RobotRocketEffect::RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloat height) : GLParticleEffect(8, 8)
+RobotRocketEffect::RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloat height, int strength, int count) : GLParticleEffect(strength, strength)
 {
+  mCount = count;
   mPos.x = x;
   mPos.y = y;
   mRotation.x = 0.0f;
@@ -26,7 +27,7 @@ RobotRocketEffect::RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloa
   recalculateVectors();
   mMaxDistance = (msrcMid - mdestMid).len();
 
-  for(int i = 0; i < FIRE_PARTICLE_COUNT; i++) {
+  for(int i = 0; i < mCount; i++) {
     GLParticleDummy * p = addParticle();
     p->moveTo(0.0f, 0.0f);
     mLifeTime[i] = 0;
@@ -123,7 +124,7 @@ void RobotRocketEffect::moveTo(GLfloat x, GLfloat y)
   mPos.y = y;
 
   recalculateVectors();
-  for(int i = 0; i < FIRE_PARTICLE_COUNT; i++) {
+  for(int i = 0; i < mCount; i++) {
     GLParticleDummy * p = getParticle(i);
     GLvector2f pos = p->pos();
     GLvector2f dest = mdestA + (mdestAB * frand());
@@ -143,7 +144,7 @@ void RobotRocketEffect::setRotation(GLfloat x, GLfloat y, GLfloat angle)
 
 void RobotRocketEffect::draw()
 {
-  for(int i = 0; i < FIRE_PARTICLE_COUNT; i++) {
+  for(int i = 0; i < mCount; i++) {
     GLParticleDummy * p = getParticle(i);
     spawn(p, i);
     p->move();

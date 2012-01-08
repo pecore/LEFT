@@ -12,11 +12,11 @@
 #include "GLDefines.h"
 #include "GLParticleEffect.h"
 
-#define FIRE_PARTICLE_COUNT 50
+#define MAX_FIRE_PARTICLE_COUNT 512
 
 class RobotRocketEffect : public GLParticleEffect {
 public:
-  RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloat height);
+  RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloat height, int strength = 8, int count = 50);
   ~RobotRocketEffect();
 
   void moveTo(GLfloat x, GLfloat y);
@@ -29,6 +29,8 @@ public:
   void draw();
 
 private:
+  int mCount;
+
   GLvector2f mPos;
   GLvector2f mVelocity;
   GLvector2f mRotation;
@@ -39,7 +41,7 @@ private:
 
   GLfloat mMaxDistance;
   GLvector3f mColor[3];
-  int mLifeTime[FIRE_PARTICLE_COUNT];
+  int mLifeTime[MAX_FIRE_PARTICLE_COUNT];
 
   GLfloat mWidth;
   GLfloat mHeight;

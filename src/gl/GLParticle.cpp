@@ -75,10 +75,11 @@ void GLParticle::colorMask()
 }
 
 
-void GLParticle::collide(GLvector2f n, GLfloat distance)
+bool GLParticle::collide(GLvector2f n, GLfloat distance)
 {
   mPos -= n * ((mWidth / 2.0f) - distance);
   mVelocity -= n * 2.0f * mVelocity.dot(n);
+  return true;
 }
 
 char GLParticle::getAlpha(int x, int y)

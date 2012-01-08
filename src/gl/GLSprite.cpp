@@ -88,23 +88,30 @@ void GLSprite::draw()
 
 bool GLSprite::prepare()
 {
-  if(!mpData) 
-    return false;
+  bool result = true;
 
-  if(mWidth == 0)
-    return false;
+  if(!mpData || (mWidth == 0)) { 
+    result = false;
+  }
 
-  glGenTextures(1, mpTextures);
-  glBindTexture(GL_TEXTURE_2D, mpTextures[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mSizeX, mSizeY, 0, GL_RGBA, GL_UNSIGNED_BYTE, mpData);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
+  if(result) {
+    glGenTextures(1, mpTextures);
+    GL_CHECK_ERROR(result);
 
-  delete mpData;
-  mpData = 0;
+    if(result) {
+      glBindTexture(GL_TEXTURE_2D, mpTextures[0]);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mSizeX, mSizeY, 0, GL_RGBA, GL_UNSIGNED_BYTE, mpData);
+      GL_CHECK_ERROR(result);
+      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
-  return true;
+    delete mpData;
+    mpData = 0;
+  }
+
+  return result;
 }
 
 bool GLSprite::load()

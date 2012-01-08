@@ -18,6 +18,7 @@ public:
   ~RigidBody() { };
   
   GLvector2f pos() { return mPos; };
+  GLvector2f velocity() { return mVelocity; };
 
   virtual void integrate(GLfloat dt) { };
   virtual void collide(GLvector2f base, GLvector2f dir) { };

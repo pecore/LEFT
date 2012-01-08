@@ -13,6 +13,9 @@
 extern GLWindow * gWindow;
 #define GL_SCREEN_BOTTOMLEFT GLvector2f(gWindow->x(), gWindow->y())
 #define GL_SCREEN_CENTER GLvector2f(gWindow->x() + (GL_SCREEN_FWIDTH / 2.0f), gWindow->y() + (GL_SCREEN_FHEIGHT / 2.0f))
+#define GL_CHECK_ERROR(result) if(GL_NO_ERROR != glGetError()) result = false;
+
+#include <assert.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>

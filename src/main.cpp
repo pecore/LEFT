@@ -24,6 +24,7 @@ extern "C" {
 
 bool gActive;
 bool gRunning = false;
+HANDLE gFrameSyncMutex;
 
 GLWindow * gWindow = 0;
 unsigned long long gTimer = 0;
@@ -35,6 +36,7 @@ Map        * gMap = 0;
 RobotModel * gRobot = 0;
 GLParticle * gCross = 0;
 LightSource * gRobotLight = 0;
+unsigned int gProjectileCount = 0;
 
 GLParticle * gBalls[1024];
 int gBallCount = 0;
@@ -74,11 +76,20 @@ void updateMousePosition(GLWindow * window)
 
 void renderScene()	
 {
+  Lock(gFrameSyncMutex);
   updateMousePosition(gWindow);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
   
+  if(gProjectileCount < gMap->Projectiles().size()) {
+    Projectile * proj = 0;
+    foreach(ProjectileList, proj, gMap->Projectiles()) {
+      proj->init();
+    }
+    gProjectileCount = gMap->Projectiles().size();
+  }
+
   for(int i = 0; i < gBallCount; i++) {
     gBalls[i]->move();
     gLightBalls[i]->pos = gBalls[i]->pos();
@@ -87,21 +98,14 @@ void renderScene()
   gRobot->integrate(0.1f);
   gCross->moveTo(gMousePos.x, gMousePos.y);
 
+  
   gMap->drawShadows(GL_SCREEN_BOTTOMLEFT);
   gMap->collide();
+  gMap->drawProjectiles();
   gRobot->draw();
-
+ 
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
-
-  DWORD tickdelta = gTimer - GetTickCount();
-  gTimer = GetTickCount();
-  if(gTimer / 1000 > gTimerCounter) {
-    int delta = (gTimer / 1000) - gTimerCounter;
-    gTimerCounter = gTimer / 1000;
-    gFPS = (GLfloat) gFrameCounter / delta;
-    gFrameCounter = 0;
-  }
 
   gRobotLight->pos = gRobot->pos();
   gCross->draw();
@@ -117,10 +121,19 @@ void renderScene()
   glFontBegin(&gFont);
   glFontTextOut(s, x, y + 15.0f, 0);
   glFontEnd();
+  Unlock(gFrameSyncMutex);
+
+  DWORD tickdelta = gTimer - GetTickCount();
+  gTimer = GetTickCount();
+  if(gTimer / 1000 > gTimerCounter) {
+    int delta = (gTimer / 1000) - gTimerCounter;
+    gTimerCounter = gTimer / 1000;
+    gFPS = (GLfloat) gFrameCounter / delta;
+    gFrameCounter = 0;
+  }
 
   if(tickdelta < (1000 / gFramerate)) Sleep((1000 / gFramerate) - tickdelta);
   gTimer += tickdelta;
-  glFlush();
   gFrameCounter++;
 }
 
@@ -136,9 +149,12 @@ void explodeMap(GLplane * p, GLvector2f center)
 
 int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
 {
-  GLvector2f crossHair = GLvector2f((GLfloat) x - GL_SCREEN_FWIDTH / 2.0f, (GLfloat) y - GL_SCREEN_FHEIGHT / 2.0f);
+  GLvector2f crossHair = GL_SCREEN_BOTTOMLEFT + GLvector2f(x, y);
   GLvector2f pos = gRobot->pos();
 
+  gMap->addProjectile(new RocketProjectile(pos, (crossHair - pos).normal() * 5.0f, gMap));
+
+#if 0
   GLplane * p;
   GLplaneList collision = gMap->collision();
   foreach(GLplaneList, p, collision) {
@@ -164,6 +180,7 @@ int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
       }
     }
   }
+#endif
 
   return 0;
 }
@@ -210,7 +227,9 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
     gKeydown[wParam] = false;
     return 0;
   case WM_RBUTTONDOWN:
-    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(1.0f, 1.0f, 1.0f)));
+    Lock(gFrameSyncMutex);
+    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
+    Unlock(gFrameSyncMutex);
     break;
   case WM_LBUTTONDOWN:
   case WM_MBUTTONDOWN:
@@ -239,7 +258,7 @@ DWORD WINAPI run(void *)
     gRobot = new RobotModel();
     gRobot->moveTo(1100.0f, 1000.0f);
     gMap->addCollidable(gRobot);
-    gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f));
+    gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 0.5f);
     gMap->LightSources().push_back(gRobotLight);
   }
 
@@ -252,7 +271,7 @@ DWORD WINAPI run(void *)
       gBalls[gBallCount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
       gBalls[gBallCount]->moveTo(1000.0f, 1000.0f);
       gBalls[gBallCount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
-      gLightBalls[gBallCount] = new LightSource(gBalls[gBallCount]->pos(), gBalls[gBallCount]->getColor() / 5.0f);
+      gLightBalls[gBallCount] = new LightSource(gBalls[gBallCount]->pos(), gBalls[gBallCount]->getColor() / 5.0f, 0.1f);
       gMap->LightSources().push_back(gLightBalls[gBallCount]);
       gMap->addCollidable(gBalls[gBallCount]);
       gBallCount++;
@@ -268,7 +287,6 @@ DWORD WINAPI run(void *)
 
   for(int i = 0; i < gBallCount; i++) {
     delete gBalls[i];
-    delete gLightBalls[i];
   }
 
   delete gMap;
@@ -277,7 +295,6 @@ DWORD WINAPI run(void *)
   delete Debug::DebugParticle;
   Debug::clear();
 
-  delete gRobotLight;
   delete gCross;
   delete gRobot;
   return 0;
@@ -291,6 +308,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   srand( (unsigned int)GetTickCount() );
   QueryPerformanceFrequency(&gPerformanceFrequency);
   Debug::DebugMutex = CreateMutex(NULL, FALSE, "LeftDebugMutex");
+  gFrameSyncMutex = CreateMutex(NULL, FALSE, "LeftFrameSyncMutex");
 
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
   gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, false, (WNDPROC) WndProc);
@@ -322,6 +340,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   WaitForSingleObject(renderThread, INFINITE);
   
   CloseHandle(Debug::DebugMutex);
+  CloseHandle(gFrameSyncMutex);
   delete gWindow;
 
   timeEndPeriod(1);
