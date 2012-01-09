@@ -16,10 +16,9 @@ class GLSprite : public Collidable {
 public:
   GLSprite(const char * filename, int width = -1, int height = -1);
   ~GLSprite();
-  bool isInitialized() { return mInitialized; };
 
-  unsigned char * data() { return mpData; };
-  GLuint texture() { return mpTextures[0]; };
+  bool isInitialized() { return mInitialized; };
+  GLuint texture() { return mTexture; };
 
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
@@ -36,6 +35,7 @@ public:
 
 protected:
   GLSprite();
+  GLuint mTexture;
   GLvector2f mPos;
   GLvector2f mRotation;
   GLfloat mAngle;
@@ -50,9 +50,6 @@ protected:
   int mSizeX;
   int mSizeY;
 
-  GLuint mpTextures[1];
-
-  bool load();
   bool prepare();
   virtual void colorMask();
 };

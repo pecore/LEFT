@@ -15,7 +15,7 @@ typedef std::list<Sound *> SoundList;
 class SoundPlayer {
 public:
   static void init();
-  static void shutdown();
+  static void clear();
 
   static bool play(int index);
   static Sound * load(const char * filename);

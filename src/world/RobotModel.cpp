@@ -10,15 +10,16 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "ALDefines.h"
+#include "Map.h"
 #include "Debug.h"
 
 #define ROCKET_EFFECT_WIDTH 18.0f
 #define ROCKET_EFFECT_HEIGHT 32.0f
 
-RobotModel::RobotModel()
+RobotModel::RobotModel(Map * map) : mMap(map)
 {
   mBodySprite = new GLSprite("data\\robotv3.png");
-  //mBodySprite->setScale(32.0f);
   mWeaponArmSprite = new GLSprite("data\\arm.png");
 
   mPos.x = GL_SCREEN_FWIDTH / 2.0f - mBodySprite->w() / 2.0f;
@@ -28,7 +29,6 @@ RobotModel::RobotModel()
 
   mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT);
   mStablizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y, 40.0f);
-  
 
   mMass = 1.0f;
   mRocketBoost = 1.0f;
@@ -52,8 +52,16 @@ RobotModel::~RobotModel()
   }
 }
 
-void RobotModel::control(const bool * keydown, GLvector2f mousepos)
+void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
 {
+  if(mousestate & MK_LBUTTON) {
+    //SoundPlayer::play(1);
+    mMap->addProjectile(new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap));
+  }
+  if(mousestate & MK_RBUTTON) {
+    mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
+  }
+
   // Stabilize
   mStable = keydown[VK_SPACE];
   mStablizeEffect->moveTo(mPos.x, mPos.y);

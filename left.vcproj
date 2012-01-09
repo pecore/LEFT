@@ -209,6 +209,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\GLResources.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\GLSprite.h"
 				>
 			</File>
@@ -289,6 +293,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\gl\GLResources.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\gl\GLSprite.cpp"
 				>
 			</File>
@@ -313,10 +321,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\al\PlayStreamThread.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\world\RobotModel.cpp"
 				>
 			</File>
@@ -330,6 +334,10 @@
 			</File>
 			<File
 				RelativePath=".\src\world\RocketProjectile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\al\SoundPlayer.cpp"
 				>
 			</File>
 			<Filter

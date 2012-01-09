@@ -7,7 +7,8 @@
 */
 
 #include "GLSprite.h"
-#include "png.h"
+#include "GLResources.h"
+#include "Debug.h"
 
 GLSprite::GLSprite()
 {
@@ -24,9 +25,11 @@ GLSprite::GLSprite()
 
 GLSprite::GLSprite(const char * filename, int width, int height)
 {
-  mFilename = filename;
-  mWidth = width;
-  mHeight = height;
+  GLTextureResource * res = (GLTextureResource *) gResources->get(filename);
+  assert(res);
+  mTexture = res->texture;
+  mWidth = res->width;
+  mHeight = res->height;
   mScale = 1.0f;
 
   mpData = 0;
@@ -35,11 +38,7 @@ GLSprite::GLSprite(const char * filename, int width, int height)
   mAngle = 0.0f;
   mRotation.x = 0.0f;
   mRotation.y = 0.0f;
-
-  mInitialized = load();
-  if(mInitialized) {
-    mInitialized = prepare();
-  }
+  mInitialized = true;
 }
 
 GLSprite::~GLSprite()
@@ -47,12 +46,36 @@ GLSprite::~GLSprite()
   if(mpData) { 
     delete mpData;
   }
-  glDeleteTextures(1, &mpTextures[0]);
   mpData = 0;
 }
 
 void GLSprite::colorMask()
 {
+  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+bool GLSprite::prepare()
+{
+  bool result = true;
+
+  if(!mpData || (mWidth == 0)) { 
+    result = false;
+  }
+
+  if(result) {
+    glGenTextures(1, &mTexture);
+    glBindTexture(GL_TEXTURE_2D, mTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mSizeX, mSizeY, 0, GL_RGBA, GL_UNSIGNED_BYTE, mpData);
+    GL_ASSERT();
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    delete mpData;
+    mpData = 0;
+  }
+
+  return result;
 }
 
 void GLSprite::draw()
@@ -72,7 +95,8 @@ void GLSprite::draw()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
   colorMask();
-  glBindTexture(GL_TEXTURE_2D, mpTextures[0]);
+  glBindTexture(GL_TEXTURE_2D, mTexture);
+  GL_ASSERT();
   glBegin(GL_QUADS);
 		glTexCoord2f(0.0f, 0.0f); 
     glVertex3f(pos.x - (width / 2), pos.y - (height / 2),  0.0f);
@@ -87,115 +111,9 @@ void GLSprite::draw()
     glVertex3f(pos.x - (width / 2), pos.y + (height / 2),  0.0f);
   glEnd();
   glBindTexture(GL_TEXTURE_2D, 0);
-  glColor3f(1.0f, 1.0f, 1.0f);
   glDisable(GL_BLEND);
   
   glPopMatrix();
-}
-
-bool GLSprite::prepare()
-{
-  bool result = true;
-
-  if(!mpData || (mWidth == 0)) { 
-    result = false;
-  }
-
-  if(result) {
-    glGenTextures(1, mpTextures);
-    glBindTexture(GL_TEXTURE_2D, mpTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mSizeX, mSizeY, 0, GL_RGBA, GL_UNSIGNED_BYTE, mpData);
-    GL_ASSERT();
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    delete mpData;
-    mpData = 0;
-  }
-
-  return result;
-}
-
-bool GLSprite::load()
-{
-  png_byte header[8];
-  png_structp png_ptr;
-  png_infop info_ptr;
-  int color_type, interlace_type;
-  int bit_depth;
-
-  FILE * fp = NULL;
-  fp = fopen(mFilename, "rb");
-  if(!fp) {
-    return false;
-  }
-
-  fread(header, 1, 8, fp);
-  if(png_sig_cmp(header, 0, 8)) {
-    fclose(fp);
-    return false;
-  }
-
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if(!png_ptr) {
-    fclose(fp);
-    return false;
-  }
-
-  info_ptr = png_create_info_struct(png_ptr);
-  if(!info_ptr) {
-    png_destroy_read_struct(&png_ptr, NULL, NULL);
-    fclose(fp);
-    return false;
-  }
-
-  if(setjmp(png_jmpbuf(png_ptr))) {
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    fclose(fp);
-    return false;
-  }
-  
-  png_init_io(png_ptr, fp);
-  png_set_sig_bytes(png_ptr, 8);
-  png_read_info(png_ptr, info_ptr);
-
-  mWidth = mSizeX = png_get_image_width(png_ptr, info_ptr);
-  mHeight = mSizeY = png_get_image_height(png_ptr, info_ptr);
-  color_type = png_get_color_type(png_ptr, info_ptr);
-  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-
-  switch(color_type) {
-  case PNG_COLOR_TYPE_RGBA:
-    break;
-  case PNG_COLOR_TYPE_RGB:
-  default:
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    fclose(fp);
-    return false;
-  }
-  png_read_update_info(png_ptr, info_ptr);
-
-  if(setjmp(png_jmpbuf(png_ptr))) {
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    fclose(fp);
-    return false;
-  }
-
-  unsigned int row_count = (unsigned int) mHeight;
-  unsigned int row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-  mpData = new unsigned char[row_bytes * row_count];
-
-  png_bytepp row_pointers = new png_bytep[row_count];
-  for(int y = 0; y < row_count; y++)
-    row_pointers[row_count - y - 1] = mpData + (y * row_bytes);
-  png_read_image(png_ptr, row_pointers);
-  delete row_pointers;
-
-  png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-  fclose(fp);
-
-  return true;
 }
 
 GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloat width, GLfloat height)
@@ -252,7 +170,6 @@ bool GLAnimatedSprite::draw(int index)
     glVertex3f(pos.x - (width / 2), pos.y + (height / 2),  0.0f);
   glEnd();
   glBindTexture(GL_TEXTURE_2D, 0);
-  glColor3f(1.0f, 1.0f, 1.0f);
   glDisable(GL_BLEND);
 
   return true;

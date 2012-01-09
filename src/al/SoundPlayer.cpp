@@ -14,6 +14,7 @@ void SoundPlayer::init()
 	}
 
   Sounds.push_back(load("data\\bomb.wav"));
+  Sounds.push_back(load("data\\rocketlaunch.wav"));
 }
 
 Sound * SoundPlayer::load(const char * filename)
@@ -64,7 +65,7 @@ Sound * SoundPlayer::load(const char * filename)
   return result;
 }
 
-void SoundPlayer::shutdown()
+void SoundPlayer::clear()
 {
   Sound * s = 0;
   foreach(SoundList, s, Sounds) {

@@ -14,9 +14,11 @@
 #include "RobotStabilizeEffect.h"
 #include "RigidBody.h"
 
+class Map;
+
 class RobotModel : public RigidBody {
 public:
-  RobotModel();
+  RobotModel(Map * map);
   ~RobotModel();
 
   GLfloat w() { return mBodySprite->w(); };
@@ -32,10 +34,12 @@ public:
   void setBoost(GLfloat b) { mRocketBoost = b; };
   void setAngle(GLfloat a) { mAngle = a; };
 
-  void control(const bool * keydown, GLvector2f mousepos);
+  void control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate);
   void draw();
 
 private:
+  Map * mMap;
+
   GLSprite * mBodySprite;
   RobotRocketEffect * mRocketEffect;
   RobotStabilizeEffect * mStablizeEffect;

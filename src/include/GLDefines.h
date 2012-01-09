@@ -9,16 +9,8 @@
 #ifndef _GLDEFINES_H_
 #define _GLDEFINES_H_
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <gl\glew.h>
-#include <gl\gl.h>
-#include <gl\glu.h>
-#include <assert.h>
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <list>
+#include "GLResources.h"
+extern GLResources * gResources;
 
 #define Lock(mutex) WaitForSingleObject(mutex, INFINITE)
 #define Unlock(mutex) ReleaseMutex(mutex)

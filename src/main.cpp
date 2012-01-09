@@ -13,26 +13,28 @@
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 #include "GLWindow.h"
+#include "GLResources.h"
 #include "GLDefines.h"
 #include "ALDefines.h"
-#include "Map.h"
 #include "RobotModel.h"
+#include "Map.h"
+#include "Debug.h"
 
 extern "C" {
 #include "glfont.h"
 }
-#include "Debug.h"
 
 bool gActive;
 bool gRunning = false;
 
+GLResources * gResources = 0;
 GLWindow * gWindow = 0;
 unsigned long long gTimer = 0;
 unsigned long long gTimerCounter = 0;
 GLfloat gFPS = 0.0f;
 GLvector2f gScreen;
 
-Map        * gMap = 0;
+Map * gMap = 0;
 RobotModel * gRobot = 0;
 GLParticle * gCross = 0;
 LightSource * gRobotLight = 0;
@@ -43,6 +45,7 @@ LightSource * gLightBalls[1024];
 
 bool gKeydown[256];
 GLvector2f gMousePos;
+unsigned int gMouseState;
 
 LARGE_INTEGER gPerformanceFrequency;
 const unsigned int gFramerate = 60;
@@ -89,7 +92,7 @@ void renderScene()
     gBalls[i]->move();
     gLightBalls[i]->pos = gBalls[i]->pos();
   }
-  gRobot->control(gKeydown, gMousePos);
+  gRobot->control(gKeydown, gMousePos, gMouseState); gMouseState = 0;
   gRobot->integrate(0.1f);
   gRobotLight->pos = gRobot->pos();
   gCross->moveTo(gMousePos.x, gMousePos.y);
@@ -140,14 +143,7 @@ void explodeMap(GLplane * p, GLvector2f center)
 
 int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
 {
-  if(button & MK_LBUTTON) {
-    GLvector2f crossHair = GL_SCREEN_BOTTOMLEFT + GLvector2f(x, y);
-    GLvector2f pos = gRobot->pos();
-    gMap->addProjectile(new RocketProjectile(pos, (crossHair - pos).normal() * 5.0f, gMap));
-  }
-  if(button & MK_RBUTTON) {
-    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
-  }
+  gMouseState = button;
   return 0;
 }
 
@@ -210,6 +206,11 @@ DWORD WINAPI run(void *)
   wglMakeCurrent(gWindow->DC(), gWindow->RC());
 
   if(gRunning) {
+    gResources = new GLResources();
+    gResources->init();
+  }
+
+  if(gRunning) {
     gMap = new Map();
   }
 
@@ -217,7 +218,7 @@ DWORD WINAPI run(void *)
   gRunning = glFontCreate(&gFont, "data\\couriernew.glf", gFontTex);
 
   if(gRunning) {
-    gRobot = new RobotModel();
+    gRobot = new RobotModel(gMap);
     gRobot->moveTo(1100.0f, 1000.0f);
     gMap->addCollidable(gRobot);
     gRobotLight = new LightSource(gRobot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
@@ -256,13 +257,15 @@ DWORD WINAPI run(void *)
   }
 
   delete gMap;
-  glFontDestroy(&gFont);
-  delete Debug::DebugParticle;
-  Debug::clear();
-  SoundPlayer::shutdown();
-
   delete gCross;
   delete gRobot;
+  glFontDestroy(&gFont);
+  SoundPlayer::clear();
+
+  delete Debug::DebugParticle;
+  Debug::clear();
+  gResources->clear();
+  delete gResources;
   return 0;
 }
 
