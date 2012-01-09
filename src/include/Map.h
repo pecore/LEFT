@@ -14,12 +14,10 @@
 using namespace ClipperLib;
 #define Polygon ClipperLib::Polygon
 #define CLIPPER_PRECISION 100000.0
+#define MAP_COLLIDABLES_MAX 2048
 
 #include "Collidable.h"
-#define MAP_COLLIDABLES_MAX 2048
 #include "Projectile.h"
-extern unsigned int gProjectileCount;
-
 #include "GLParticle.h"
 
 struct Animation {
@@ -70,7 +68,7 @@ public:
   void unlock() { Unlock(mMutex); }
 
   void draw();
-  void drawShadows(GLvector2f window);
+  void drawShadows();
   void drawProjectiles();
   void drawAnimations();
   void collide();

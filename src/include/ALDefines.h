@@ -12,7 +12,7 @@ struct Sound {
 };
 typedef std::list<Sound *> SoundList;
 
-class PlayStreamThread {
+class SoundPlayer {
 public:
   static void init();
   static void shutdown();
@@ -21,8 +21,8 @@ public:
   static Sound * load(const char * filename);
   static SoundList Sounds;
 private:
-  PlayStreamThread() { }
-  ~PlayStreamThread() { }
+  SoundPlayer() { }
+  ~SoundPlayer() { }
 };
 
 #endif

@@ -9,14 +9,13 @@
 #ifndef _GLDEFINES_H_
 #define _GLDEFINES_H_
 
-#include "GLWindow.h"
-extern GLWindow * gWindow;
-#define GL_SCREEN_BOTTOMLEFT GLvector2f(gWindow->x(), gWindow->y())
-#define GL_SCREEN_CENTER GLvector2f(gWindow->x() + (GL_SCREEN_FWIDTH / 2.0f), gWindow->y() + (GL_SCREEN_FHEIGHT / 2.0f))
-#define GL_CHECK_ERROR(result) if(GL_NO_ERROR != glGetError()) result = false;
-
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <gl\glew.h>
+#include <gl\gl.h>
+#include <gl\glu.h>
 #include <assert.h>
-
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <list>
@@ -122,5 +121,15 @@ static GLvector3f yellow(1.0f, 0.7f, 0.0f);
 static GLvector3f blue(0.3f, 0.6f, 0.9f);
 static GLvector3f black(0.0f, 0.0f, 0.0f);
 static GLvector2f gravity(0.0f, -9.81f);
+
+extern GLvector2f gScreen;
+#define GL_SCREEN_BOTTOMLEFT gScreen
+#define GL_SCREEN_CENTER     (gScreen + GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f))
+#define GL_SCREEN_IWIDTH     1280
+#define GL_SCREEN_FWIDTH     1280.0f
+#define GL_SCREEN_IHEIGHT    720
+#define GL_SCREEN_FHEIGHT    720.0f
+#define GL_MAP_THRESHOLD     500
+#define GL_ASSERT() assert(GL_NO_ERROR == glGetError());
 
 #endif

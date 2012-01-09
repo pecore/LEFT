@@ -238,17 +238,17 @@ bool GLWindow::initOpenGL()
 
   if(result) {
     glMatrixMode(GL_PROJECTION);		
-	  glLoadIdentity();									
-    glViewport(0, 0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
-    glOrtho(0, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, 0, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR, 0, 128);
+    glLoadIdentity();									
+    glViewport(0, 0, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT);
+    glOrtho(0, GL_SCREEN_IWIDTH, 0, GL_SCREEN_IHEIGHT, 0, 128);
 
-	  glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
-	  glLoadIdentity();									// Reset The Modelview Matrix
+    glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
+    glLoadIdentity();									// Reset The Modelview Matrix
 
     glEnable(GL_TEXTURE_2D);
-	  glShadeModel(GL_SMOOTH);							
-	  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);	
-	  glClearDepth(1.0f);
+    glShadeModel(GL_SMOOTH);							
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);	
+    glClearDepth(1.0f);
 
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
   }

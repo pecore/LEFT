@@ -21,7 +21,7 @@ public:
     va_list args;
     va_start(args, fmt);
     vsprintf(msg, fmt, args);
-    MessageBox(NULL, msg, "Debug", 0);
+    MessageBox(0, msg, "Debug", 0);
     va_end(args);
 #endif
   }

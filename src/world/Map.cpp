@@ -17,16 +17,14 @@ Map::Map() : mMap(0), mCollision(0)
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
   glGenFramebuffersEXT(1, &mFramebuffer);
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mFramebuffer);
   glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, mFramebufferTexture, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, NULL);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
   
   generate();
 }
@@ -59,7 +57,7 @@ void Map::draw()
   Unlock(mMutex);
 }
 
-void Map::drawShadows(GLvector2f window)
+void Map::drawShadows()
 {
   GLplane * p;
   GLfloat radius = 1280.0f;
@@ -93,12 +91,17 @@ void Map::drawShadows(GLvector2f window)
       GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
       GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
 
+      base -= GL_SCREEN_BOTTOMLEFT;
+      dest -= GL_SCREEN_BOTTOMLEFT;
+      bproj -= GL_SCREEN_BOTTOMLEFT;
+      dproj -= GL_SCREEN_BOTTOMLEFT;
+
       glBegin(GL_QUADS);
-      glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
-      glVertex3f(base.x, base.y,  0.0f);
-      glVertex3f(bproj.x, bproj.y,  0.0f);
-      glVertex3f(dproj.x, dproj.y,  0.0f);
-      glVertex3f(dest.x, dest.y,  0.0f);
+        glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
+        glVertex3f(base.x, base.y,  0.0f);
+        glVertex3f(bproj.x, bproj.y,  0.0f);
+        glVertex3f(dproj.x, dproj.y,  0.0f);
+        glVertex3f(dest.x, dest.y,  0.0f);
       glEnd();
     }
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -109,13 +112,13 @@ void Map::drawShadows(GLvector2f window)
     glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
     glBegin(GL_QUADS);
       glTexCoord2f(0.0f, 0.0f); 
-      glVertex3f(window.x, window.y,  0.0f);
+      glVertex3f(0.0f, 0.0f,  0.0f);
       glTexCoord2f(1.0f, 0.0f);
-      glVertex3f(window.x + GL_SCREEN_FWIDTH, window.y,  0.0f);
+      glVertex3f(GL_SCREEN_FWIDTH, 0.0f,  0.0f);
       glTexCoord2f(1.0f, 1.0f); 
-      glVertex3f(window.x + GL_SCREEN_FWIDTH, window.y + GL_SCREEN_FHEIGHT,  0.0f);
+      glVertex3f(GL_SCREEN_FWIDTH, GL_SCREEN_FHEIGHT,  0.0f);
       glTexCoord2f(0.0f, 1.0f); 
-      glVertex3f(window.x, window.y + GL_SCREEN_FHEIGHT,  0.0f);
+      glVertex3f(0.0f, GL_SCREEN_FHEIGHT,  0.0f);
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_BLEND);
@@ -284,7 +287,6 @@ void Map::collide()
             toremove.push_back(c);
             if(isProjectile(c)) {
               removeProjectile((Projectile *) c);
-              gProjectileCount--;
             }
             continue;
           }

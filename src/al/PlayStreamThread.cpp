@@ -3,9 +3,9 @@
 #include "Framework.h"
 #include "CWaves.h"
 
-SoundList PlayStreamThread::Sounds;
+SoundList SoundPlayer::Sounds;
 
-void PlayStreamThread::init()
+void SoundPlayer::init()
 {
 	// Initialize Framework
 	ALFWInit();
@@ -16,12 +16,12 @@ void PlayStreamThread::init()
   Sounds.push_back(load("data\\bomb.wav"));
 }
 
-Sound * PlayStreamThread::load(const char * filename)
+Sound * SoundPlayer::load(const char * filename)
 {
   Sound * result = new Sound;
   result->data = 0;
   result->size = 0;
-  CWaves * pWaveLoader = NULL;
+  CWaves * pWaveLoader = 0;
 	WAVEID WaveID;
 	WAVEFORMATEX	wfex;
 
@@ -64,7 +64,7 @@ Sound * PlayStreamThread::load(const char * filename)
   return result;
 }
 
-void PlayStreamThread::shutdown()
+void SoundPlayer::shutdown()
 {
   Sound * s = 0;
   foreach(SoundList, s, Sounds) {
@@ -105,13 +105,13 @@ DWORD WINAPI stream_run(void * data)
   return 0;
 }
 
-bool PlayStreamThread::play(int index)
+bool SoundPlayer::play(int index)
 {
   Sound * s = 0; int i = 0;
   foreach(SoundList, s, Sounds) {
     if(i++ == index) break;
   }
-  HANDLE althread = CreateThread(NULL, 0, &stream_run, s, 0, 0);
+  HANDLE althread = CreateThread(0, 0, &stream_run, s, 0, 0);
   if(althread != INVALID_HANDLE_VALUE) {
     return true;
   }

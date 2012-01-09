@@ -25,19 +25,17 @@ extern "C" {
 
 bool gActive;
 bool gRunning = false;
-HANDLE gFrameSyncMutex;
 
 GLWindow * gWindow = 0;
 unsigned long long gTimer = 0;
 unsigned long long gTimerCounter = 0;
 GLfloat gFPS = 0.0f;
-GLfloat gDebugValue;
+GLvector2f gScreen;
 
 Map        * gMap = 0;
 RobotModel * gRobot = 0;
 GLParticle * gCross = 0;
 LightSource * gRobotLight = 0;
-unsigned int gProjectileCount = 0;
 
 GLParticle * gBalls[1024];
 int gBallCount = 0;
@@ -57,6 +55,7 @@ GLParticle * Debug::DebugParticle = 0;
 std::list<Debug::DebugVectorType> Debug::DebugVectors;
 bool Debug::DebugActive = false;
 HANDLE Debug::DebugMutex;
+GLfloat gDebugValue;
 
 void updateMousePosition(GLWindow * window)
 {
@@ -72,8 +71,8 @@ void updateMousePosition(GLWindow * window)
         POINT delta;
         int x = windowrect.left + clientrect.left + fx; 
         int y = windowrect.top + clientrect.top + fy;
-        gMousePos.x = gWindow->x() + cursorpos.x - x;
-        gMousePos.y = (gWindow->y() + GL_SCREEN_FHEIGHT) - (cursorpos.y - y);
+        gMousePos = gScreen + GLvector2f(cursorpos.x - x, GL_SCREEN_FHEIGHT);
+        gMousePos.y -= (cursorpos.y - y);
       }
     }
   }
@@ -81,19 +80,10 @@ void updateMousePosition(GLWindow * window)
 
 void renderScene()	
 {
-  Lock(gFrameSyncMutex);
   updateMousePosition(gWindow);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
-  
-  if(gProjectileCount < gMap->Projectiles().size()) {
-    Projectile * proj = 0;
-    foreach(ProjectileList, proj, gMap->Projectiles()) {
-      proj->init();
-    }
-    gProjectileCount = gMap->Projectiles().size();
-  }
 
   for(int i = 0; i < gBallCount; i++) {
     gBalls[i]->move();
@@ -101,10 +91,10 @@ void renderScene()
   }
   gRobot->control(gKeydown, gMousePos);
   gRobot->integrate(0.1f);
+  gRobotLight->pos = gRobot->pos();
   gCross->moveTo(gMousePos.x, gMousePos.y);
 
-  
-  gMap->drawShadows(GL_SCREEN_BOTTOMLEFT);
+  gMap->drawShadows();
   gMap->collide();
   gMap->drawProjectiles();
   gMap->drawAnimations();
@@ -112,23 +102,19 @@ void renderScene()
  
   for(int i = 0; i < gBallCount; i++)
     gBalls[i]->draw();
-
-  gRobotLight->pos = gRobot->pos();
+  
   gCross->draw();
-
-  gWindow->updateCenter(gRobot->pos().x, gRobot->pos().y);
-  int x = gWindow->x();
-  int y = gWindow->y();
-  glViewport(-x, -y, GL_SCREEN_IWIDTH * GL_SCREEN_FACTOR, GL_SCREEN_IHEIGHT * GL_SCREEN_FACTOR);
+  gScreen = gRobot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
+  
   Debug::drawVectors(gRobot->pos());
 
   char s[512]; sprintf(s, "%.2f FPS Map: %.2fms             Debug: F1 Quit: ESC             [W]/[S]: Boost [A]/[D]: Turn [Space]: Stop", gFPS, gDebugValue); int i = strlen(s);
   memset(&s[i], 0x20, 512 - i); s[511] = 0; 
   glFontBegin(&gFont);
-  glFontTextOut(s, x, y + 15.0f, 0);
+  glFontTextOut(s, 0.0f, 15.0f, 0);
   glFontEnd();
-  Unlock(gFrameSyncMutex);
 
+  // FPS
   DWORD tickdelta = gTimer - GetTickCount();
   gTimer = GetTickCount();
   if(gTimer / 1000 > gTimerCounter) {
@@ -137,7 +123,6 @@ void renderScene()
     gFPS = (GLfloat) gFrameCounter / delta;
     gFrameCounter = 0;
   }
-
   if(tickdelta < (1000 / gFramerate)) Sleep((1000 / gFramerate) - tickdelta);
   gTimer += tickdelta;
   gFrameCounter++;
@@ -155,9 +140,14 @@ void explodeMap(GLplane * p, GLvector2f center)
 
 int onMouseDown(unsigned int button, unsigned int x, unsigned int y)
 {
-  GLvector2f crossHair = GL_SCREEN_BOTTOMLEFT + GLvector2f(x, y);
-  GLvector2f pos = gRobot->pos();
-  gMap->addProjectile(new RocketProjectile(pos, (crossHair - pos).normal() * 5.0f, gMap));
+  if(button & MK_LBUTTON) {
+    GLvector2f crossHair = GL_SCREEN_BOTTOMLEFT + GLvector2f(x, y);
+    GLvector2f pos = gRobot->pos();
+    gMap->addProjectile(new RocketProjectile(pos, (crossHair - pos).normal() * 5.0f, gMap));
+  }
+  if(button & MK_RBUTTON) {
+    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
+  }
   return 0;
 }
 
@@ -203,10 +193,6 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)			
     gKeydown[wParam] = false;
     return 0;
   case WM_RBUTTONDOWN:
-    Lock(gFrameSyncMutex);
-    gMap->LightSources().push_back(new LightSource(gRobot->pos(), GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
-    Unlock(gFrameSyncMutex);
-    break;
   case WM_LBUTTONDOWN:
   case WM_MBUTTONDOWN:
   case WM_XBUTTONDOWN:
@@ -239,7 +225,7 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
-    PlayStreamThread::init();
+    SoundPlayer::init();
   }
 
   if(gRunning) {
@@ -261,7 +247,7 @@ DWORD WINAPI run(void *)
 	while(gRunning) {
     if(gActive)	{
 			renderScene();			
-			gWindow->swapBuffers();	
+			gWindow->swapBuffers();
 		}
   }
 
@@ -273,7 +259,7 @@ DWORD WINAPI run(void *)
   glFontDestroy(&gFont);
   delete Debug::DebugParticle;
   Debug::clear();
-  PlayStreamThread::shutdown();
+  SoundPlayer::shutdown();
 
   delete gCross;
   delete gRobot;
@@ -287,8 +273,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   timeBeginPeriod(1);
   srand( (unsigned int)GetTickCount() );
   QueryPerformanceFrequency(&gPerformanceFrequency);
-  Debug::DebugMutex = CreateMutex(NULL, FALSE, "LeftDebugMutex");
-  gFrameSyncMutex = CreateMutex(NULL, FALSE, "LeftFrameSyncMutex");
+  Debug::DebugMutex = CreateMutex(0, FALSE, "LeftDebugMutex");
 
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
   gWindow = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, false, (WNDPROC) WndProc);
@@ -297,7 +282,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     gRunning = gWindow->isInitialized();
     if(gRunning) {
       wglMakeCurrent(0, 0);
-      renderThread = CreateThread(NULL, 0, &run, 0, 0, 0);
+      renderThread = CreateThread(0, 0, &run, 0, 0, 0);
       if(renderThread == INVALID_HANDLE_VALUE) {
         delete gWindow;
         return 0;
@@ -306,21 +291,18 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   }
 
 	while(gRunning) {
-    while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
       if(msg.message == WM_QUIT) {
         gRunning = false;
         break;
       }
       DispatchMessage(&msg);
     }
-
     Sleep(16);
 	}
 
   WaitForSingleObject(renderThread, INFINITE);
-  
   CloseHandle(Debug::DebugMutex);
-  CloseHandle(gFrameSyncMutex);
   delete gWindow;
 
   timeEndPeriod(1);
