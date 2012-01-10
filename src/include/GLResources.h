@@ -3,26 +3,41 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
 #include <gl\glew.h>
+#endif
 #include <gl\gl.h>
 #include <gl\glu.h>
-#include <assert.h>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <assert.h>
 #include <list>
 
-class GLResource { public: unsigned int type; };
-#define GL_RESOURCE_TEXTURE 0
+#define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
+                                if(iter ## _ref != list.end()) iter = *iter ## _ref; \
+                                for(; iter && iter ## _ref != list.end(); iter ## _ref++, iter = (iter ## _ref != list.end()) ? *iter ## _ref : 0)
 
+
+#define GL_RESOURCE_TEXTURE   0
+#define GL_RESOURCE_SOUND     1
+
+class GLResource { public: unsigned int type; };
 class GLTextureResource : public GLResource {
 public:
   GLTextureResource(GLuint _texture, GLfloat _width, GLfloat _height)
-    : texture(_texture), width(_width), height(_height) { type = GL_RESOURCE_TEXTURE; }
-  
+    : texture(_texture), width(_width), height(_height) 
+    { type = GL_RESOURCE_TEXTURE; }
   GLuint texture;
   GLfloat width;
   GLfloat height;
+};
+struct Sound;
+class GLSoundResource : public GLResource {
+public:
+  GLSoundResource(Sound * _sound)
+    : sound(_sound)
+    { type = GL_RESOURCE_SOUND; }
+  Sound * sound;
 };
 
 typedef struct {

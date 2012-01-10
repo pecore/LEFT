@@ -10,7 +10,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "ALDefines.h"
+#include "SoundPlayer.h"
 #include "Map.h"
 #include "Debug.h"
 

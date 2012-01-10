@@ -86,10 +86,6 @@ public:
   ~GLplane();
 };
 
-#define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
-                                if(iter ## _ref != list.end()) iter = *iter ## _ref; \
-                                for(; iter && iter ## _ref != list.end(); iter ## _ref++, iter = (iter ## _ref != list.end()) ? *iter ## _ref : 0)
-
 typedef std::list<GLplane *> GLplaneList;
 typedef std::list<GLtriangle *> GLtriangleList;
 typedef std::list<GLvector2f *> GLpolygon;

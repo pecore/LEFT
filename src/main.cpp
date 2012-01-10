@@ -15,7 +15,7 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "GLWindow.h"
 #include "GLResources.h"
 #include "GLDefines.h"
-#include "ALDefines.h"
+#include "SoundPlayer.h"
 #include "RobotModel.h"
 #include "Map.h"
 #include "Debug.h"
@@ -226,10 +226,6 @@ DWORD WINAPI run(void *)
   }
 
   if(gRunning) {
-    SoundPlayer::init();
-  }
-
-  if(gRunning) {
     gCross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
   }
 
@@ -260,10 +256,10 @@ DWORD WINAPI run(void *)
   delete gCross;
   delete gRobot;
   glFontDestroy(&gFont);
-  SoundPlayer::clear();
 
-  delete Debug::DebugParticle;
   Debug::clear();
+  delete Debug::DebugParticle;
+  
   gResources->clear();
   delete gResources;
   return 0;

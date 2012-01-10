@@ -16,6 +16,7 @@ class Map;
 class GLSprite;
 class RobotRocketEffect;
 class LightSource;
+struct Sound;
 
 class Projectile : public Collidable {
 public:
@@ -55,6 +56,7 @@ private:
   GLSprite * mSprite;
   RobotRocketEffect * mRocketEffect;
   LightSource * mLight;
+  Sound * mExplosionSound;
 };
 
 #endif

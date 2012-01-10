@@ -3,7 +3,7 @@
 #include "Map.h"
 #include "GLSprite.h"
 #include "RobotRocketEffect.h"
-#include "ALDefines.h"
+#include "SoundPlayer.h"
 
 RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
@@ -30,6 +30,7 @@ void RocketProjectile::init()
   mMap->LightSources().push_back(mLight);
   mWidth = mSprite->w();
   mHeight = mSprite->h();
+  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
   mInitialized = true;
 }
 
@@ -43,7 +44,7 @@ bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
   mMap->addCirclePolygon(mPos, 100.0f);
   mMap->LightSources().remove(mLight);
   mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
-  SoundPlayer::play(0);
+  SoundPlayer::play(mExplosionSound);
   delete mLight;
   return false;
 }

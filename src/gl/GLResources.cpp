@@ -2,11 +2,12 @@
 #include <windows.h>
 #include "png.h"
 
-#include "Debug.h"
+#include "SoundPlayer.h"
 
 void GLResources::init()
 {
   WIN32_FIND_DATA ffd;
+  SoundPlayer::init();
 
   HANDLE hFind = FindFirstFile(".\\data\\*.*", &ffd);
   assert(INVALID_HANDLE_VALUE != hFind);
@@ -14,15 +15,15 @@ void GLResources::init()
   do {
     if(!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
       char ext[4]; strncpy(ext, ffd.cFileName + strlen(ffd.cFileName) - 3, 4); ext[3] = 0;
+      char filename[256]; sprintf(filename, "data\\%s", ffd.cFileName);
+
       if(strcmp(ext, "png") == 0) {
         GLuint texture;
         int width = 0;
         int height = 0;
-        char filename[256];
         unsigned char * data = 0;
         unsigned int size = 0;
 
-        sprintf(filename, "data\\%s", ffd.cFileName);
         assert(load(filename, &data, width, height, size));
         if(data) {
           glGenTextures(1, &texture);
@@ -42,6 +43,15 @@ void GLResources::init()
           delete data;
         }
       }
+      if(strcmp(ext, "wav") == 0) {
+        Sound * sound = SoundPlayer::load(filename);
+        if(sound) {
+          ResourcePair * rp = new ResourcePair;
+          strncpy(rp->path, filename, sizeof(rp->path)-1);
+          rp->value = new GLSoundResource(sound);
+          mResources.push_back(rp);
+        }
+      }
     }
   } while(FindNextFile(hFind, &ffd) != 0);
 }
@@ -58,6 +68,7 @@ void GLResources::clear()
     delete rp->value;
     delete rp;
   }
+  SoundPlayer::clear();
 }
 
 GLResource * GLResources::get(const char * path)
