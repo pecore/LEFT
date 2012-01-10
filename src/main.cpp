@@ -42,8 +42,8 @@ typedef struct {
   int ballcount;
 
   struct {
-    // FIXME mutex
     bool keydown[256];
+    // FIXME mutex
     GLvector2f mousepos;
     unsigned int mousebutton;
   } control;
@@ -194,7 +194,6 @@ DWORD WINAPI run(void * lh)
 
   if(left->running) {
     left->resources = new GLResources();
-    left->resources->init();
     gResources = left->resources;
     left->font.couriernew = ((GLFontResource *)left->resources->get("data\\couriernew.glf"))->font;
   }
@@ -231,15 +230,11 @@ DWORD WINAPI run(void * lh)
   for(int i = 0; i < left->ballcount; i++) {
     delete left->balls[i];
   }
-
+  Debug::clear();
   delete left->map;
   delete left->cross;
   delete left->robot;
-
-  Debug::clear();
   delete Debug::DebugParticle;
-  
-  left->resources->clear();
   delete left->resources;
   return 0;
 }
@@ -254,6 +249,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left_handle * left = new left_handle;
   left->ballcount = 0;
   left->control.mousebutton = 0;
+  memset(&left->control, 0, 256);
   memset(&left->timing, 0, sizeof(left->timing));
 
   QueryPerformanceFrequency(&left->timing.performancefrequency);

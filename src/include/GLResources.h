@@ -59,12 +59,8 @@ typedef std::list<ResourcePair *> ResourceList;
 
 class GLResources {
 public:
-  GLResources() { }
-  ~GLResources() { }
-
-  void init();
-  void clear();
-
+  GLResources();
+  ~GLResources();
   GLResource * get(const char * path);
 private:
   ResourceList mResources;  

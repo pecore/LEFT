@@ -4,7 +4,7 @@
 
 #include "SoundPlayer.h"
 
-void GLResources::init()
+GLResources::GLResources()
 {
   WIN32_FIND_DATA ffd;
   SoundPlayer::init();
@@ -69,7 +69,7 @@ void GLResources::init()
   } while(FindNextFile(hFind, &ffd) != 0);
 }
 
-void GLResources::clear()
+GLResources::~GLResources()
 {
   ResourcePair * rp = 0;
   foreach(ResourceList, rp, mResources) {
