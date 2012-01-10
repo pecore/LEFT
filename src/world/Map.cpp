@@ -10,7 +10,7 @@
 #include "Map.h"
 #include "Debug.h"
 
-Map::Map() : mMap(0), mCollision(0)
+Map::Map()
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
   mSpot = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IWIDTH, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
@@ -33,10 +33,6 @@ Map::~Map()
 {
   CloseHandle(mMutex);
 
-  GLtriangle * t = 0;
-  foreach(GLtriangleList, t, mMap) {
-    delete t;
-  }
   GLplane * p = 0;
   foreach(GLplaneList, p, mCollision) {
     delete p;
@@ -52,9 +48,6 @@ Map::~Map()
 
 void Map::draw()
 {
-  Lock(mMutex);
-  drawTriangleList(GLvector2f(0.0f, 0.0f), mMap, GLvector3f(0.4f, 0.3f, 0.3f), 0.0f);
-  Unlock(mMutex);
 }
 
 void Map::drawShadows()
@@ -160,8 +153,8 @@ void Map::generate()
   Polygons p, q;
   p.resize(1); q.resize(1);
 
-  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, mMap, *(p.begin()));
-  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, mMap, *(q.begin()));
+  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, *(p.begin()));
+  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, *(q.begin()));
   c.AddPolygons(p, ptSubject);
   c.AddPolygons(q, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
@@ -212,25 +205,19 @@ void Map::updateCollision()
   Unlock(mMutex);
 }
 
-void Map::genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon, bool random, GLfloat _segments_per_100)
+void Map::genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random, GLfloat _segments_per_100)
 {
   const GLfloat segments_per_100 = _segments_per_100;
   int segments = (int) ((size / 100.0f) * segments_per_100) | 0x01;
 
   GLvector2f radius(size, 0.0f);
-  GLvector2f p, last = pos + radius;
+  GLvector2f p;
 
   GLfloat delta = 2.0f * M_PI / segments;
   for(GLfloat angle = 0.0f; angle < (2.0f * M_PI); angle += delta) {
-    last = p;
     p = pos + (radius.rotate(angle) * (random?(0.9f + frand()/5):1.0f));
-    
     polygon.push_back(IntPoint((long64)(p.x * CLIPPER_PRECISION), (long64)(p.y * CLIPPER_PRECISION)));
-    if(angle > 0.0f) {
-      triangles.push_back(new GLtriangle(pos, p, last));
-    }
   }
-  triangles.push_back(new GLtriangle(pos, p, pos + radius));
 }
 
 void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
@@ -238,7 +225,7 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
   Clipper c;
   Polygons p;
   p.resize(1);
-  genCirclePolygon(pos, size, mMap, p[0]);
+  genCirclePolygon(pos, size, p[0]);
   c.AddPolygons(mCMap, ptSubject);
   c.AddPolygons(p, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);

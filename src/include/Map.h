@@ -99,7 +99,6 @@ private:
   }
 
   Polygons mCMap;
-  GLtriangleList mMap;
   GLplaneList mCollision;
 
   GLParticle * mSpot;
@@ -109,7 +108,7 @@ private:
   AnimationList mAnimations;
 
   void generate();
-  void genCirclePolygon(GLvector2f pos, GLfloat size, GLtriangleList & triangles, Polygon & polygon, bool random = true, GLfloat _segments_per_100 = 12);
+  void genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random = true, GLfloat _segments_per_100 = 12);
 };
 
 #endif
