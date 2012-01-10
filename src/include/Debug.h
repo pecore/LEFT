@@ -90,7 +90,7 @@ public:
       DebugParticle = new GLParticle(size, size, 1.0f, 1.0f, 1.0f, glpSolid);
     }
 
-    int repeat = 20;
+    int repeat = 5;
     bool showdir = false;
 
     Lock(DebugMutex);

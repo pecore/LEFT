@@ -52,6 +52,19 @@ void GLResources::init()
           mResources.push_back(rp);
         }
       }
+      if(strcmp(ext, "glf") == 0) {
+        GLFONT font;
+        GLuint texture;
+        glGenTextures(1, &texture);
+        if(glFontCreate(&font, filename, texture)) {
+          ResourcePair * rp = new ResourcePair;
+          strncpy(rp->path, filename, sizeof(rp->path)-1);
+          rp->value = new GLFontResource(font, texture);
+          mResources.push_back(rp);
+        } else {
+          glDeleteTextures(1, &texture);
+        }
+      }
     }
   } while(FindNextFile(hFind, &ffd) != 0);
 }
@@ -63,6 +76,10 @@ void GLResources::clear()
     switch(rp->value->type) {
     case GL_RESOURCE_TEXTURE:
       glDeleteTextures(1, &(((GLTextureResource *)rp)->texture));
+      break;
+    case GL_RESOURCE_FONT:
+      glFontDestroy(&(((GLFontResource *)rp)->font));
+      glDeleteTextures(1, &(((GLFontResource *)rp)->texture));
       break;
     }
     delete rp->value;

@@ -150,8 +150,8 @@ DWORD WINAPI stream_run(void * data)
   ALint iState = AL_PLAYING;
   ALuint uiBuffers[1];
 
-  alGenBuffers( 1, uiBuffers );
-  alGenSources( 1, &uiSource );
+  alGenBuffers(1, uiBuffers);
+  alGenSources(1, &uiSource);
   alBufferData(uiBuffers[0], sound->format, sound->data, sound->size, sound->freq);
   assert(AL_NO_ERROR == alGetError());
   alSourceQueueBuffers(uiSource, 1, &uiBuffers[0]);
@@ -165,8 +165,8 @@ DWORD WINAPI stream_run(void * data)
   alSourceStop(uiSource);
   alSourcei(uiSource, AL_BUFFER, 0);
 
-  alDeleteSources( 1, &uiSource );
-  alDeleteBuffers( 1, uiBuffers );
+  alDeleteSources(1, &uiSource);
+  alDeleteBuffers(1, uiBuffers);
 
   return 0;
 }

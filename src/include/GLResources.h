@@ -12,14 +12,17 @@
 #include <math.h>
 #include <assert.h>
 #include <list>
+extern "C" {
+#include "glfont.h"
+}
 
 #define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
                                 if(iter ## _ref != list.end()) iter = *iter ## _ref; \
                                 for(; iter && iter ## _ref != list.end(); iter ## _ref++, iter = (iter ## _ref != list.end()) ? *iter ## _ref : 0)
 
-
 #define GL_RESOURCE_TEXTURE   0
 #define GL_RESOURCE_SOUND     1
+#define GL_RESOURCE_FONT      2
 
 class GLResource { public: unsigned int type; };
 class GLTextureResource : public GLResource {
@@ -38,6 +41,14 @@ public:
     : sound(_sound)
     { type = GL_RESOURCE_SOUND; }
   Sound * sound;
+};
+class GLFontResource : public GLResource {
+public:
+  GLFontResource(GLFONT _font, GLuint _texture)
+    : font(_font), texture(_texture)
+    { type = GL_RESOURCE_FONT; }
+  GLFONT font;
+  GLuint texture;
 };
 
 typedef struct {
