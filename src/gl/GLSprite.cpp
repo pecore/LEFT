@@ -31,6 +31,7 @@ GLSprite::GLSprite(const char * filename, int width, int height)
   mWidth = res->width;
   mHeight = res->height;
   mScale = 1.0f;
+  ma = 1.0f;
 
   mpData = 0;
   mPos.x = 0.0f;
@@ -51,7 +52,7 @@ GLSprite::~GLSprite()
 
 void GLSprite::colorMask()
 {
-  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+  glColor4f(1.0f, 1.0f, 1.0f, ma);
 }
 
 bool GLSprite::prepare()

@@ -54,6 +54,7 @@ void Map::draw()
 {
   MapObject * o = 0;
   foreach(MapObjectList, o, mMapObjects) {
+    o->setAlpha(getOpacity(o->pos()));
     o->draw();
   }
 }
@@ -185,6 +186,28 @@ void Map::generate()
 
   updateCollision();
 }                           
+
+GLfloat Map::getOpacity(GLvector2f pos)
+{
+  LightSource * s = 0;
+  const GLfloat maxdistance = 1200.0f;
+  GLfloat mindistance = maxdistance;
+  
+  foreach(LightSourceList, s, mLightSources) {
+    if((pos - s->pos).len() < mindistance) {
+      mindistance = (pos - s->pos).len();
+    }
+  }
+
+  GLfloat alpha = 0.0f;
+  if(mindistance <= maxdistance) {
+    alpha = 5000.0f / (mindistance * mindistance);
+  } else {
+    alpha = 0.0f;
+  }
+  if(alpha > 1.0f) alpha = 1.0f; 
+  return alpha;
+}
 
 void Map::updateCollision()
 {

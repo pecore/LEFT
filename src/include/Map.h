@@ -124,6 +124,7 @@ public:
 
   void updateCollision();
   void addCirclePolygon(GLvector2f pos, GLfloat size);
+  GLfloat getOpacity(GLvector2f pos);
 
 private:
   HANDLE mMutex;

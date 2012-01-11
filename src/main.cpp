@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.58"
+#define LEFT_VERSION "0.59"
 
 #include "GLResources.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -23,6 +23,7 @@ bool gActive;
 GLResources * gResources = 0;
 GLvector2f gScreen;
 const unsigned int gFramerate = 60;
+bool gSeen = false;
 
 typedef struct {
   bool running;
@@ -34,7 +35,8 @@ typedef struct {
   GLParticle * cross;
   RobotModel * robot;
   LightSource * robotlight;
-  
+  MapObject * house;
+
   GLParticle * balls[1024];
   LightSource * lightballs[1024];
   int ballcount;
@@ -144,6 +146,21 @@ void renderScene(left_handle * left)
     }    
   }
   Unlock(left->console.mutex);
+
+  {
+    GLfloat housedistance = (left->robot->pos() - left->house->pos()).len();
+    GLvector2f pos = left->house->pos() - GL_SCREEN_BOTTOMLEFT;
+    if(housedistance < 200.0f) {
+      glFontBegin(&left->font.couriernew);
+      glFontTextOut("There You Are", pos.x + 150.0f, pos.y, 0);
+      glFontEnd();
+      gSeen = true;
+    } if(gSeen && housedistance > 500.0f)  { 
+      glFontBegin(&left->font.couriernew);
+      glFontTextOut("Are You Still There?", pos.x - 100.0f, pos.y, 0);
+      glFontEnd();
+    }
+  }
 
   unsigned long tickdelta = left->timing.timer - GetTickCount();
   left->timing.timer = GetTickCount();
@@ -349,9 +366,9 @@ DWORD WINAPI run(void * lh)
     left->map->addCollidable(left->robot);
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
     left->map->LightSources().push_back(left->robotlight);
-    MapObject * house = new MapObject("house");
-    left->map->MapObjects().push_back(house);
-    house->moveTo(2000.0f, 2000.0f);
+    left->house = new MapObject("house");
+    left->map->MapObjects().push_back(left->house);
+    left->house->moveTo(2000.0f, 2000.0f);
     left->map->updateCollision();
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);

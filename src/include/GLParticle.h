@@ -44,7 +44,6 @@ protected:
   GLfloat mr;
   GLfloat mg;
   GLfloat mb;
-  GLfloat ma;
   
   int mForm;
 
