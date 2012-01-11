@@ -66,6 +66,7 @@ typedef std::vector< Polygon > Polygons;
 
 std::ostream& operator <<(std::ostream &s, Polygon &p);
 std::ostream& operator <<(std::ostream &s, Polygons &p);
+std::istream& operator >>(std::istream &s, Polygons &p);
 
 struct ExPolygon {
   Polygon  outer;

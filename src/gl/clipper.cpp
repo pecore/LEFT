@@ -45,6 +45,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>
+#include <istream>
 #include <ostream>
 
 namespace ClipperLib {
@@ -3295,6 +3296,30 @@ std::ostream& operator <<(std::ostream &s, Polygons &p)
   for (Polygons::size_type i = 0; i < p.size(); i++)
     s << p[i];
   s << "\n";
+  return s;
+}
+//------------------------------------------------------------------------------
+
+std::istream& operator >>(std::istream &s, Polygons &p)
+{
+  Polygon polygon;
+  IntPoint point;
+  char line[64];
+  while(!s.eof()) {
+    s.getline(line, 64, '\n');
+    if(strlen(line) == 0) {
+      p.push_back(polygon);
+      polygon.clear();
+    } else {
+      char * x = strtok(line, " ");
+      char * y = strtok(   0, " ");
+      if(x && y) {
+        point.X = atol(x);
+        point.Y = atol(y);
+        polygon.push_back(point);
+      }
+    }
+  }
   return s;
 }
 //------------------------------------------------------------------------------
