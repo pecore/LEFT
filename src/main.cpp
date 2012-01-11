@@ -111,6 +111,7 @@ void renderScene(left_handle * left)
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
 
+  left->map->draw();
   left->map->drawShadows();
   left->map->collide();
   left->map->drawProjectiles();
@@ -179,8 +180,7 @@ void cprintf(left_handle * left, const char * fmt, ...)
 
 void parseConsoleCommand(left_handle * left, char * cmd)
 {
-  char tmp[129];
-  strcpy(tmp, cmd);
+  char tmp[129]; strcpy(tmp, cmd);
   char * op = strtok(tmp, " ");
   char * param[16]; 
   int pcount = 0;
@@ -210,7 +210,9 @@ void parseConsoleCommand(left_handle * left, char * cmd)
       if(f.good()) {
         Polygons p;
         f >> p;
-        left->map->setPolygons(p);
+        if(p.size() > 0) {
+          left->map->setPolygons(p);
+        }
       }
       f.close();
     }
@@ -237,6 +239,16 @@ void parseConsoleCommand(left_handle * left, char * cmd)
         case GL_RESOURCE_FONT: {
           GLFontResource * fres = (GLFontResource *) res;
           cprintf(left, "%d: Font %dx%d:%d [%s]", i, fres->font.TexWidth, fres->font.TexHeight, fres->font.Tex, rp->path);
+          break;
+        }
+        case GL_RESOURCE_POLYGON: {
+          GLPolygonResource * pres = (GLPolygonResource *) res;
+          int vertices = 0;
+          Polygons::iterator pit = pres->polygons.begin();
+          for(; pit != pres->polygons.end(); ++pit) {
+            vertices += (*pit).size();
+          }
+          cprintf(left, "%d: Polygon(%d) %d Vertices [%s]", i, pres->polygons.size(), vertices, rp->path);
           break;
         }
       } i++;
@@ -280,8 +292,10 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case  27 :
       break;
     default:
-      left->console.linebuffer[0][left->console.recorder++] = wParam;
-      left->console.linebuffer[0][left->console.recorder+1] = 0;
+      if(left->console.recorder < 128) {
+        left->console.linebuffer[0][left->console.recorder++] = wParam;
+        left->console.linebuffer[0][left->console.recorder+1] = 0;
+      }
     }
     break;
   case WM_KEYDOWN:
@@ -335,8 +349,12 @@ DWORD WINAPI run(void * lh)
     left->map->addCollidable(left->robot);
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
     left->map->LightSources().push_back(left->robotlight);
-    left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
+    MapObject * house = new MapObject("house");
+    left->map->MapObjects().push_back(house);
+    house->moveTo(2000.0f, 2000.0f);
+    left->map->updateCollision();
 
+    left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
     for(int i = 0; i < 4; i++) {
       unsigned int ballcount = left->ballcount;
       left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);

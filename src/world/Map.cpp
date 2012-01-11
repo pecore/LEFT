@@ -41,6 +41,10 @@ Map::~Map()
   foreach(LightSourceList, s, mLightSources) {
     delete s;
   }
+  MapObject * o = 0;
+  foreach(MapObjectList, o, mMapObjects) {
+    delete o;
+  }
 
   glDeleteFramebuffersEXT(1, &mFramebuffer);
   glDeleteTextures(1, &mFramebufferTexture);
@@ -48,6 +52,10 @@ Map::~Map()
 
 void Map::draw()
 {
+  MapObject * o = 0;
+  foreach(MapObjectList, o, mMapObjects) {
+    o->draw();
+  }
 }
 
 void Map::drawShadows()
@@ -196,7 +204,24 @@ void Map::updateCollision()
     for(vit = p.begin(); vit != p.end(); ++vit) {
       IntPoint current = *vit, next;
       if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
+      GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
+      GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
+      mCollision.push_back(new GLplane(A, B - A));
+    }
+  }
+  MapObject * o = 0;
+  foreach(MapObjectList, o, mMapObjects) {
+    Polygon p = o->collision();
+    Polygon::iterator vit;
+    for(vit = p.begin(); vit != p.end(); ++vit) {
+      IntPoint current = *vit, next;
+      if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
       
+      GLvector2f center((o->pos().x * CLIPPER_PRECISION) - (o->w() * CLIPPER_PRECISION / 2.0f), (o->pos().y * CLIPPER_PRECISION) - (o->h() * CLIPPER_PRECISION / 2.0f));
+      current.X += center.x;
+      current.Y += center.y;
+      next.X += center.x;
+      next.Y += center.y;
       GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
       GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
       mCollision.push_back(new GLplane(A, B - A));

@@ -3307,7 +3307,7 @@ std::istream& operator >>(std::istream &s, Polygons &p)
   char line[64];
   while(!s.eof()) {
     s.getline(line, 64, '\n');
-    if(strlen(line) == 0) {
+    if(strlen(line) == 0 && polygon.size() > 0) {
       p.push_back(polygon);
       polygon.clear();
     } else {
@@ -3316,9 +3316,14 @@ std::istream& operator >>(std::istream &s, Polygons &p)
       if(x && y) {
         point.X = atol(x);
         point.Y = atol(y);
-        polygon.push_back(point);
+        if(point.X && point.Y) {
+          polygon.push_back(point);
+        }
       }
     }
+  }
+  if(polygon.size() > 0) {
+    p.push_back(polygon);
   }
   return s;
 }

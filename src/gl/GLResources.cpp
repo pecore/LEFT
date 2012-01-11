@@ -1,6 +1,7 @@
 #include "GLResources.h"
 #include <windows.h>
 #include "png.h"
+#include <fstream>
 
 #include "SoundPlayer.h"
 
@@ -64,6 +65,20 @@ GLResources::GLResources()
         } else {
           glDeleteTextures(1, &texture);
         }
+      }
+      if(strcmp(ext, "ply") == 0) {
+        std::ifstream f(filename);
+        if(f.good()) {
+          Polygons p;
+          f >> p;
+          if(p.size() > 0) {
+            ResourcePair * rp = new ResourcePair;
+            strncpy(rp->path, filename, sizeof(rp->path)-1);
+            rp->value = new GLPolygonResource(p);
+            mResources.push_back(rp);
+          }
+        }
+        f.close();
       }
     }
   } while(FindNextFile(hFind, &ffd) != 0);

@@ -10,10 +10,6 @@
 #define _MAP_H_
 
 #include "GLDefines.h"
-#include "clipper.hpp"
-using namespace ClipperLib;
-#define Polygon ClipperLib::Polygon
-#define CLIPPER_PRECISION 100000.0
 #define MAP_COLLIDABLES_MAX 2048
 
 #include "Collidable.h"
@@ -47,6 +43,35 @@ public:
 
   GLParticle * particle;
 };
+
+class MapObject : public GLSprite {
+public:
+  MapObject(const char * name) {
+    char filename[256];
+    sprintf(filename, "data\\%s.ply", name);
+    mCollision = ((GLPolygonResource *)gResources->get(filename))->polygons[0];
+    sprintf(filename, "data\\%s.png", name);
+    GLTextureResource * res = (GLTextureResource *) gResources->get(filename);
+    assert(res);
+    mTexture = res->texture;
+    mWidth = res->width;
+    mHeight = res->height;
+    mScale = 1.0f;
+
+    mpData = 0;
+    mPos.x = 0.0f;
+    mPos.y = 0.0f;
+    mAngle = 0.0f;
+    mRotation.x = 0.0f;
+    mRotation.y = 0.0f;
+    mInitialized = true;
+  }
+  Polygon &collision() { return mCollision; };
+private:
+  Polygon mCollision;
+};
+
+typedef std::list<MapObject *> MapObjectList;
 typedef std::list<LightSource *> LightSourceList;
 typedef std::list<Collidable *> CollidableList;
 typedef std::list<Projectile *> ProjectileList;
@@ -93,6 +118,7 @@ public:
   bool isProjectile(Collidable * c);
   void playAnimation(GLAnimatedSprite * sprite);
 
+  MapObjectList & MapObjects() { return mMapObjects; }
   LightSourceList & LightSources() { return mLightSources; }
   ProjectileList & Projectiles() { return mProjectiles; }
 
@@ -116,6 +142,7 @@ private:
   GLplaneList mCollision;
 
   GLParticle * mSpot;
+  MapObjectList mMapObjects;
   LightSourceList mLightSources;
   CollidableList mCollidables;
   ProjectileList mProjectiles;

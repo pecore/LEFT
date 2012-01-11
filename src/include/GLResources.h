@@ -7,6 +7,10 @@
 #endif
 #include <gl\gl.h>
 #include <gl\glu.h>
+#include "clipper.hpp"
+using namespace ClipperLib;
+#define Polygon ClipperLib::Polygon
+#define CLIPPER_PRECISION 100000.0
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -23,6 +27,7 @@ extern "C" {
 #define GL_RESOURCE_TEXTURE   0
 #define GL_RESOURCE_SOUND     1
 #define GL_RESOURCE_FONT      2
+#define GL_RESOURCE_POLYGON   3
 
 class GLResource { public: unsigned int type; };
 class GLTextureResource : public GLResource {
@@ -49,6 +54,13 @@ public:
     { type = GL_RESOURCE_FONT; }
   GLFONT font;
   GLuint texture;
+};
+class GLPolygonResource : public GLResource {
+public:
+  GLPolygonResource(Polygons _polygons)
+    : polygons(_polygons)
+    { type = GL_RESOURCE_POLYGON; }
+  Polygons polygons;
 };
 
 typedef struct {
