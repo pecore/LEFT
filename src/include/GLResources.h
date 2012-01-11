@@ -62,8 +62,9 @@ public:
   GLResources();
   ~GLResources();
   GLResource * get(const char * path);
+  ResourceList list() { return mResources; }
 private:
-  ResourceList mResources;  
+  ResourceList mResources;
   static bool load(const char * filename, unsigned char ** data, int & width, int & height, unsigned int & size);
 };
 

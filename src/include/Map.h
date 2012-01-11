@@ -64,6 +64,20 @@ public:
     return c;
   }
 
+  Polygons polygons() {
+    Lock(mMutex);
+    Polygons p = mCMap;
+    Unlock(mMutex);
+    return p;
+  }
+
+  void setPolygons(Polygons p) {
+    Lock(mMutex);
+    mCMap = p;
+    updateCollision();
+    Unlock(mMutex);
+  }
+
   void lock() { Lock(mMutex); }
   void unlock() { Unlock(mMutex); }
 
@@ -72,7 +86,7 @@ public:
   void drawProjectiles();
   void drawAnimations();
   void collide();
-  
+
   void addCollidable(Collidable * c);
   void addProjectile(Projectile * proj);
   void removeProjectile(Projectile * proj);
