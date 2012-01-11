@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.57"
+#define LEFT_VERSION "0.58"
 
 #include "GLResources.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -188,6 +188,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
   if(!op) return;
 
   if(strcmp(op, "help") == 0 || strcmp(op, "h") == 0 || strcmp(op, "?") == 0) {
+    cprintf(left, "");
     cprintf(left, "ls                         : list resources");
     cprintf(left, "save <filename>            : save current map");
     cprintf(left, "load <filename>            : load map");
@@ -206,9 +207,11 @@ void parseConsoleCommand(left_handle * left, char * cmd)
   if(strcmp(op, "load") == 0) {
     if(pcount == 1) {
       std::ifstream f(param[0]);
-      Polygons p;
-      f >> p;
-      left->map->setPolygons(p);
+      if(f.good()) {
+        Polygons p;
+        f >> p;
+        left->map->setPolygons(p);
+      }
       f.close();
     }
   }
@@ -290,6 +293,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F1:
       Debug::DebugActive = !Debug::DebugActive;
       return 0;
+    case VK_F2:
     case VK_OEM_3: // '`' or '^'
       left->consoleactive = !left->consoleactive;
       left->console.recorder = 0;
