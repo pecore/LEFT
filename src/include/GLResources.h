@@ -1,6 +1,8 @@
 #ifndef _GLRESOURCES_H_
 #define _GLRESOURCES_H_
 
+#define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT 1
+#define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #ifdef _WIN32
 #include <windows.h>
 #include <gl\glew.h>
@@ -10,7 +12,7 @@
 #include "clipper.hpp"
 using namespace ClipperLib;
 #define Polygon ClipperLib::Polygon
-#define CLIPPER_PRECISION 100000.0
+#define CLIPPER_PRECISION 100000L
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -75,9 +77,10 @@ public:
   ~GLResources();
   GLResource * get(const char * path);
   ResourceList list() { return mResources; }
+
+  static bool load(const char * filename, unsigned char ** data, int & width, int & height, unsigned int & size);
 private:
   ResourceList mResources;
-  static bool load(const char * filename, unsigned char ** data, int & width, int & height, unsigned int & size);
 };
 
 #endif

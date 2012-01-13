@@ -118,6 +118,9 @@ extern GLvector2f gScreen;
 #define GL_SCREEN_IHEIGHT    720
 #define GL_SCREEN_FHEIGHT    720.0f
 #define GL_MAP_THRESHOLD     500
+#ifndef _DEBUG
 #define GL_ASSERT() assert(GL_NO_ERROR == glGetError());
-
+#else
+#define GL_ASSERT() {GLenum err; if(GL_NO_ERROR != (err = glGetError())) Debug::Log("glError: %d 0x%08x", err, err);}
+#endif
 #endif

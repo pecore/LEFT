@@ -435,8 +435,9 @@ png_convert_from_time_t(png_timep ptime, time_t ttime)
    struct tm *tbuf;
 
    png_debug(1, "in png_convert_from_time_t");
-
+#pragma warning( disable : 4996 )
    tbuf = gmtime(&ttime);
+#pragma warning( default : 4996 )
    png_convert_from_struct_tm(ptime, tbuf);
 }
 #endif

@@ -18,7 +18,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="$(ProjectDir)\bin\debug"
-			IntermediateDirectory="$(ProjectDir)\bin\debug\obj"
+			IntermediateDirectory="$(ProjectDir)\bin\debug\.obj.left"
 			ConfigurationType="1"
 			>
 			<Tool
@@ -88,7 +88,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(ProjectDir)\bin\release"
-			IntermediateDirectory="$(ProjectDir)\bin\release\obj"
+			IntermediateDirectory="$(ProjectDir)\bin\release\.obj.left"
 			ConfigurationType="1"
 			>
 			<Tool
@@ -253,22 +253,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\src\al\aldlist.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\gl\clipper.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\gl\glew.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\gl\glfont.c"
-				>
-			</File>
-			<File
 				RelativePath=".\src\gl\GLParticle.cpp"
 				>
 			</File>
@@ -277,23 +261,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\gl\GLResources.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\gl\GLSprite.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\gl\GLUtil.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\gl\GLWindow.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\al\LoadOAL.cpp"
 				>
 			</File>
 			<File
@@ -320,105 +288,141 @@
 				RelativePath=".\src\world\RocketProjectile.cpp"
 				>
 			</File>
-			<File
-				RelativePath=".\src\al\SoundPlayer.cpp"
-				>
-			</File>
 			<Filter
-				Name="png"
+				Name="lib"
 				>
 				<File
-					RelativePath=".\src\png\png.c"
+					RelativePath=".\src\al\aldlist.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\png.h"
+					RelativePath=".\src\gl\clipper.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngconf.h"
+					RelativePath=".\src\gl\glew.c"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngdebug.h"
+					RelativePath=".\src\gl\glfont.c"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngerror.c"
+					RelativePath=".\src\gl\GLResources.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngget.c"
+					RelativePath=".\src\gl\GLUtil.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pnginfo.h"
+					RelativePath=".\src\gl\GLWindow.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngmem.c"
+					RelativePath=".\src\al\LoadOAL.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\src\png\pngpread.c"
+					RelativePath=".\src\al\SoundPlayer.cpp"
 					>
 				</File>
-				<File
-					RelativePath=".\src\png\pngpriv.h"
+				<Filter
+					Name="png"
 					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngread.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngrio.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngrtran.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngrutil.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngset.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngstruct.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngtrans.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngwio.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngwrite.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngwtran.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\pngwutil.c"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\zconf.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\png\zlib.h"
-					>
-				</File>
+					<File
+						RelativePath=".\src\png\png.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\png.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngconf.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngdebug.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngerror.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngget.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pnginfo.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngmem.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngpread.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngpriv.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngread.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngrio.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngrtran.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngrutil.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngset.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngstruct.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngtrans.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngwio.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngwrite.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngwtran.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\pngwutil.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\zconf.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\png\zlib.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 	</Files>

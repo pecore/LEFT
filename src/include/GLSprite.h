@@ -23,6 +23,7 @@ public:
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
   GLfloat h() { return mHeight; };
+  void setSize(GLfloat w, GLfloat h) { mWidth = w; mHeight = h; }
   bool collide(GLvector2f n, GLfloat distance) { return true; };
 
   void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };

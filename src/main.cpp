@@ -36,6 +36,7 @@ typedef struct {
   RobotModel * robot;
   LightSource * robotlight;
   MapObject * house;
+  MapObject * zombie;
 
   GLParticle * balls[1024];
   LightSource * lightballs[1024];
@@ -321,6 +322,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_ESCAPE:
       left->running = false;
       PostQuitMessage(0);
+      break;
     case VK_F1:
       Debug::DebugActive = !Debug::DebugActive;
       return 0;
@@ -367,8 +369,11 @@ DWORD WINAPI run(void * lh)
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
     left->map->LightSources().push_back(left->robotlight);
     left->house = new MapObject("house");
+    left->zombie = new MapObject("deadzombie");
     left->map->MapObjects().push_back(left->house);
+    left->map->MapObjects().push_back(left->zombie);
     left->house->moveTo(2000.0f, 2000.0f);
+    left->zombie->moveTo(2700.0f, 750.0f);
     left->map->updateCollision();
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);

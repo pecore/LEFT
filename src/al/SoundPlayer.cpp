@@ -3,13 +3,9 @@
 #include "aldlist.h"
 #include "Debug.h"
 
-SoundList SoundPlayer::Sounds;
-
 void SoundPlayer::init()
 {
   assert(initOpenAL());
-  Sounds.push_back(load("data\\bomb.wav"));
-  Sounds.push_back(load("data\\rocketlaunch.wav"));
 }
 
 bool SoundPlayer::initOpenAL()
@@ -62,7 +58,7 @@ Sound * SoundPlayer::load(const char * filename)
   } waveheader;
 
   if(ok) {
-    FILE * fp = fopen(filename, "rb");
+    FILE * fp = 0; fopen_s(&fp, filename, "rb");
     if(fp) {
       if(fread(&waveheader, 1, sizeof(waveheader), fp) == sizeof(waveheader)) {
         if(waveheader.chunkID    != 0x46464952) ok = false;
@@ -127,16 +123,8 @@ void SoundPlayer::clear()
 {
 	ALCcontext * pContext = 0;
 	ALCdevice * pDevice = 0;
-  Sound * s = 0;
-  foreach(SoundList, s, Sounds) {
-    if(s->data) {
-      free(s->data);
-    }
-    delete s;
-  }
 	pContext = alcGetCurrentContext();
 	pDevice = alcGetContextsDevice(pContext);
-	
 	alcMakeContextCurrent(0);
 	alcDestroyContext(pContext);
 	alcCloseDevice(pDevice);
@@ -146,7 +134,6 @@ DWORD WINAPI stream_run(void * data)
 {
   Sound * sound = (Sound *) data;
   ALuint uiSource;
-  ALuint uiBuffer;
   ALint iState = AL_PLAYING;
   ALuint uiBuffers[1];
 

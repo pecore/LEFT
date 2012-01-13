@@ -26,10 +26,18 @@ GLSprite::GLSprite()
 GLSprite::GLSprite(const char * filename, int width, int height)
 {
   GLTextureResource * res = (GLTextureResource *) gResources->get(filename);
-  assert(res);
-  mTexture = res->texture;
-  mWidth = res->width;
-  mHeight = res->height;
+  if(!res) {
+    unsigned int size;
+    int width, height;
+    gResources->load(filename, &mpData, width, height, size);
+    mWidth = (GLfloat) (mSizeX = width);
+    mHeight = (GLfloat) (mSizeY = height);
+    prepare();
+  } else {
+    mTexture = res->texture;
+    mWidth = res->width;
+    mHeight = res->height;
+  }
   mScale = 1.0f;
   ma = 1.0f;
 
@@ -134,8 +142,8 @@ bool GLAnimatedSprite::draw(int index)
 {
   GLfloat width = mWidth;
   GLfloat height = mHeight;
-  int colcount = mSprite->w() / mWidth;
-  int rowcount = mSprite->h() / mHeight;
+  int colcount = (int)(mSprite->w() / mWidth);
+  int rowcount = (int)(mSprite->h() / mHeight);
   if(index >= colcount * rowcount) {
     return false;
   }

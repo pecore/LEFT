@@ -29,8 +29,8 @@ GLParticle::GLParticle()
 GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, GLfloat a, particle_t form)
 {
   mFilename = "";
-  mSizeX = mWidth = width;
-  mSizeY =  mHeight = height;
+  mWidth = (GLfloat) (mSizeX = width);
+  mHeight = (GLfloat) (mSizeY = height);
   mForm = form;
 
   mr = r;

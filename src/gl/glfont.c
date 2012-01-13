@@ -30,7 +30,8 @@ int glFontCreate (GLFONT *Font, char *FileName, int Tex)
   int i;
 
 	//Open font file
-	if ((Input = fopen(FileName, "rb")) == NULL)
+	fopen_s(&Input, FileName, "rb");
+	if (Input == NULL)
 		return FALSE;
 
 	//Read glFont structure

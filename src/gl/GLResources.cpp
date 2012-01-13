@@ -15,8 +15,10 @@ GLResources::GLResources()
 
   do {
     if(!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-      char ext[4]; strncpy(ext, ffd.cFileName + strlen(ffd.cFileName) - 3, 4); ext[3] = 0;
-      char filename[256]; sprintf(filename, "data\\%s", ffd.cFileName);
+      char filename[256]; 
+      char ext[4]; 
+      strncpy(ext, ffd.cFileName + strlen(ffd.cFileName) - 3, 3);
+      sprintf(filename, "data\\%s", ffd.cFileName);
 
       if(strcmp(ext, "png") == 0) {
         GLuint texture;
@@ -39,7 +41,7 @@ GLResources::GLResources()
 
           ResourcePair * rp = new ResourcePair;
           strncpy(rp->path, filename, sizeof(rp->path)-1);
-          rp->value = new GLTextureResource(texture, width, height);;
+          rp->value = new GLTextureResource(texture, (GLfloat)width, (GLfloat)height);
           mResources.push_back(rp);
           delete data;
         }
@@ -119,11 +121,10 @@ bool GLResources::load(const char * filename, unsigned char ** data, int & width
   png_byte header[8];
   png_structp png_ptr;
   png_infop info_ptr;
-  int color_type, interlace_type;
+  int color_type;
   int bit_depth;
 
-  FILE * fp = NULL;
-  fp = fopen(filename, "rb");
+  FILE * fp = 0; fopen_s(&fp, filename, "rb");
   if(!fp) {
     return false;
   }
@@ -185,7 +186,7 @@ bool GLResources::load(const char * filename, unsigned char ** data, int & width
   size = row_bytes * row_count;
 
   png_bytepp row_pointers = new png_bytep[row_count];
-  for(int y = 0; y < row_count; y++)
+  for(unsigned int y = 0; y < row_count; y++)
     row_pointers[row_count - y - 1] = *data + (y * row_bytes);
   png_read_image(png_ptr, row_pointers);
   delete row_pointers;

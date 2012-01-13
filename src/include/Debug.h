@@ -28,12 +28,14 @@ public:
 
   static void LogToFile(const char * filename, const char * fmt, ...) {
 #ifdef _DEBUG
-    char msg[256];
     va_list args;
     va_start(args, fmt);
-    FILE * fp = fopen(filename, "w");
-    vfprintf(fp, fmt, args);
-    fclose(fp);
+    FILE * fp = 0;
+    fopen_s(&fp, filename, "w");
+    if(fp) {
+      vfprintf(fp, fmt, args);
+      fclose(fp);
+    }
     va_end(args);
 #endif
   }

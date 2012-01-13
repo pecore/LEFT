@@ -19,7 +19,6 @@ public:
 
   static bool play(Sound * s);
   static Sound * load(const char * filename);
-  static SoundList Sounds;
 private:
   SoundPlayer() { }
   ~SoundPlayer() { }
