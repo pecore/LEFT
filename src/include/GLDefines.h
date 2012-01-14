@@ -80,6 +80,7 @@ public:
   GLvector2f base;
   GLvector2f dir;
   GLvector2f dest;
+  GLvector2f n() { return GLvector2f((dest.y - base.y), -(dest.x - base.x)); }
 
   GLplane();
   GLplane(GLvector2f & _base, GLvector2f & _dir);
@@ -121,6 +122,6 @@ extern GLvector2f gScreen;
 #ifndef _DEBUG
 #define GL_ASSERT() assert(GL_NO_ERROR == glGetError());
 #else
-#define GL_ASSERT() {GLenum err; if(GL_NO_ERROR != (err = glGetError())) Debug::Log("glError: %d 0x%08x", err, err);}
+#define GL_ASSERT() {GLenum err; if(GL_NO_ERROR != (err = glGetError())) Debug::Log("glError: %d 0x%08x [%s %d]", err, err, __FILE__, __LINE__);}
 #endif
 #endif

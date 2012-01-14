@@ -52,8 +52,8 @@ public:
 class GLFontResource : public GLResource {
 public:
   GLFontResource(GLFONT _font, GLuint _texture)
-    : font(_font), texture(_texture)
-    { type = GL_RESOURCE_FONT; }
+    : texture(_texture)
+    { memcpy(&font, &_font, sizeof(GLFONT)); type = GL_RESOURCE_FONT; }
   GLFONT font;
   GLuint texture;
 };

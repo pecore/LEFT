@@ -19,6 +19,7 @@
 
 RobotModel::RobotModel(Map * map) : mMap(map)
 {
+  mHUD = new HUD();
   mBodySprite = new GLSprite("data\\robotv3.png");
   mWeaponArmSprite = new GLSprite("data\\arm.png");
 
@@ -50,17 +51,34 @@ RobotModel::~RobotModel()
   if(mWeaponArmSprite) {
     delete mWeaponArmSprite;
   }
+  if(mHUD) {
+    delete mHUD;
+  }
 }
 
 void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
 {
   if(mousestate & MK_LBUTTON) {
-    //SoundPlayer::play(1);
-    mMap->addProjectile(new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap));
+    switch(mHUD->getActive()) {
+    case 1:
+      mMap->addProjectile(new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap));
+      break;
+    case 2:
+      for(int i = 0; i < 6; i++) {
+        mMap->addProjectile(new ShotgunProjectile(mPos, (mousepos - mPos).rotate(frand() * 0.6).normal() * (frand() + 3.0f) * 4.0f, mMap));
+      }
+      break;
+    case 3:
+      break;
+    }
   }
   if(mousestate & MK_RBUTTON) {
     mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
   }
+
+  if(keydown['1']) mHUD->setActive(1);
+  if(keydown['2']) mHUD->setActive(2);
+  if(keydown['3']) mHUD->setActive(3);
 
   // Stabilize
   mStable = keydown[VK_SPACE];
@@ -154,4 +172,5 @@ void RobotModel::draw()
   } else {
     mRocketEffect->draw();
   }
+  mHUD->draw();
 }

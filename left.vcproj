@@ -209,6 +209,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\HUD.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\LoadOAL.h"
 				>
 			</File>

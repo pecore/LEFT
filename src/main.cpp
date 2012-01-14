@@ -123,6 +123,7 @@ void renderScene(left_handle * left)
   for(int i = 0; i < left->ballcount; i++)
     left->balls[i]->draw();
   left->cross->draw();
+
   Debug::drawVectors(left->robot->pos());
 
   Lock(left->console.mutex);
@@ -357,12 +358,13 @@ DWORD WINAPI run(void * lh)
   if(left->running) {
     left->resources = new GLResources();
     gResources = left->resources;
-    left->font.couriernew = ((GLFontResource *)left->resources->get("data\\couriernew.glf"))->font;
+    GLFontResource * f = (GLFontResource *) left->resources->get("data\\couriernew.glf");
+    if(f) memcpy(&left->font.couriernew, &f->font, sizeof(GLFONT));
   }
 
   if(left->running) {
     left->map = new Map();
-    
+
     left->robot = new RobotModel(left->map);
     left->robot->moveTo(1100.0f, 1000.0f);
     left->map->addCollidable(left->robot);

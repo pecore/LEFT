@@ -88,6 +88,8 @@ public:
     Unlock(mMutex);
     return c;
   }
+  
+  GLplaneList & shadows() { return mExtraShadows; }
 
   Polygons polygons() {
     Lock(mMutex);
@@ -123,7 +125,7 @@ public:
   ProjectileList & Projectiles() { return mProjectiles; }
 
   void updateCollision();
-  void addCirclePolygon(GLvector2f pos, GLfloat size);
+  void addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments = 12);
   GLfloat getOpacity(GLvector2f pos);
 
 private:
@@ -141,6 +143,7 @@ private:
 
   Polygons mCMap;
   GLplaneList mCollision;
+  GLplaneList mExtraShadows;
 
   GLParticle * mSpot;
   MapObjectList mMapObjects;
@@ -150,7 +153,7 @@ private:
   AnimationList mAnimations;
 
   void generate();
-  void genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random = true, GLfloat _segments_per_100 = 12);
+  void genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random = true, GLfloat segments = 12);
 };
 
 #endif

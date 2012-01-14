@@ -5,8 +5,54 @@
 #include "RobotRocketEffect.h"
 #include "SoundPlayer.h"
 
+#include "Debug.h"
+
+ShotgunProjectile::ShotgunProjectile(GLvector2f pos, GLvector2f velocity, Map * map) 
+{ 
+  type = PROJECTILE_TYPE_SHOTGUN;
+
+  mMap = map;
+  mPos = pos;
+  mVelocity = velocity;
+  mWidth = 20.0f;
+  mHeight = 20.0f;
+  init();
+}
+
+ShotgunProjectile::~ShotgunProjectile() 
+{
+  mMap->shadows().remove(mShadow);
+  delete mShadow;
+}
+
+void ShotgunProjectile::init() 
+{
+  mInitialized = true;
+  mShadow = new GLplane(mPos, GLplane(mPos, mVelocity).n().normal() * mHeight);
+  mMap->shadows().push_back(mShadow);
+  mShotgunSound = ((GLSoundResource *)gResources->get("data\\shotgun.wav"))->sound;
+  SoundPlayer::play(mShotgunSound);
+}
+
+void ShotgunProjectile::move()
+{
+  mShadow->base += mVelocity;
+  mShadow->dest += mVelocity;
+  mPos += mVelocity;
+}
+
+bool ShotgunProjectile::collide(GLvector2f n, GLfloat distance) 
+{ 
+  mMap->addCirclePolygon(mPos, mWidth, 8);
+  return false; 
+}
+
+
+
 RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
+  type = PROJECTILE_TYPE_ROCKET;
+  
   mInitialized = false;
   mMap = map;
   mPos = pos;

@@ -83,6 +83,7 @@ void Map::drawShadows()
     //mSpot->setScale(s->intensity);
     spot->draw();
 
+    {
     foreach(GLplaneList, p, mCollision) {
       GLvector2f base = p->base;
       GLvector2f dest = p->dest;
@@ -105,6 +106,32 @@ void Map::drawShadows()
         glVertex3f(dproj.x, dproj.y,  0.0f);
         glVertex3f(dest.x, dest.y,  0.0f);
       glEnd();
+    }
+    }
+    {
+    foreach(GLplaneList, p, mExtraShadows) {
+      GLvector2f base = p->base;
+      GLvector2f dest = p->dest;
+      GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
+
+      GLvector2f baseproj = base - pos;
+      GLvector2f destproj = dest - pos;
+      GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
+      GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
+
+      base -= GL_SCREEN_BOTTOMLEFT;
+      dest -= GL_SCREEN_BOTTOMLEFT;
+      bproj -= GL_SCREEN_BOTTOMLEFT;
+      dproj -= GL_SCREEN_BOTTOMLEFT;
+
+      glBegin(GL_QUADS);
+        glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
+        glVertex3f(base.x, base.y,  0.0f);
+        glVertex3f(bproj.x, bproj.y,  0.0f);
+        glVertex3f(dproj.x, dproj.y,  0.0f);
+        glVertex3f(dest.x, dest.y,  0.0f);
+      glEnd();
+    }
     }
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -253,11 +280,8 @@ void Map::updateCollision()
   Unlock(mMutex);
 }
 
-void Map::genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random, GLfloat _segments_per_100)
+void Map::genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random, GLfloat segments)
 {
-  const GLfloat segments_per_100 = _segments_per_100;
-  int segments = (int) ((size / 100.0f) * segments_per_100) | 0x01;
-
   GLvector2f radius(size, 0.0f);
   GLvector2f p;
 
@@ -268,12 +292,12 @@ void Map::genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool
   }
 }
 
-void Map::addCirclePolygon(GLvector2f pos, GLfloat size)
+void Map::addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments)
 {
   Clipper c;
   Polygons p;
   p.resize(1);
-  genCirclePolygon(pos, size, p[0]);
+  genCirclePolygon(pos, size, p[0], true, segments);
   c.AddPolygons(mCMap, ptSubject);
   c.AddPolygons(p, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
@@ -360,7 +384,10 @@ void Map::addProjectile(Projectile * proj)
 void Map::removeProjectile(Projectile * proj)
 {
   mProjectiles.remove(proj);
-  delete proj;
+  switch(proj->type) {
+  case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
+  case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
+  }
 }
 
 bool Map::isProjectile(Collidable * c)

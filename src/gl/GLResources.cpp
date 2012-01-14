@@ -91,13 +91,15 @@ GLResources::~GLResources()
   ResourcePair * rp = 0;
   foreach(ResourceList, rp, mResources) {
     switch(rp->value->type) {
-    case GL_RESOURCE_TEXTURE:
-      glDeleteTextures(1, &(((GLTextureResource *)rp)->texture));
-      break;
-    case GL_RESOURCE_FONT:
-      glFontDestroy(&(((GLFontResource *)rp)->font));
-      glDeleteTextures(1, &(((GLFontResource *)rp)->texture));
-      break;
+    case GL_RESOURCE_TEXTURE: {
+        GLTextureResource * t = (GLTextureResource *) rp->value;
+        glDeleteTextures(1, &t->texture);
+      } break;
+    case GL_RESOURCE_FONT: {
+        GLFontResource * f = (GLFontResource *) rp->value;
+        glFontDestroy(&f->font);
+        glDeleteTextures(1, &f->texture);
+      } break;
     }
     delete rp->value;
     delete rp;

@@ -9,7 +9,7 @@
 #ifndef _ROBOTMODEL_H_
 #define _ROBOTMODEL_H_
 
-#include "GLSprite.h"
+#include "HUD.h"
 #include "RobotRocketEffect.h"
 #include "RobotStabilizeEffect.h"
 #include "RigidBody.h"
@@ -39,6 +39,7 @@ public:
 
 private:
   Map * mMap;
+  HUD * mHUD;
 
   GLSprite * mBodySprite;
   RobotRocketEffect * mRocketEffect;
