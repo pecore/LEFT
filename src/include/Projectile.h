@@ -17,6 +17,7 @@ class GLSprite;
 class RobotRocketEffect;
 class LightSource;
 struct Sound;
+class GLParticle;
 
 #define PROJECTILE_TYPE_NONE     0
 #define PROJECTILE_TYPE_ROCKET   1
@@ -32,13 +33,16 @@ public:
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
   GLfloat h() { return mHeight; };
-
+  
   virtual void move() = 0;
   virtual void draw() = 0;
 
   void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; };
   void setVelocity(GLvector2f & v) { mVelocity = v; };
   void addVelocity(GLvector2f & v) { mVelocity += v; };
+
+  GLvector2f start() { return mStart; }
+  GLfloat maxdistance() { return mMaxDistance; }
 
 protected:
   bool mInitialized;
@@ -47,6 +51,8 @@ protected:
   GLvector2f mVelocity;
   GLfloat mWidth;
   GLfloat mHeight;
+  GLvector2f mStart;
+  GLfloat mMaxDistance;
 };
 
 class RocketProjectile : public Projectile {
@@ -71,12 +77,13 @@ public:
   ~ShotgunProjectile();
   void init();
   void move();
-  void draw() { }
+  void draw();
   bool collide(GLvector2f n, GLfloat distance);
 private:
   Map * mMap;
   GLplane * mShadow;
   Sound * mShotgunSound;
+  GLParticle * mParticle;
 };
 
 #endif

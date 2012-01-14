@@ -10,39 +10,57 @@
 ShotgunProjectile::ShotgunProjectile(GLvector2f pos, GLvector2f velocity, Map * map) 
 { 
   type = PROJECTILE_TYPE_SHOTGUN;
-
+  mInitialized = false;
   mMap = map;
   mPos = pos;
   mVelocity = velocity;
   mWidth = 20.0f;
   mHeight = 20.0f;
+  mMaxDistance = 280.0f;
+  mStart = pos;
   init();
 }
 
 ShotgunProjectile::~ShotgunProjectile() 
 {
   mMap->shadows().remove(mShadow);
-  delete mShadow;
+  if(mShadow) {
+    delete mShadow;
+  }
+  if(mParticle) {
+    delete mParticle;
+  }
 }
 
 void ShotgunProjectile::init() 
 {
+  if(mInitialized) return;
   mInitialized = true;
   mShadow = new GLplane(mPos, GLplane(mPos, mVelocity).n().normal() * mHeight);
   mMap->shadows().push_back(mShadow);
   mShotgunSound = ((GLSoundResource *)gResources->get("data\\shotgun.wav"))->sound;
   SoundPlayer::play(mShotgunSound);
+  mParticle = new GLParticle(8, 6, 0.6f, 0.6f, 0.0f, 0.8f, glpSolid);
+}
+
+void ShotgunProjectile::draw() 
+{
+  if(!mInitialized) return;
+  mParticle->draw();
 }
 
 void ShotgunProjectile::move()
 {
+  if(!mInitialized) return;
   mShadow->base += mVelocity;
   mShadow->dest += mVelocity;
+  mParticle->moveTo(mPos.x, mPos.y);
   mPos += mVelocity;
 }
 
 bool ShotgunProjectile::collide(GLvector2f n, GLfloat distance) 
 { 
+  if(!mInitialized) return true;
   mMap->addCirclePolygon(mPos, mWidth, 8);
   return false; 
 }
@@ -52,19 +70,23 @@ bool ShotgunProjectile::collide(GLvector2f n, GLfloat distance)
 RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
   type = PROJECTILE_TYPE_ROCKET;
-  
   mInitialized = false;
   mMap = map;
   mPos = pos;
   mVelocity = velocity;
+  mMaxDistance = 0.0f;
+  mStart = pos;
   init();
 }
 
 RocketProjectile::~RocketProjectile()
 {
-  if(!mInitialized) return;
-  delete mSprite;
-  delete mRocketEffect;
+  if(mSprite) {
+    delete mSprite;
+  }
+  if(mRocketEffect) {
+    delete mRocketEffect;
+  }
 }
 
 void RocketProjectile::init()

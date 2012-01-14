@@ -332,6 +332,12 @@ void Map::collide()
       && (p->base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
       ||  p->base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
 
+      Projectile * proj = isProjectile(c) ? (Projectile *) c : 0;
+      if(proj && (proj->maxdistance() > 0.0f) && ((proj->start() - proj->pos()).len() >= proj->maxdistance())) {
+        toremove.push_back(c);
+        removeProjectile(proj);
+      }
+
       GLfloat distance;
       GLfloat planedistance;
       GLvector2f n = GLvector2f((p->dest.y - p->base.y), -(p->dest.x - p->base.x)).normal();
@@ -339,14 +345,9 @@ void Map::collide()
 
       if(planedistance >= 0.0f && planedistance <= p->dir.len()) {
         if((distance > -radius && distance <= 0.0f) || (distance > 0.0f && distance <= radius)) {
-          if(isProjectile(c)) {
-            c = c;
-          }
           if(!c->collide(n, distance)) {
             toremove.push_back(c);
-            if(isProjectile(c)) {
-              removeProjectile((Projectile *) c);
-            }
+            if(proj) removeProjectile(proj);
             continue;
           }
         }
