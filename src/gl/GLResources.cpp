@@ -1,9 +1,18 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "GLResources.h"
 #include <windows.h>
 #include "png.h"
 #include <fstream>
 
 #include "SoundPlayer.h"
+#include "GLFont.h"
 
 GLResources::GLResources()
 {
@@ -15,36 +24,16 @@ GLResources::GLResources()
 
   do {
     if(!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-      char filename[256]; 
+      char filename[256];
+      char name[256];
       char ext[4]; 
+      strncpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
       strncpy(ext, ffd.cFileName + strlen(ffd.cFileName) - 3, 3);
       sprintf(filename, "data\\%s", ffd.cFileName);
+      if(get(filename)) continue;
 
       if(strcmp(ext, "png") == 0) {
-        GLuint texture;
-        int width = 0;
-        int height = 0;
-        unsigned char * data = 0;
-        unsigned int size = 0;
-
-        assert(load(filename, &data, width, height, size));
-        if(data) {
-          glGenTextures(1, &texture);
-          glBindTexture(GL_TEXTURE_2D, texture);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
-          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-          glGenerateMipmap(GL_TEXTURE_2D);
-          glBindTexture(GL_TEXTURE_2D, 0);
-
-          ResourcePair * rp = new ResourcePair;
-          strncpy(rp->path, filename, sizeof(rp->path)-1);
-          rp->value = new GLTextureResource(texture, (GLfloat)width, (GLfloat)height);
-          mResources.push_back(rp);
-          delete data;
-        }
+        loadTexture(filename);
       }
       if(strcmp(ext, "wav") == 0) {
         Sound * sound = SoundPlayer::load(filename);
@@ -55,17 +44,17 @@ GLResources::GLResources()
           mResources.push_back(rp);
         }
       }
-      if(strcmp(ext, "glf") == 0) {
-        GLFONT font;
-        GLuint texture;
-        glGenTextures(1, &texture);
-        if(glFontCreate(&font, filename, texture)) {
+      if(strcmp(ext, "fnt") == 0) {
+        bm_font * font = 0;
+        glFontCreate(name, &font);
+        if(font) {
+          char tfilename[256];
+          sprintf(tfilename, "data\\%s.png", name);
+          font->fontTex = loadTexture(tfilename);
           ResourcePair * rp = new ResourcePair;
           strncpy(rp->path, filename, sizeof(rp->path)-1);
-          rp->value = new GLFontResource(font, texture);
+          rp->value = new GLFontResource(font);
           mResources.push_back(rp);
-        } else {
-          glDeleteTextures(1, &texture);
         }
       }
       if(strcmp(ext, "ply") == 0) {
@@ -97,8 +86,7 @@ GLResources::~GLResources()
       } break;
     case GL_RESOURCE_FONT: {
         GLFontResource * f = (GLFontResource *) rp->value;
-        glFontDestroy(&f->font);
-        glDeleteTextures(1, &f->texture);
+        glFontDestroy(f->font);
       } break;
     }
     delete rp->value;
@@ -109,6 +97,7 @@ GLResources::~GLResources()
 
 GLResource * GLResources::get(const char * path)
 {
+  if(mResources.size() <= 0) return 0;
   ResourcePair * rp = 0;
   foreach(ResourceList, rp, mResources) {
     if(strncmp(rp->path, path, sizeof(rp->path)-1) == 0) {
@@ -116,6 +105,38 @@ GLResource * GLResources::get(const char * path)
     }
   }
   return 0;
+}
+
+GLuint GLResources::loadTexture(const char * filename)
+{
+  GLuint texture;
+  int width = 0;
+  int height = 0;
+  unsigned char * data = 0;
+  unsigned int size = 0;
+
+  assert(load(filename, &data, width, height, size));
+  if(data) {
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    ResourcePair * rp = new ResourcePair;
+    strncpy(rp->path, filename, sizeof(rp->path)-1);
+    rp->value = new GLTextureResource(texture, (GLfloat)width, (GLfloat)height);
+    mResources.push_back(rp);
+    delete data;
+  } else {
+    data = data;
+  }
+
+  return texture;
 }
 
 bool GLResources::load(const char * filename, unsigned char ** data, int & width, int & height, unsigned int & size)

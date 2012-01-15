@@ -20,8 +20,6 @@ Copyright (c) 1998-2011 Glenn Randers-Pehrson
 (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
 (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
 
-glFont routines - Copyright (c) 1998 Brad Fish
-
 The OpenGL Extension Wrangler Library
 Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>
 Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>

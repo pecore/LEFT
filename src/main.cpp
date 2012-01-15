@@ -15,6 +15,7 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "SoundPlayer.h"
 #include "RobotModel.h"
 #include "Map.h"
+#include "GLFont.h"
 #include "Debug.h"
 
 #include <fstream>
@@ -55,11 +56,8 @@ typedef struct {
     unsigned int recorder;
     unsigned int linecount;
     char linebuffer[16][129];
+    GLParticle * bg;
   } console;
-
-  struct {
-    GLFONT couriernew;
-  } font;
 
   struct {
     GLfloat fps;
@@ -108,6 +106,7 @@ void renderScene(left_handle * left)
     left->balls[i]->move();
     left->lightballs[i]->pos = left->balls[i]->pos();
   }
+  if(!left->control.keydown[VK_SPACE]) left->control.keydown[VK_SPACE] = left->consoleactive;
   left->robot->control(left->control.keydown, left->control.mousepos, left->control.mousebutton); left->control.mousebutton = 0;
   left->robot->integrate(0.1f);
   left->robotlight->pos = left->robot->pos();
@@ -126,43 +125,24 @@ void renderScene(left_handle * left)
 
   Debug::drawVectors(left->robot->pos());
 
+  bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
   Lock(left->console.mutex);
   if(left->consoleactive) {
     char s[129];
-    left->console.linecount = 16;
-
+    left->console.bg->setSize(GL_SCREEN_FWIDTH, 3.0f + left->console.linecount * font->line_h);
+    left->console.bg->moveTo(GL_SCREEN_BOTTOMLEFT.x + left->console.bg->w() / 2.0f, GL_SCREEN_BOTTOMLEFT.y + left->console.bg->h() / 2.0f);
+    left->console.bg->draw();
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     for(int i = 0; i < left->console.linecount; i++) {
       if(left->console.linebuffer[i][0]) {
-        int offset = sprintf(s, "%s", left->console.linebuffer[i]);
-        memset(&s[offset], 0x20, 128 - offset); s[128] = 0;
-      } else {
-        if(i == 0) {
-          sprintf(s, "%.2f FPS                                                                               %d Vertices %d Lights", left->timing.fps, left->map->collision().size(), left->map->LightSources().size());
-        } else {
-          memset(s, 0x20, 128); s[128] = 0;
-        }
+        glFontPrint(font, GLvector2f(0.0f, 3.0f + i * font->line_h), left->console.linebuffer[i]);
       }
-      glFontBegin(&left->font.couriernew);
-      glFontTextOut(s, 0.0f, 15.0f + (i * 15.0f), 0);
-      glFontEnd();
-    }    
-  }
-  Unlock(left->console.mutex);
-
-  {
-    GLfloat housedistance = (left->robot->pos() - left->house->pos()).len();
-    GLvector2f pos = left->house->pos() - GL_SCREEN_BOTTOMLEFT;
-    if(housedistance < 200.0f) {
-      glFontBegin(&left->font.couriernew);
-      glFontTextOut("There You Are", pos.x + 150.0f, pos.y, 0);
-      glFontEnd();
-      gSeen = true;
-    } if(gSeen && housedistance > 500.0f)  { 
-      glFontBegin(&left->font.couriernew);
-      glFontTextOut("Are You Still There?", pos.x - 100.0f, pos.y, 0);
-      glFontEnd();
     }
   }
+  Unlock(left->console.mutex);
+  GLvector2f fpspos(GL_SCREEN_FWIDTH - 50.0f, GL_SCREEN_FHEIGHT - 30.0f);
+  glColor4f(0.8f, 0.8f, 0.0f, 1.0f);
+  glFontPrint(font, fpspos, "%-2.0f", left->timing.fps);
 
   unsigned long tickdelta = left->timing.timer - GetTickCount();
   left->timing.timer = GetTickCount();
@@ -257,7 +237,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
         }
         case GL_RESOURCE_FONT: {
           GLFontResource * fres = (GLFontResource *) res;
-          cprintf(left, "%d: Font %dx%d:%d [%s]", i, fres->font.TexWidth, fres->font.TexHeight, fres->font.Tex, rp->path);
+          cprintf(left, "%d: Font [%s]", i, rp->path);
           break;
         }
         case GL_RESOURCE_POLYGON: {
@@ -330,6 +310,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F2:
     case VK_OEM_3: // '`' or '^'
       left->consoleactive = !left->consoleactive;
+      left->control.keydown[VK_SPACE] = left->consoleactive;
       left->console.recorder = 0;
       break;
     }
@@ -358,8 +339,7 @@ DWORD WINAPI run(void * lh)
   if(left->running) {
     left->resources = new GLResources();
     gResources = left->resources;
-    GLFontResource * f = (GLFontResource *) left->resources->get("data\\couriernew.glf");
-    if(f) memcpy(&left->font.couriernew, &f->font, sizeof(GLFONT));
+    left->console.bg = new GLParticle(1, 1, 0.0f, 0.0f, 0.0f, 0.9f, glpSolid);
   }
 
   if(left->running) {
@@ -407,6 +387,7 @@ DWORD WINAPI run(void * lh)
   delete left->robot;
   delete Debug::DebugParticle;
   delete left->resources;
+  delete left->console.bg;
   return 0;
 }
 
@@ -418,13 +399,14 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   srand( (unsigned int)GetTickCount() );
 
   left_handle * left = new left_handle;
-  left->console.mutex = CreateMutex(0, FALSE, "LeftConsoleMutex");
-  left->consoleactive = false;
-  left->ballcount = 0;
-  left->control.mousebutton = 0;
   memset(&left->control, 0, 256);
   memset(&left->timing, 0, sizeof(left->timing));
   memset(&left->console, 0, sizeof(left->console));
+  left->console.mutex = CreateMutex(0, FALSE, "LeftConsoleMutex");
+  left->console.linecount = 16;
+  left->consoleactive = false;
+  left->ballcount = 0;
+  left->control.mousebutton = 0;
 
   QueryPerformanceFrequency(&left->timing.performancefrequency);
   Debug::DebugMutex = CreateMutex(0, FALSE, "LeftDebugMutex");

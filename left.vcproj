@@ -185,7 +185,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\include\glfont.h"
+				RelativePath=".\src\include\GLFont.h"
 				>
 			</File>
 			<File
@@ -277,6 +277,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\world\Projectile.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\world\RobotModel.cpp"
 				>
 			</File>
@@ -286,10 +290,6 @@
 			</File>
 			<File
 				RelativePath=".\src\world\RobotStabilizeEffect.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\world\RocketProjectile.cpp"
 				>
 			</File>
 			<Filter
@@ -308,7 +308,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\gl\glfont.c"
+					RelativePath=".\src\gl\GLFont.cpp"
 					>
 				</File>
 				<File

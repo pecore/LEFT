@@ -50,6 +50,7 @@ private:
   GLfloat mAngle;
   bool mStable;
   bool mReset;
+  GLfloat mWeaponTimeout;
 };
 
 #endif

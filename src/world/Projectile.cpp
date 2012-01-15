@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "Projectile.h"
 
 #include "Map.h"
@@ -38,8 +46,6 @@ void ShotgunProjectile::init()
   mInitialized = true;
   mShadow = new GLplane(mPos, GLplane(mPos, mVelocity).n().normal() * mHeight);
   mMap->shadows().push_back(mShadow);
-  mShotgunSound = ((GLSoundResource *)gResources->get("data\\shotgun.wav"))->sound;
-  SoundPlayer::play(mShotgunSound);
   mParticle = new GLParticle(8, 6, 0.6f, 0.6f, 0.0f, 0.8f, glpSolid);
 }
 
@@ -55,6 +61,7 @@ void ShotgunProjectile::move()
   mShadow->base += mVelocity;
   mShadow->dest += mVelocity;
   mParticle->moveTo(mPos.x, mPos.y);
+  mParticle->setRotation(mPos.x, mPos.y, frand() * M_PI);
   mPos += mVelocity;
 }
 

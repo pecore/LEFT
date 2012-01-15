@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "GLWindow.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 bool running = false;
@@ -12,16 +20,17 @@ void * Debug::DebugMutex;
 #include "GLResources.h"
 #include "GLSprite.h"
 #include "GLParticle.h"
+#include "GLFont.h"
 GLResources * gResources;
 GLvector2f gScreen(0.0f, 0.0f);
 GLvector2f gMousePos;
-GLFONT font;
 
 bool showpolygon = false;
 Polygon polygon;
 typedef std::list<GLParticle *> ParticleList;
 ParticleList particles;
 GLSprite * bg = 0;
+bm_font * font;
 char gBGFilename[256];
 
 #define POLYLEFT_MODE_ADD          0
@@ -93,25 +102,22 @@ void render()
     bg = new GLSprite(gBGFilename);
   }
 
-  glFontBegin(&font);
   glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
   switch(mode) {
   case POLYLEFT_MODE_ADD:
-    glFontTextOut("ADD", 0.0f, 15.0f, 0);
+    glFontPrint(font, GLvector2f(0.0f, 15.0f), "ADD");
     break;
   case POLYLEFT_MODE_MOVE:
-    glFontTextOut("MOVE", 0.0f, 15.0f, 0);
+    glFontPrint(font, GLvector2f(0.0f, 15.0f), "MOVE");
     break;
   case POLYLEFT_MODE_DELETE:
-    glFontTextOut("DELETE", 0.0f, 15.0f, 0);
+    glFontPrint(font, GLvector2f(0.0f, 15.0f), "DELETE");
     break;
   }
-  glFontTextOut("F1: toggle modes     F2: save poly     F3: load background     F4: show poly", 300.0f, 15.0f, 0);
+  glFontPrint(font, GLvector2f(300.0f, 15.0f), "F1: toggle modes     F2: save poly     F3: load background     F4: show poly");
   GLvector2f scaledpos = scaleFromScreen(gMousePos, bg->w(), bg->h());
   char s[128]; sprintf(s, "screen(%-4.2f, %-4.2f) tex(%-4.2f, %-4.2f)", gMousePos.x, gMousePos.y, scaledpos.x, scaledpos.y);
-  glFontTextOut(s, 0.0f, GL_SCREEN_FHEIGHT, 0);
-  glFontEnd();
-
+  glFontPrint(font, GLvector2f(0.0f, GL_SCREEN_FHEIGHT), s);
   
   GLvector2f size(bg->w(), bg->h());
   GLvector2f scaled = scaleToScreen(size, bg->w(), bg->h());
@@ -323,7 +329,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
   if(running) {
     gResources = new GLResources();
-    font = ((GLFontResource *)gResources->get("data\\couriernew.glf"))->font;
+    font = gResources->getFont("data\\couriernew.fnt")->font;
     strcpy(gBGFilename, "data\\house.png");
   }
 

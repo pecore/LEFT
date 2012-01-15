@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #include "GLDefines.h"
 #include "SoundPlayer.h"
 #include "aldlist.h"

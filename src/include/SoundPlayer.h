@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #ifndef _SoundPlayer_H_
 #define _SoundPlayer_H_
 

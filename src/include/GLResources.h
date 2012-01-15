@@ -1,3 +1,11 @@
+/*
+    Copyright (c) 2011   LEFT PROJECT
+    All rights reserved.
+
+    file authors:
+    Jan Christian Meyer
+*/
+
 #ifndef _GLRESOURCES_H_
 #define _GLRESOURCES_H_
 
@@ -18,9 +26,6 @@ using namespace ClipperLib;
 #include <math.h>
 #include <assert.h>
 #include <list>
-extern "C" {
-#include "glfont.h"
-}
 
 #define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
                                 if(iter ## _ref != list.end()) iter = *iter ## _ref; \
@@ -49,13 +54,13 @@ public:
     { type = GL_RESOURCE_SOUND; }
   Sound * sound;
 };
+struct S_bm_font;
 class GLFontResource : public GLResource {
 public:
-  GLFontResource(GLFONT _font, GLuint _texture)
-    : texture(_texture)
-    { memcpy(&font, &_font, sizeof(GLFONT)); type = GL_RESOURCE_FONT; }
-  GLFONT font;
-  GLuint texture;
+  GLFontResource(struct S_bm_font * _font)
+    : font(_font)
+    { type = GL_RESOURCE_FONT; }
+  struct S_bm_font * font;
 };
 class GLPolygonResource : public GLResource {
 public:
@@ -76,8 +81,14 @@ public:
   GLResources();
   ~GLResources();
   GLResource * get(const char * path);
+  GLSoundResource * getSound(const char * path) { return (GLSoundResource *) get(path); }
+  GLTextureResource * getTexture(const char * path) { return (GLTextureResource *) get(path); }
+  GLPolygonResource * getPolygon(const char * path) { return (GLPolygonResource *) get(path); }
+  GLFontResource * getFont(const char * path) { return (GLFontResource *) get(path); }
+
   ResourceList list() { return mResources; }
 
+  GLuint loadTexture(const char * filename);
   static bool load(const char * filename, unsigned char ** data, int & width, int & height, unsigned int & size);
 private:
   ResourceList mResources;
