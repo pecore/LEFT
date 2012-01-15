@@ -67,7 +67,13 @@ void Map::drawShadows()
   Lock(mMutex);
   LightSource * s = 0;
   foreach(LightSourceList, s, mLightSources) {
-    GLvector2f pos = s->pos;   
+    GLvector2f pos = s->pos;
+    if(pos.x < GL_SCREEN_BOTTOMLEFT.x - GL_SCREEN_FWIDTH / 2.0f ||
+       pos.x > GL_SCREEN_BOTTOMLEFT.x + GL_SCREEN_FWIDTH ||
+       pos.y < GL_SCREEN_BOTTOMLEFT.y - GL_SCREEN_FHEIGHT / 2.0f ||
+       pos.y > GL_SCREEN_BOTTOMLEFT.y + GL_SCREEN_FHEIGHT) {
+      continue;
+    }
 
     renderTarget(true);
     
@@ -80,7 +86,6 @@ void Map::drawShadows()
 
     spot->setColor((GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb) * s->intensity, 1.0f);
     spot->moveTo(pos.x, pos.y);
-    //mSpot->setScale(s->intensity);
     spot->draw();
 
     {
