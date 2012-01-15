@@ -18,11 +18,13 @@ class RobotRocketEffect;
 class LightSource;
 struct Sound;
 class GLParticle;
+class BFGEffect;
 
 #define PROJECTILE_TYPE_NONE     0
 #define PROJECTILE_TYPE_ROCKET   1
 #define PROJECTILE_TYPE_SHOTGUN  2
-
+#define PROJECTILE_TYPE_BFG      3
+#define PROJECTILE_TYPE_GRENADE  4
 
 class Projectile : public Collidable {
 public:
@@ -86,4 +88,35 @@ private:
   GLParticle * mParticle;
 };
 
+class BFGProjectile : public Projectile {
+public:
+  BFGProjectile(GLvector2f pos, GLvector2f velocity, Map * map);
+  ~BFGProjectile();
+  void init();
+  void move() { mPos += mVelocity; };
+  void draw();
+  bool collide(GLvector2f n, GLfloat distance);
+private:
+  Map * mMap;
+  BFGEffect * mBFGEffect;
+  LightSource * mLight;
+  Sound * mBFGSound;
+};
+
+class GrenadeProjectile : public Projectile {
+public:
+  GrenadeProjectile(GLvector2f pos, GLvector2f velocity, Map * map);
+  ~GrenadeProjectile();
+  void init();
+  void move() { 
+    mPos += mVelocity;
+    mVelocity += gravity * 0.01f;
+  };
+  void draw();
+  bool collide(GLvector2f n, GLfloat distance);
+private:
+  Map * mMap;
+  GLSprite * mSprite;
+  Sound * mExplosionSound;
+};
 #endif

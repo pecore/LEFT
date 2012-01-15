@@ -368,7 +368,7 @@ void Map::collide()
   }
 
   Unlock(mMutex);
-  if(update) updateCollision();
+  if(true) updateCollision();
 }
 
 void Map::addCollidable(Collidable * c)
@@ -388,6 +388,7 @@ void Map::removeProjectile(Projectile * proj)
   switch(proj->type) {
   case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
   case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
+  case PROJECTILE_TYPE_BFG: delete ((BFGProjectile *) proj); break;
   }
 }
 

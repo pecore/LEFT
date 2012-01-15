@@ -12,7 +12,7 @@
 #include "GLSprite.h"
 #include "RobotRocketEffect.h"
 #include "SoundPlayer.h"
-
+#include "BFGEffect.h"
 #include "Debug.h"
 
 ShotgunProjectile::ShotgunProjectile(GLvector2f pos, GLvector2f velocity, Map * map) 
@@ -94,6 +94,10 @@ RocketProjectile::~RocketProjectile()
   if(mRocketEffect) {
     delete mRocketEffect;
   }
+  if(mLight) {
+    mMap->LightSources().remove(mLight);
+    delete mLight;
+  }
 }
 
 void RocketProjectile::init()
@@ -112,15 +116,9 @@ void RocketProjectile::init()
 bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
 {
   if(!mInitialized) return true;
-  //if(mPos.x < (GL_SCREEN_FWIDTH * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD &&
-  //   mPos.x > GL_MAP_THRESHOLD &&
-  //   mPos.y < (GL_SCREEN_FHEIGHT * GL_SCREEN_FACTOR) - GL_MAP_THRESHOLD &&
-  //   mPos.y > GL_MAP_THRESHOLD) 
   mMap->addCirclePolygon(mPos, 100.0f);
-  mMap->LightSources().remove(mLight);
   mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
   SoundPlayer::play(mExplosionSound);
-  delete mLight;
   return false;
 }
 
@@ -138,4 +136,109 @@ void RocketProjectile::draw()
   mSprite->draw();
   mRocketEffect->draw();
   mVelocity *= 1.02f;
+}
+
+
+
+BFGProjectile::BFGProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
+{
+  type = PROJECTILE_TYPE_BFG;
+  mInitialized = false;
+  mMap = map;
+  mPos = pos;
+  mVelocity = velocity;
+  mMaxDistance = 1200.0f;
+  mStart = pos;
+  init();
+}
+
+BFGProjectile::~BFGProjectile()
+{
+  if(mBFGEffect) {
+    delete mBFGEffect;
+  }
+  if(mLight) {
+    mMap->LightSources().remove(mLight);
+    delete mLight;
+  }
+}
+
+void BFGProjectile::init()
+{
+  if(mInitialized) return;
+  mBFGEffect = new BFGEffect(mPos.x, mPos.y);
+  mLight = new LightSource(mPos, GLvector3f(1.0f, 1.0f, 1.0f), 0.8, glpLight);
+  mMap->LightSources().push_back(mLight);
+  mWidth = mHeight = 20.0f;
+  mBFGSound = ((GLSoundResource *) gResources->get("data\\bfg.wav"))->sound;
+  SoundPlayer::play(mBFGSound);
+  mInitialized = true;
+}
+
+bool BFGProjectile::collide(GLvector2f n, GLfloat distance)
+{
+  if(!mInitialized) return true;
+  mMap->addCirclePolygon(mPos, 120.0f);
+  return true;
+}
+
+void BFGProjectile::draw()
+{
+  if(!mInitialized) return;
+  GLfloat angle = mVelocity.angle() * 360.0f / (2.0f * M_PI);
+  
+  mLight->pos = mPos;
+  mLight->angle = angle;
+  mBFGEffect->moveTo(mPos.x - 7.0f, mPos.y - 3.0f);
+  mBFGEffect->draw();
+}
+
+
+
+GrenadeProjectile::GrenadeProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
+{
+  type = PROJECTILE_TYPE_GRENADE;
+  mInitialized = false;
+  mMap = map;
+  mPos = pos;
+  mVelocity = velocity;
+  mMaxDistance = 0.0f;
+  mStart = pos;
+  init();
+}
+
+GrenadeProjectile::~GrenadeProjectile()
+{
+  if(mSprite) {
+    delete mSprite;
+  }
+}
+
+void GrenadeProjectile::init()
+{
+  if(mInitialized) return;
+  mSprite = new GLSprite("data\\grenade.png");
+  mWidth = mSprite->w();
+  mHeight = mSprite->h();
+  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
+  mInitialized = true;
+}
+
+bool GrenadeProjectile::collide(GLvector2f n, GLfloat distance)
+{
+  if(!mInitialized) return true; 
+  mMap->addCirclePolygon(mPos, 300.0f);
+  mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
+  SoundPlayer::play(mExplosionSound);
+  return false;
+}
+
+void GrenadeProjectile::draw()
+{
+  if(!mInitialized) return;
+  GLfloat angle = mVelocity.angle() * 360.0f / (2.0f * M_PI);
+  mSprite->moveTo(mPos.x, mPos.y);
+  mSprite->setRotation(mSprite->pos().x, mSprite->pos().y, angle);
+  mSprite->setAlpha(mMap->getOpacity(mPos));
+  mSprite->draw();
 }

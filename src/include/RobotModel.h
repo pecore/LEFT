@@ -40,6 +40,7 @@ public:
 private:
   Map * mMap;
   HUD * mHUD;
+  GLfloat mButtonOpacity[3];
 
   GLSprite * mBodySprite;
   RobotRocketEffect * mRocketEffect;
@@ -50,7 +51,7 @@ private:
   GLfloat mAngle;
   bool mStable;
   bool mReset;
-  GLfloat mWeaponTimeout;
+  GLfloat mWeaponTimeout[3];
 };
 
 #endif

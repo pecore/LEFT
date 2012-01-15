@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.60"
+#define LEFT_VERSION "0.61"
 
 #include "GLResources.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -16,6 +16,7 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "RobotModel.h"
 #include "Map.h"
 #include "GLFont.h"
+#include "BFGEffect.h"
 #include "Debug.h"
 
 #include <fstream>

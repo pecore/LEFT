@@ -35,7 +35,9 @@ RobotModel::RobotModel(Map * map) : mMap(map)
   mRocketBoost = 1.0f;
   mAngle = 0.0f;
   mStable = false;
-  mWeaponTimeout = 0.0f;
+  for(int i = 0; i < 3; i++) {
+    mWeaponTimeout[i] = 0.0f;
+  }
 }
 
 RobotModel::~RobotModel()
@@ -60,30 +62,44 @@ RobotModel::~RobotModel()
 void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
 {
   static bool shotgun = false;
-  if(shotgun && mWeaponTimeout <= 0.6f) {
+  if(shotgun && mWeaponTimeout[1] <= 0.6f) {
     SoundPlayer::play(gResources->getSound("data\\shotgun-reload.wav")->sound);
     shotgun = false;
   }
-  if(mWeaponTimeout <= 0.0f && mousestate & MK_LBUTTON) {
+  if(mWeaponTimeout[mHUD->getActive()-1] <= 0.0f && mousestate & MK_LBUTTON) {
     switch(mHUD->getActive()) {
     case 1:
       mMap->addProjectile(new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap));
-      mWeaponTimeout = 0.1f; // in sec
+      mWeaponTimeout[0] = 0.1f; // in sec
       break;
     case 2:
       for(int i = 0; i < 6; i++) {
         mMap->addProjectile(new ShotgunProjectile(mPos, (mousepos - mPos).rotate(frand() * 0.6).normal() * (frand() + 3.0f) * 4.0f, mMap));
       }
       SoundPlayer::play(gResources->getSound("data\\shotgun.wav")->sound);
-      mWeaponTimeout = 1.2f; // in sec
+      mWeaponTimeout[1] = 1.2f; // in sec
       shotgun = true;
       break;
     case 3:
+      mMap->addProjectile(new GrenadeProjectile(mPos, (mousepos - mPos).normal() * 8.0f, mMap));
+      mWeaponTimeout[2] = 3.0f; // in sec
       break;
     }
-    
   } else {
-    mWeaponTimeout -= 0.016f;
+    for(int i = 0; i < 3; i++) {
+      mWeaponTimeout[i] -= 0.016f;
+    }
+  }
+  for(int i = 0; i < 3; i++) {
+    if(mWeaponTimeout[i] > 0.0f) {
+      switch(i) {
+      case 0: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 0.1f)); break;
+      case 1: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 1.2f)); break;
+      case 2: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 3.0f)); break;
+      }
+    } else {
+      mButtonOpacity[i] = 1.0f;
+    }
   }
   if(mousestate & MK_RBUTTON) {
     mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
@@ -185,5 +201,5 @@ void RobotModel::draw()
   } else {
     mRocketEffect->draw();
   }
-  mHUD->draw();
+  mHUD->draw(mButtonOpacity);
 }
