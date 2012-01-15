@@ -69,9 +69,9 @@ void Map::drawShadows()
   foreach(LightSourceList, s, mLightSources) {
     GLvector2f pos = s->pos;
     if(pos.x < GL_SCREEN_BOTTOMLEFT.x - GL_SCREEN_FWIDTH / 2.0f ||
-       pos.x > GL_SCREEN_BOTTOMLEFT.x + GL_SCREEN_FWIDTH ||
+       pos.x > GL_SCREEN_BOTTOMLEFT.x + 1.5f * GL_SCREEN_FWIDTH ||
        pos.y < GL_SCREEN_BOTTOMLEFT.y - GL_SCREEN_FHEIGHT / 2.0f ||
-       pos.y > GL_SCREEN_BOTTOMLEFT.y + GL_SCREEN_FHEIGHT) {
+       pos.y > GL_SCREEN_BOTTOMLEFT.y + 1.5f * GL_SCREEN_FHEIGHT) {
       continue;
     }
 
