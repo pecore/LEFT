@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.61"
+#define LEFT_VERSION "0.62"
 
 #define _WIN32_WINNT 0x0601
 #include "LEFTnet.h"
@@ -128,16 +128,24 @@ void renderScene(left_handle * left)
     left_message * m = 0;
 
     if(left->net.client && !left->net.client->isconnected()) {
-      for(int i = 0; i < 1024; i++) {
-        if(left->net.friends[i]) {
-          delete left->net.friends[i];
-          left->net.friends[i] = 0;
-        }
+      int timeout = 3000;
+      while(!left->net.client->isconnected() && --timeout) {
+        cprintf(left, "> connecting %d", timeout);
+        Sleep(1);
       }
-      delete left->net.client;
-      left->net.client = 0;
 
-      cprintf(left, "> disconnected from server");
+      if(!timeout) {
+        for(int i = 0; i < 1024; i++) {
+          if(left->net.friends[i]) {
+            delete left->net.friends[i];
+            left->net.friends[i] = 0;
+          }
+        }
+        delete left->net.client;
+        left->net.client = 0;
+
+        cprintf(left, "> disconnected from server");
+      }
     }
 
     // update position
@@ -179,7 +187,9 @@ void renderScene(left_handle * left)
             if(!left->net.friends[m->header.sender]) {
               left->net.friends[m->header.sender] = new RobotModel(left->map);
             }
-            left->net.friends[m->header.sender]->moveTo(m->msg.update_position.xpos, m->msg.update_position.ypos);
+            GLvector2f newpos(m->msg.update_position.xpos,  m->msg.update_position.ypos);
+            left->net.friends[m->header.sender]->setVelocity(newpos - left->net.friends[m->header.sender]->pos());
+            //left->net.friends[m->header.sender]->moveTo(m->msg.update_position.xpos, m->msg.update_position.ypos);
             left->net.friends[m->header.sender]->setWeaponAngle(m->msg.update_position.weaponangle);
             left->net.friends[m->header.sender]->setAngle(m->msg.update_position.robotangle);
           } break;
@@ -227,7 +237,7 @@ void renderScene(left_handle * left)
 
   for(int i = 0; i < 1024; i++) {
     if(left->net.friends[i]) {
-      left->net.friends[i]->integrate(0.0f);
+      left->net.friends[i]->integrate(0.1f);
       left->net.friends[i]->draw();
     }
   }
@@ -417,7 +427,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F5: {
         if(!left->net.client) {
           tcp::resolver resolver(io_service);
-          tcp::resolver::query query("192.168.2.100", "40155");
+          tcp::resolver::query query("79.218.109.126", "40155");
           tcp::resolver::iterator iterator = resolver.resolve(query);
 
           cprintf(left, "> connecting...");
