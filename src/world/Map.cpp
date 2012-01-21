@@ -99,6 +99,8 @@ void Map::drawShadows()
       GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
       GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
 
+      if(baseproj.len() > radius || destproj.len() > radius) continue; 
+
       base -= GL_SCREEN_BOTTOMLEFT;
       dest -= GL_SCREEN_BOTTOMLEFT;
       bproj -= GL_SCREEN_BOTTOMLEFT;
