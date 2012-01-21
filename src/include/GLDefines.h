@@ -12,7 +12,12 @@
 #include "GLResources.h"
 extern GLResources * gResources;
 
-#define Lock(mutex) WaitForSingleObject(mutex, INFINITE)
+#ifdef _WIN32
+#include <windows.h>
+#include <gl\glew.h>
+#endif
+
+#define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
 #define Unlock(mutex) ReleaseMutex(mutex)
 
 #define frand() ((GLfloat) rand() / (GLfloat)RAND_MAX)

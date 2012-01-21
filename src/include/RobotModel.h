@@ -21,18 +21,20 @@ public:
   RobotModel(Map * map);
   ~RobotModel();
 
-  GLfloat w() { return mBodySprite->w(); };
-  GLfloat h() { return mBodySprite->h(); };
+  GLfloat angle() { return mAngle; }
+  GLfloat w() { return mBodySprite->w(); }
+  GLfloat h() { return mBodySprite->h(); }
   bool collide(GLvector2f n, GLfloat distance);
 
   void integrate(GLfloat dt);
   void moveTo(GLfloat x, GLfloat y);
   
-  void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; };
-  void setVelocity(GLvector2f & v) { mVelocity = v; };
-  void addVelocity(GLvector2f & v) { mVelocity += v; };
-  void setBoost(GLfloat b) { mRocketBoost = b; };
-  void setAngle(GLfloat a) { mAngle = a; };
+  void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; }
+  void setVelocity(GLvector2f & v) { mVelocity = v; }
+  void addVelocity(GLvector2f & v) { mVelocity += v; }
+  void setBoost(GLfloat b) { mRocketBoost = b; }
+  void setAngle(GLfloat a) { mAngle = a; }
+  void setWeaponAngle(GLfloat a) { mWeaponAngle = a; }
 
   void control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate);
   void draw();
@@ -49,6 +51,7 @@ private:
 
   GLfloat mRocketBoost;
   GLfloat mAngle;
+  GLfloat mWeaponAngle;
   bool mStable;
   bool mReset;
   GLfloat mWeaponTimeout[3];

@@ -17,6 +17,10 @@ void bmfont_infoblock(FILE * f, bm_font * font, int size);
 void bmfont_commonblock(FILE * f, bm_font * font, int size);
 void bmfont_charsblock(FILE * f, bm_font * font, int size);
 
+#define DWORD int
+#define WORD  short
+#define BYTE  char
+
 void glFontCreate(const char * name, bm_font ** pfont)
 {
   char filename[128];

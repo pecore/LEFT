@@ -46,7 +46,7 @@ public:
     int size;
   } DebugVectorType;
 
-  static HANDLE DebugMutex;
+  static void * DebugMutex;
   static bool DebugActive;
   static std::list<DebugVectorType> DebugVectors;
   static void add(GLplane * p, GLvector3f color = GLvector3f(1.0f, 1.0f, 1.0f), int size = 10) {

@@ -217,6 +217,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\LEFTnet.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\LoadOAL.h"
 				>
 			</File>

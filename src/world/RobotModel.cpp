@@ -34,6 +34,7 @@ RobotModel::RobotModel(Map * map) : mMap(map)
   mMass = 1.0f;
   mRocketBoost = 1.0f;
   mAngle = 0.0f;
+  mWeaponAngle = 0.0f;
   mStable = false;
   for(int i = 0; i < 3; i++) {
     mWeaponTimeout[i] = 0.0f;
@@ -178,6 +179,9 @@ void RobotModel::integrate(GLfloat dt)
   mRocketEffect->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mAngle);
 
   mVelocity += mRocketEffect->direction().normal() * -9.0f * mRocketBoost * dt;
+  if(mWeaponAngle != 0.0f) {
+    mWeaponArmSprite->setRotation(mPos.x, mPos.y, mWeaponAngle);
+  }
 
   const GLfloat maxspeed = 150.0f;
   if(mVelocity.len() > maxspeed) mVelocity = mVelocity.normal() * maxspeed;

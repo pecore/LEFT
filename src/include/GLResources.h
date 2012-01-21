@@ -9,11 +9,18 @@
 #ifndef _GLRESOURCES_H_
 #define _GLRESOURCES_H_
 
+#ifndef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT 1
+#endif
+#ifndef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
+#include <mmsystem.h>
 #include <gl\glew.h>
+#include <gl\wglew.h>
 #endif
 #include <gl\gl.h>
 #include <gl\glu.h>
@@ -22,10 +29,12 @@ using namespace ClipperLib;
 #define Polygon ClipperLib::Polygon
 #define CLIPPER_PRECISION 100000L
 
+#include <stdarg.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <assert.h>
 #include <list>
+#include <deque>
 
 #define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
                                 if(iter ## _ref != list.end()) iter = *iter ## _ref; \
