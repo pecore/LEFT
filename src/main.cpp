@@ -13,6 +13,7 @@
 boost::asio::io_service io_service;
 tcp_server server(io_service);
 
+#include "LEFTsettings.h"
 #include "GLResources.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "GLWindow.h"
@@ -22,13 +23,14 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "Map.h"
 #include "GLFont.h"
 #include "BFGEffect.h"
-#include "LEFTsettings.h"
 
 #include "Debug.h"
 
 bool gActive;
 GLResources * gResources = 0;
+Settings * gSettings = 0;
 GLvector2f gScreen;
+GLvector2f gScreenSize;
 const unsigned int gFramerate = 60;
 
 typedef struct {
@@ -182,7 +184,7 @@ void renderScene(left_handle * left)
           left->net.friends[m->header.sender] = 0;
           break;
         case LEFT_NET_MSG_CHAT:
-          cprintf(left, m->msg.chat.msg);
+          cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
           break;
         case LEFT_NET_MSG_UPDATE_POS: {
             if(!left->net.friends[m->header.sender]) {
@@ -320,51 +322,91 @@ void parseConsoleCommand(left_handle * left, char * cmd)
     }
   } else
 
-  if(strcmp(op, "ls") == 0) {
-    if(pcount == 1) {
-      std::list<std::string> keys;
-      left->settings->getkeys(keys);
-      std::list<std::string>::iterator iter = keys.begin();
-      for(; iter != keys.end(); iter++) {
-        cprintf(left, "%s", (*iter).c_str());
+  if(strcmp(op, "ls") == 0 && pcount > 0 && strcmp(param[0], "res") == 0) {
+    int i = 0;
+    ResourceList resources = left->resources->list();
+    ResourcePair * rp = 0;
+    cprintf(left, "Resources: %d", resources.size());
+    foreach(ResourceList, rp, resources) {
+      GLResource * res = rp->value;
+      switch(res->type) {
+        case GL_RESOURCE_TEXTURE: {
+          GLTextureResource * tres = (GLTextureResource *) res;
+          cprintf(left, "%d: Texture %dx%d:%d [%s]", i, (int)tres->width, (int)tres->height, tres->texture, rp->path);
+          break;
+        }
+        case GL_RESOURCE_SOUND: {
+          GLSoundResource * sres = (GLSoundResource *) res;
+          cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
+          break;
+        }
+        case GL_RESOURCE_FONT: {
+          GLFontResource * fres = (GLFontResource *) res;
+          cprintf(left, "%d: Font [%s]", i, rp->path);
+          break;
+        }
+        case GL_RESOURCE_POLYGON: {
+          GLPolygonResource * pres = (GLPolygonResource *) res;
+          int vertices = 0;
+          Polygons::iterator pit = pres->polygons.begin();
+          for(; pit != pres->polygons.end(); ++pit) {
+            vertices += (*pit).size();
+          }
+          cprintf(left, "%d: Polygon(%d) %d Vertices [%s]", i, pres->polygons.size(), vertices, rp->path);
+          break;
+        }
+      } i++;
+    }
+  } else if(strcmp(op, "ls") == 0) {
+    std::list<std::string> keys;
+    left->settings->getkeys(keys);
+    for(std::list<std::string>::iterator iter = keys.begin(); iter != keys.end(); iter++) {
+      SettingsValue value = left->settings->get(*iter);
+      switch(value.type()) {
+      case stString:
+        cprintf(left, "%s %s", (*iter).c_str(), value.gets().c_str());
+        break;
+      case stInt:
+        cprintf(left, "%s %d", (*iter).c_str(), value.geti());
+        break;
+      case stFloat:
+        cprintf(left, "%s %f", (*iter).c_str(), value.getf());
+        break;
       }
-    } else { int i = 0;
-      ResourceList resources = left->resources->list();
-      ResourcePair * rp = 0;
-      cprintf(left, "Resources: %d", resources.size());
-      foreach(ResourceList, rp, resources) {
-        GLResource * res = rp->value;
-        switch(res->type) {
-          case GL_RESOURCE_TEXTURE: {
-            GLTextureResource * tres = (GLTextureResource *) res;
-            cprintf(left, "%d: Texture %dx%d:%d [%s]", i, (int)tres->width, (int)tres->height, tres->texture, rp->path);
-            break;
-          }
-          case GL_RESOURCE_SOUND: {
-            GLSoundResource * sres = (GLSoundResource *) res;
-            cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
-            break;
-          }
-          case GL_RESOURCE_FONT: {
-            GLFontResource * fres = (GLFontResource *) res;
-            cprintf(left, "%d: Font [%s]", i, rp->path);
-            break;
-          }
-          case GL_RESOURCE_POLYGON: {
-            GLPolygonResource * pres = (GLPolygonResource *) res;
-            int vertices = 0;
-            Polygons::iterator pit = pres->polygons.begin();
-            for(; pit != pres->polygons.end(); ++pit) {
-              vertices += (*pit).size();
-            }
-            cprintf(left, "%d: Polygon(%d) %d Vertices [%s]", i, pres->polygons.size(), vertices, rp->path);
-            break;
-          }
-        } i++;
+    }
+  } else if(left->settings->get(op).type() != stNone) {
+    SettingsValue value = left->settings->get(op);
+    switch(value.type()) {
+    case stString:
+      cprintf(left, "%s", value.gets().c_str());
+      break;
+    case stInt:
+      cprintf(left, "%d", value.geti());
+      break;
+    case stFloat:
+      cprintf(left, "%f", value.getf());
+      break;
+    }
+  } else if(strcmp(op, "set") == 0) {
+    if(pcount >= 2) {
+      if(left->settings->get(param[0]).type() != stNone) {
+        SettingsValue value = left->settings->get(param[0]);
+        switch(value.type()) {
+        case stString:
+          left->settings->set(param[0], std::string(param[1]));
+          break;
+        case stInt:
+          left->settings->set(param[0], (int) atoi(param[1]));
+          break;
+        case stFloat:
+          left->settings->set(param[0], (float) atof(param[1]));
+          break;
+        }
       }
     }
   } else {
     left_message * chat = new_message(LEFT_NET_MSG_CHAT);
+    strcpy(chat->msg.chat.name, left->settings->gets("p_name").c_str());
     strcpy(chat->msg.chat.msg, cmd);
     if(left->net.client) {
       left->net.client->send_message(chat);
@@ -436,7 +478,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F5: {
         if(!left->net.client) {
           tcp::resolver resolver(io_service);
-          tcp::resolver::query query("192.168.178.39", "40155");
+          tcp::resolver::query query(left->settings->gets("net_host"), left->settings->gets("net_port"));
           tcp::resolver::iterator iterator = resolver.resolve(query);
 
           cprintf(left, "> connecting...");
@@ -453,7 +495,9 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
   case WM_MBUTTONDOWN:
   case WM_XBUTTONDOWN:
     return onMouseDown(left, wParam, lParam & 0xFFFF, GL_SCREEN_IHEIGHT - ((lParam >> 16) & 0xFFFF));
-  case WM_SIZE:	
+  case WM_SIZE:
+    //gScreenSize.x = (GLfloat) ((lParam >> 16) & 0xFFFF);
+    //gScreenSize.y = (GLfloat) (lParam & 0xFFFF);
     return 0;
   }
 
@@ -569,11 +613,24 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   memset(left->net.friends, 0, sizeof(left->net.friends));
   
   left->settings = new Settings();
+  gSettings = left->settings;
+  
+  std::ifstream f("data\\config.cfg");
+  if(f.good()) {
+    char line[128];
+    while(!f.eof()) {
+      f.getline(line, 64, '\n');
+      parseConsoleCommand(left, line);
+    }
+  }
+
+  gScreenSize.x = (GLfloat) left->settings->geti("r_xsize");
+  gScreenSize.y = (GLfloat) left->settings->geti("r_ysize");
 
   QueryPerformanceFrequency(&left->timing.performancefrequency);
   Debug::DebugMutex = CreateMutex(0, FALSE, "LeftDebugMutex");
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
-  left->window = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, false, (WNDPROC) WndProc);
+  left->window = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, left->settings->geti("r_fullscreen") != 0, (WNDPROC) WndProc);
   
   if(left->window) {
     wglSwapIntervalEXT(0);

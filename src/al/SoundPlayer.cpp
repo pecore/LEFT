@@ -7,8 +7,10 @@
 */
 
 #include "GLDefines.h"
-#include "SoundPlayer.h"
 #include "aldlist.h"
+#include "SoundPlayer.h"
+#include "LEFTsettings.h"
+
 #include "Debug.h"
 
 void SoundPlayer::init()
@@ -150,6 +152,7 @@ DWORD WINAPI stream_run(void * data)
   alBufferData(uiBuffers[0], sound->format, sound->data, sound->size, sound->freq);
   assert(AL_NO_ERROR == alGetError());
   alSourceQueueBuffers(uiSource, 1, &uiBuffers[0]);
+  alSourcef(uiSource, AL_GAIN, sound->volume);
   alSourcePlay(uiSource);
 
   while(iState == AL_PLAYING) {
@@ -168,7 +171,7 @@ DWORD WINAPI stream_run(void * data)
 
 bool SoundPlayer::play(Sound * s)
 {
-  assert(s);
+  assert(s); s->volume = gSettings->getf("r_volume");
   HANDLE althread = CreateThread(0, 0, &stream_run, s, 0, 0);
   if(althread != INVALID_HANDLE_VALUE) {
     return true;

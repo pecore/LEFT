@@ -17,6 +17,7 @@ struct Sound {
   unsigned long size;
   unsigned long format;
   unsigned long freq;
+  float volume;
 };
 typedef std::list<Sound *> SoundList;
 

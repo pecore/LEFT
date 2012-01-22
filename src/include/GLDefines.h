@@ -117,12 +117,13 @@ static GLvector3f black(0.0f, 0.0f, 0.0f);
 static GLvector2f gravity(0.0f, -9.81f);
 
 extern GLvector2f gScreen;
+extern GLvector2f gScreenSize;
 #define GL_SCREEN_BOTTOMLEFT gScreen
 #define GL_SCREEN_CENTER     (gScreen + GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f))
-#define GL_SCREEN_IWIDTH     1280
-#define GL_SCREEN_FWIDTH     1280.0f
-#define GL_SCREEN_IHEIGHT    720
-#define GL_SCREEN_FHEIGHT    720.0f
+#define GL_SCREEN_IWIDTH     (int)gScreenSize.x
+#define GL_SCREEN_FWIDTH     gScreenSize.x
+#define GL_SCREEN_IHEIGHT    (int)gScreenSize.y
+#define GL_SCREEN_FHEIGHT    gScreenSize.y
 #define GL_MAP_THRESHOLD     500
 #ifndef _DEBUG
 #define GL_ASSERT() assert(GL_NO_ERROR == glGetError());
