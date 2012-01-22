@@ -33,6 +33,7 @@ using namespace ClipperLib;
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <assert.h>
+#include <fstream>
 #include <list>
 #include <deque>
 

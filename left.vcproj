@@ -221,6 +221,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\LEFTsettings.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\LoadOAL.h"
 				>
 			</File>

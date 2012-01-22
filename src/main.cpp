@@ -22,9 +22,9 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 #include "Map.h"
 #include "GLFont.h"
 #include "BFGEffect.h"
-#include "Debug.h"
+#include "LEFTsettings.h"
 
-#include <fstream>
+#include "Debug.h"
 
 bool gActive;
 GLResources * gResources = 0;
@@ -34,6 +34,7 @@ const unsigned int gFramerate = 60;
 typedef struct {
   bool running;
   
+  Settings * settings;
   GLResources * resources;
   GLWindow * window;
   Map * map;
@@ -320,39 +321,47 @@ void parseConsoleCommand(left_handle * left, char * cmd)
   } else
 
   if(strcmp(op, "ls") == 0) {
-    int i = 0;
-    ResourceList resources = left->resources->list();
-    ResourcePair * rp = 0;
-    cprintf(left, "Resources: %d", resources.size());
-    foreach(ResourceList, rp, resources) {
-      GLResource * res = rp->value;
-      switch(res->type) {
-        case GL_RESOURCE_TEXTURE: {
-          GLTextureResource * tres = (GLTextureResource *) res;
-          cprintf(left, "%d: Texture %dx%d:%d [%s]", i, (int)tres->width, (int)tres->height, tres->texture, rp->path);
-          break;
-        }
-        case GL_RESOURCE_SOUND: {
-          GLSoundResource * sres = (GLSoundResource *) res;
-          cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
-          break;
-        }
-        case GL_RESOURCE_FONT: {
-          GLFontResource * fres = (GLFontResource *) res;
-          cprintf(left, "%d: Font [%s]", i, rp->path);
-          break;
-        }
-        case GL_RESOURCE_POLYGON: {
-          GLPolygonResource * pres = (GLPolygonResource *) res;
-          int vertices = 0;
-          Polygons::iterator pit = pres->polygons.begin();
-          for(; pit != pres->polygons.end(); ++pit) {
-            vertices += (*pit).size();
+    if(pcount == 1) {
+      std::list<std::string> keys;
+      left->settings->getkeys(keys);
+      std::list<std::string>::iterator iter = keys.begin();
+      for(; iter != keys.end(); iter++) {
+        cprintf(left, "%s", (*iter).c_str());
+      }
+    } else { int i = 0;
+      ResourceList resources = left->resources->list();
+      ResourcePair * rp = 0;
+      cprintf(left, "Resources: %d", resources.size());
+      foreach(ResourceList, rp, resources) {
+        GLResource * res = rp->value;
+        switch(res->type) {
+          case GL_RESOURCE_TEXTURE: {
+            GLTextureResource * tres = (GLTextureResource *) res;
+            cprintf(left, "%d: Texture %dx%d:%d [%s]", i, (int)tres->width, (int)tres->height, tres->texture, rp->path);
+            break;
           }
-          cprintf(left, "%d: Polygon(%d) %d Vertices [%s]", i, pres->polygons.size(), vertices, rp->path);
-          break;
-        }
-      } i++;
+          case GL_RESOURCE_SOUND: {
+            GLSoundResource * sres = (GLSoundResource *) res;
+            cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
+            break;
+          }
+          case GL_RESOURCE_FONT: {
+            GLFontResource * fres = (GLFontResource *) res;
+            cprintf(left, "%d: Font [%s]", i, rp->path);
+            break;
+          }
+          case GL_RESOURCE_POLYGON: {
+            GLPolygonResource * pres = (GLPolygonResource *) res;
+            int vertices = 0;
+            Polygons::iterator pit = pres->polygons.begin();
+            for(; pit != pres->polygons.end(); ++pit) {
+              vertices += (*pit).size();
+            }
+            cprintf(left, "%d: Polygon(%d) %d Vertices [%s]", i, pres->polygons.size(), vertices, rp->path);
+            break;
+          }
+        } i++;
+      }
     }
   } else {
     left_message * chat = new_message(LEFT_NET_MSG_CHAT);
@@ -427,7 +436,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F5: {
         if(!left->net.client) {
           tcp::resolver resolver(io_service);
-          tcp::resolver::query query("79.218.109.126", "40155");
+          tcp::resolver::query query("192.168.178.39", "40155");
           tcp::resolver::iterator iterator = resolver.resolve(query);
 
           cprintf(left, "> connecting...");
@@ -558,6 +567,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->net.client = 0;
   left->net.io_service = &io_service;
   memset(left->net.friends, 0, sizeof(left->net.friends));
+  
+  left->settings = new Settings();
 
   QueryPerformanceFrequency(&left->timing.performancefrequency);
   Debug::DebugMutex = CreateMutex(0, FALSE, "LeftDebugMutex");
@@ -609,6 +620,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     delete left->net.client;
   }
   delete left->window;
+  delete left->settings;
   delete left;
 
   timeEndPeriod(1);
