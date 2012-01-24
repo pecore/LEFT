@@ -26,6 +26,8 @@ Map::Map()
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
   
+  mCallback = 0;
+  mUpdate = true;
   generate();
 }
 
@@ -94,12 +96,19 @@ void Map::drawShadows()
       GLvector2f dest = p->dest;
       GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
 
+#if 1
+      if((base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
+      ||  base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
+      || (base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
+      ||  base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
+#endif
+
       GLvector2f baseproj = base - pos;
       GLvector2f destproj = dest - pos;
       GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
       GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
 
-      if(baseproj.len() > radius || destproj.len() > radius) continue; 
+      //if(baseproj.len() > radius || destproj.len() > radius) continue; 
 
       base -= GL_SCREEN_BOTTOMLEFT;
       dest -= GL_SCREEN_BOTTOMLEFT;
@@ -173,16 +182,11 @@ void Map::drawProjectiles()
 
 void Map::drawAnimations()
 {
-  AnimationList toerase;
   Animation * anim = 0;
   foreach(AnimationList, anim, mAnimations) {
     if(!anim->sprite->draw(anim->frameCount++)) {
-      toerase.push_back(anim);
-    }
-  }
-  if(toerase.size() > 0) {
-    foreach(AnimationList, anim, toerase) {
-      mAnimations.remove(anim);
+      anim_ref = mAnimations.erase(anim_ref);
+      if(anim_ref == mAnimations.end()) return;
       delete anim->sprite;
       delete anim;
     }
@@ -305,6 +309,19 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments)
   Polygons p;
   p.resize(1);
   genCirclePolygon(pos, size, p[0], true, segments);
+  if(mCallback) (*mCallback)(mCallbackUserData, p[0]);
+  if(!mUpdate) return;
+
+  c.AddPolygons(mCMap, ptSubject);
+  c.AddPolygons(p, ptClip);
+  c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
+}
+
+void Map::addPolygon(Polygon & polygon)
+{
+  Clipper c;
+  Polygons p;
+  p.push_back(polygon);
   c.AddPolygons(mCMap, ptSubject);
   c.AddPolygons(p, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);

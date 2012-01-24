@@ -60,8 +60,9 @@ RobotModel::~RobotModel()
   }
 }
 
-void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
+ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
 {
+  ProjectileList result;
   static bool shotgun = false;
   if(shotgun && mWeaponTimeout[1] <= 0.6f) {
     SoundPlayer::play(gResources->getSound("data\\shotgun-reload.wav")->sound);
@@ -69,22 +70,28 @@ void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int
   }
   if(mWeaponTimeout[mHUD->getActive()-1] <= 0.0f && mousestate & MK_LBUTTON) {
     switch(mHUD->getActive()) {
-    case 1:
-      mMap->addProjectile(new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap));
-      mWeaponTimeout[0] = 0.1f; // in sec
-      break;
-    case 2:
-      for(int i = 0; i < 6; i++) {
-        mMap->addProjectile(new ShotgunProjectile(mPos, (mousepos - mPos).rotate(frand() * 0.6).normal() * (frand() + 3.0f) * 4.0f, mMap));
-      }
-      SoundPlayer::play(gResources->getSound("data\\shotgun.wav")->sound);
-      mWeaponTimeout[1] = 1.2f; // in sec
-      shotgun = true;
-      break;
-    case 3:
-      mMap->addProjectile(new GrenadeProjectile(mPos, (mousepos - mPos).normal() * 8.0f, mMap));
-      mWeaponTimeout[2] = 3.0f; // in sec
-      break;
+    case 1: {
+        Projectile * p = new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap);
+        result.push_back(p);
+        mMap->addProjectile(p);
+        mWeaponTimeout[0] = 0.1f; // in sec
+      } break;
+    case 2: {
+        for(int i = 0; i < 6; i++) {
+          Projectile * p = new ShotgunProjectile(mPos, (mousepos - mPos).rotate(frand() * 0.6).normal() * (frand() + 3.0f) * 4.0f, mMap);
+          result.push_back(p);
+          mMap->addProjectile(p);
+        }
+        SoundPlayer::play(gResources->getSound("data\\shotgun.wav")->sound);
+        mWeaponTimeout[1] = 1.2f; // in sec
+        shotgun = true;
+      } break;
+    case 3: {
+        Projectile * p = new GrenadeProjectile(mPos, (mousepos - mPos).normal() * 8.0f, mMap);
+        result.push_back(p);
+        mMap->addProjectile(p);
+        mWeaponTimeout[2] = 3.0f; // in sec
+      } break;
     }
   } else {
     for(int i = 0; i < 3; i++) {
@@ -160,6 +167,7 @@ void RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int
   }
 
   mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
+  return result;
 }
 
 bool RobotModel::collide(GLvector2f n, GLfloat distance)

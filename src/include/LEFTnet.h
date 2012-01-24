@@ -27,6 +27,9 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_CHAT                   FOURCC('C', 'H', 'A', 'T')
   #define LEFT_NET_MSG_CHAT_MSGLENGTH       140
 #define LEFT_NET_MSG_UPDATE_POS             FOURCC('U', 'P', 'O', 'S')
+#define LEFT_NET_MSG_UPDATE_MAP             FOURCC('U', 'M', 'A', 'P')  
+#define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
+#define LEFT_NET_MSG_PROJECTILE             FOURCC('P', 'R', 'O', 'J')
 
 struct left_message {
   struct {
@@ -49,8 +52,15 @@ struct left_message {
       float angle;
       float weaponangle;
       float robotangle;
-    } update_position;
+    } position;
 
+    struct {
+      unsigned int type;
+      float dirx;
+      float diry;
+    } projectile;
+
+    char buffer[0xFFFF];
   } msg;
 };
 
@@ -65,7 +75,9 @@ inline unsigned int sizeof_message(unsigned int msg)
   case LEFT_NET_MSG_CHAT:
     return sizeof(d.msg.chat);
   case LEFT_NET_MSG_UPDATE_POS:
-    return sizeof(d.msg.update_position);
+    return sizeof(d.msg.position);
+  case LEFT_NET_MSG_PROJECTILE:
+    return sizeof(d.msg.projectile);
   }
 }
 
@@ -111,6 +123,7 @@ public:
   void start()
   {
     left_message * wui = new_message(LEFT_NET_MSG_WUI);
+    wui->header.sender = id;
     send_message(wui);
     dist->push(wui);
     next_header();
@@ -130,7 +143,7 @@ public:
       dist->remove(id);
       return;
     }
-    unsigned int size = sizeof_message(recv.header.msg);
+    unsigned int size = recv.header.size;
     recv.header.sender = id;
     if(size > 0) {
       next_msg(size);  
@@ -182,7 +195,7 @@ class tcp_server : public distributor {
 public:
   typedef std::queue<left_message *> message_fifo;
 
-  tcp_server(boost::asio::io_service& io_service) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(0)
+  tcp_server(boost::asio::io_service& io_service) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(1)
   {
     next_id = 1;
     start_accept();
@@ -222,6 +235,18 @@ public:
     for(; iter != connections.end(); iter++) {
       tcp_connection::pointer client_connection = *iter;
       if(client_connection->getid() != m->header.sender) {
+        client_connection->send_message(m);
+      }
+    }
+  }
+
+  void send_message(left_message * m, unsigned int sender)
+  {
+    m->header.sender = 0;
+    std::list<tcp_connection::pointer>::iterator iter = connections.begin();
+    for(; iter != connections.end(); iter++) {
+      tcp_connection::pointer client_connection = *iter;
+      if(client_connection->getid() == sender) {
         client_connection->send_message(m);
       }
     }
@@ -322,7 +347,7 @@ private:
       handle_error();
       return;
     }
-    unsigned int size = sizeof_message(recv.header.msg);
+    unsigned int size = recv.header.size;
     if(size > 0) {
       next_msg(size);  
     } else {
@@ -336,14 +361,7 @@ private:
       handle_error();
       return;
     }
-    switch(recv.header.msg) {
-    case LEFT_NET_MSG_WUI:
-    case LEFT_NET_MSG_BYE:
-    case LEFT_NET_MSG_CHAT:
-    case LEFT_NET_MSG_UPDATE_POS:
-      messages.push(new left_message(recv));
-      break;
-    }
+    messages.push(new left_message(recv));
     memset(&recv, 0, sizeof(left_message));
     next_header();
   }

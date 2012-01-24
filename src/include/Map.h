@@ -77,6 +77,8 @@ typedef std::list<Collidable *> CollidableList;
 typedef std::list<Projectile *> ProjectileList;
 typedef std::list<Animation *> AnimationList;
 
+typedef void (*CollisionCallback)(void *, Polygon & polygon);
+
 class Map {
 public:
   Map();
@@ -126,6 +128,10 @@ public:
 
   void updateCollision();
   void addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments = 12);
+  void addPolygon(Polygon & polygon);
+  void setUpdate(bool u) { mUpdate = u; }
+  void setCallback(CollisionCallback cb, void * ud) { mCallback = cb; mCallbackUserData = ud; }
+
   GLfloat getOpacity(GLvector2f pos);
 
 private:
@@ -144,6 +150,10 @@ private:
   Polygons mCMap;
   GLplaneList mCollision;
   GLplaneList mExtraShadows;
+  bool mUpdate;
+
+  CollisionCallback mCallback;
+  void * mCallbackUserData;
 
   GLParticle * mSpot;
   MapObjectList mMapObjects;

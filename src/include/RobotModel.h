@@ -13,8 +13,7 @@
 #include "RobotRocketEffect.h"
 #include "RobotStabilizeEffect.h"
 #include "RigidBody.h"
-
-class Map;
+#include "Map.h"
 
 class RobotModel : public RigidBody {
 public:
@@ -36,7 +35,7 @@ public:
   void setAngle(GLfloat a) { mAngle = a; }
   void setWeaponAngle(GLfloat a) { mWeaponAngle = a; }
 
-  void control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate);
+  ProjectileList control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate);
   void draw();
 
 private:

@@ -39,6 +39,7 @@ public:
   virtual void move() = 0;
   virtual void draw() = 0;
 
+  GLvector2f velocity() { return mVelocity; }
   void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; };
   void setVelocity(GLvector2f & v) { mVelocity = v; };
   void addVelocity(GLvector2f & v) { mVelocity += v; };
