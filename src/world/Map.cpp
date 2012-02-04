@@ -64,7 +64,7 @@ void Map::draw()
 void Map::drawShadows(GLuint shader, GLint dirloc)
 {
   GLplane * p;
-  GLfloat radius = 2500.0f;
+  GLfloat radius = GL_SCREEN_FWIDTH;
 
   Lock(mMutex);
   LightSource * s = 0;

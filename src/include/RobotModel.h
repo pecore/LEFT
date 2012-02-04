@@ -17,7 +17,7 @@
 
 class RobotModel : public RigidBody {
 public:
-  RobotModel(Map * map);
+  RobotModel(Map * map, const char * model = "data\\robotv3.png", const char * arm = "data\\arm.png");
   ~RobotModel();
 
   GLfloat angle() { return mAngle; }
@@ -55,6 +55,9 @@ private:
   GLfloat mWeaponAngle;
   bool mStable;
   bool mReset;
+  GLfloat mTurbo;
+  bool mTurboReady;
+
   GLfloat mWeaponTimeout[3];
 };
 

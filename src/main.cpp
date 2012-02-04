@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.62"
+#define LEFT_VERSION "0.63"
 #define LEFT_USE_FAST_SQRT 1
 
 #define _WIN32_WINNT 0x0601
@@ -284,7 +284,7 @@ void renderScene(left_handle * left)
         break;
       case LEFT_NET_MSG_UPDATE_POS: {
           if(!left->net.friends[m->header.sender]) {
-            left->net.friends[m->header.sender] = new RobotModel(left->map);
+            left->net.friends[m->header.sender] = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
             left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
             left->map->addCollidable(left->net.friends[m->header.sender]);
           }

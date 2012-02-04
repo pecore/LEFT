@@ -17,11 +17,11 @@
 #define ROCKET_EFFECT_WIDTH 18.0f
 #define ROCKET_EFFECT_HEIGHT 32.0f
 
-RobotModel::RobotModel(Map * map) : mMap(map)
+RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(map)
 {
   mHUD = new HUD();
-  mBodySprite = new GLSprite("data\\robotv3.png");
-  mWeaponArmSprite = new GLSprite("data\\arm.png");
+  mBodySprite = new GLSprite(model);
+  mWeaponArmSprite = new GLSprite(arm);
 
   mPos.x = GL_SCREEN_FWIDTH / 2.0f - mBodySprite->w() / 2.0f;
   mPos.y = GL_SCREEN_FHEIGHT / 2.0f - mBodySprite->h() / 2.0f;
@@ -34,6 +34,8 @@ RobotModel::RobotModel(Map * map) : mMap(map)
   mAlpha = 1.0f;
   mMass = 1.0f;
   mRocketBoost = 1.0f;
+  mTurbo = 1.0f;
+  mTurboReady = true;
   mAngle = 0.0f;
   mWeaponAngle = 0.0f;
   mStable = false;
@@ -121,10 +123,24 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   if(keydown['2']) mHUD->setActive(2);
   if(keydown['3']) mHUD->setActive(3);
 
-  // Stabilize
-  if(mStable && !keydown[VK_SPACE]) {
-    mVelocity += (mousepos - mPos) * 0.15f;
+  if(keydown[VK_SHIFT] && mTurboReady) {
+    mVelocity += (mousepos - mPos) * 0.016f;
+    mTurbo -= 0.015f;
+    if(mTurbo <= 0.0f) {
+      mVelocity *= 0.5f;
+      mTurboReady = false;
+    }
+  } else {
+    if(mTurbo >= 1.0f) {
+      mTurboReady = true;
+    } else {
+      mTurbo += 0.01f;
+    }
   }
+
+  mHUD->setTurboLoading(!mTurboReady);
+  mHUD->setTurboOpacity(mTurbo);
+
   mStable = keydown[VK_SPACE];
   mStablizeEffect->moveTo(mPos.x, mPos.y);
   if(mStable) {
@@ -155,7 +171,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     }
 
     // Control Boost
-    if(keydown['W'] && mRocketBoost < 3.5f) {
+    if(keydown['W'] && mRocketBoost < 3.0f) {
       mRocketBoost += 0.4f;
     } else 
     if(keydown['S'] && mRocketBoost > 0.0f) {

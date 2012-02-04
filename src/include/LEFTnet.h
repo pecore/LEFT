@@ -27,6 +27,11 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_CHAT                   FOURCC('C', 'H', 'A', 'T')
   #define LEFT_NET_MSG_CHAT_MSGLENGTH       140
 #define LEFT_NET_MSG_UPDATE_POS             FOURCC('U', 'P', 'O', 'S')
+  static const unsigned int left_net_modelcount = 2;
+  static const char * left_net_models[left_net_modelcount] = {
+    "data\\robotv4.png",
+    "data\\robotv5.png",
+  };
 #define LEFT_NET_MSG_UPDATE_MAP             FOURCC('U', 'M', 'A', 'P')  
 #define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
 #define LEFT_NET_MSG_PROJECTILE             FOURCC('P', 'R', 'O', 'J')
