@@ -329,7 +329,7 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments)
   Polygons p;
   p.resize(1);
   genCirclePolygon(pos, size, p[0], true, segments);
-  if(mCallback) (*mCallback)(mCallbackUserData, p[0]);
+  if(mCallback) (*mCallback)(mCallbackUserData, p[0], 0, -1);
   if(!mUpdate) return;
 
   c.AddPolygons(mCMap, ptSubject);
@@ -366,6 +366,7 @@ void Map::collide()
         proj->collide(GLvector2f(0.0f, 0.0f), distance);
         toremove.push_back(proj);
         proj_ref = mProjectiles.erase(proj_ref);
+        if(mCallback) (*mCallback)(mCallbackUserData, Polygon(), c, proj->type);
         switch(proj->type) {
         case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
         case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;

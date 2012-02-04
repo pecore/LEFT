@@ -243,5 +243,5 @@ void RobotModel::draw()
   } else {
     mRocketEffect->draw();
   }
-  mHUD->draw(mButtonOpacity);
+  if(mDrawHUD) mHUD->draw(mButtonOpacity);
 }

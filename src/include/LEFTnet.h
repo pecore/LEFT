@@ -35,6 +35,7 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_UPDATE_MAP             FOURCC('U', 'M', 'A', 'P')  
 #define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
 #define LEFT_NET_MSG_PROJECTILE             FOURCC('P', 'R', 'O', 'J')
+#define LEFT_NET_MSG_UPDATE_STATS           FOURCC('S', 'T', 'A', 'T')
 
 #define uintptr unsigned long
 struct left_message {
@@ -45,6 +46,11 @@ struct left_message {
   } header;
   
   union {
+    // LEFT_NET_MSG_WUI
+    struct {
+      char name[32];
+    } wui;
+    
     // LEFT_NET_MSG_CHAT
     struct {
       char name[32];
@@ -60,11 +66,17 @@ struct left_message {
       float robotangle;
     } position;
 
+    // LEFT_NET_MSG_PROJECTILE
     struct {
       unsigned int type;
       float dirx;
       float diry;
     } projectile;
+
+    // LEFT_NET_MSG_UPDATE_STATS
+    struct {
+      float health;
+    } stats;
 
     char buffer[0xFFFF];
   } msg;
@@ -75,15 +87,18 @@ inline unsigned int sizeof_message(unsigned int msg)
   left_message d;
   switch(msg) {
   default:
-  case LEFT_NET_MSG_WUI:
   case LEFT_NET_MSG_BYE:
     return 0;
+  case LEFT_NET_MSG_WUI:
+    return sizeof(d.msg.wui);
   case LEFT_NET_MSG_CHAT:
     return sizeof(d.msg.chat);
   case LEFT_NET_MSG_UPDATE_POS:
     return sizeof(d.msg.position);
   case LEFT_NET_MSG_PROJECTILE:
     return sizeof(d.msg.projectile);
+  case LEFT_NET_MSG_UPDATE_STATS:
+    return sizeof(d.msg.stats);
   }
 }
 
@@ -149,9 +164,9 @@ public:
   typedef boost::shared_ptr<tcp_connection> pointer;
   tcp::socket& socket() { return socket_; }
 
-  static pointer create(boost::asio::io_service& _io_service, distributor * _dist, unsigned int _id) 
+  static pointer create(boost::asio::io_service& _io_service, distributor * _dist, unsigned int _id, std::string _name) 
   {
-    return pointer(new tcp_connection(_io_service, _dist, _id));
+    return pointer(new tcp_connection(_io_service, _dist, _id, _name));
   }
 
   inline void next_header() {
@@ -169,8 +184,8 @@ public:
   {
     left_message * wui = new_message(LEFT_NET_MSG_WUI);
     wui->header.sender = id;
+    strcpy(wui->msg.wui.name, name.c_str());
     send_message(wui);
-    dist->push(wui);
     next_header();
   }
 
@@ -215,8 +230,8 @@ public:
   unsigned int getid() { return id; }
 
 private:
-  tcp_connection(boost::asio::io_service& _io_service, distributor * _dist, unsigned int _id)
-    : socket_(_io_service), dist(_dist), id(_id)
+  tcp_connection(boost::asio::io_service& _io_service, distributor * _dist, unsigned int _id, std::string _name)
+    : socket_(_io_service), dist(_dist), id(_id), name(_name)
   {
   }
 
@@ -229,6 +244,7 @@ private:
     }
   }
 
+  std::string name;
   left_message recv;
   left_message send;
   distributor * dist;
@@ -240,7 +256,7 @@ class tcp_server : public distributor {
 public:
   typedef std::queue<left_message *> message_fifo;
 
-  tcp_server(boost::asio::io_service& io_service) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(1)
+  tcp_server(boost::asio::io_service& io_service, std::string _name) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(1), name(_name)
   {
     next_id = 1;
     start_accept();
@@ -307,7 +323,7 @@ public:
 private:
   void start_accept() 
   {
-    tcp_connection::pointer new_connection = tcp_connection::create(acceptor_.get_io_service(), this, next_id++);
+    tcp_connection::pointer new_connection = tcp_connection::create(acceptor_.get_io_service(), this, next_id++, name);
     acceptor_.async_accept(new_connection->socket(), boost::bind(&tcp_server::handle_accept, this, new_connection, boost::asio::placeholders::error));
   }
 
@@ -320,6 +336,7 @@ private:
     start_accept();
   }
 
+  std::string name;
   unsigned int next_id;
   tcp::acceptor acceptor_;
   std::list<tcp_connection::pointer> connections;

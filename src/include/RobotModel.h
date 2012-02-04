@@ -39,9 +39,13 @@ public:
   void setAlpha(GLfloat o) { mAlpha = o; }
   void draw();
 
+  HUD * getHUD() { return mHUD; }
+  void setHUD(bool draw) { mDrawHUD = draw; }
+
 private:
   Map * mMap;
   HUD * mHUD;
+  bool mDrawHUD;
   GLfloat mButtonOpacity[3];
 
   GLSprite * mBodySprite;

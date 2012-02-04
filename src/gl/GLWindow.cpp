@@ -57,7 +57,8 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
 		  ChangeDisplaySettings(&dmScreenSettings,CDS_FULLSCREEN);
 		  dwExStyle = WS_EX_APPWINDOW;
 		  dwStyle = WS_POPUP;					
-		  ShowCursor(FALSE);					
+		  ShowCursor(FALSE);	
+      gScreen = GLvector2f(0.0f, 0.0f);
 	  }	else {
 		  dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		  dwStyle = WS_OVERLAPPEDWINDOW;					

@@ -78,7 +78,7 @@ typedef std::list<Collidable *> CollidableList;
 typedef std::list<Projectile *> ProjectileList;
 typedef std::list<Animation *> AnimationList;
 
-typedef void (*CollisionCallback)(void *, Polygon & polygon);
+typedef void (*CollisionCallback)(void *, Polygon & polygon, Collidable * c, unsigned int type);
 
 class Map {
 public:

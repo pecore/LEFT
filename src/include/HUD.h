@@ -58,6 +58,9 @@ public:
   void setActive(unsigned int a) { mActive = (a >= 1 && a <= 3) ? a : mActive; }
   unsigned int getActive() { return mActive; }
   
+  void setHealth(GLfloat health) { mHealth = health; }
+  void addHealth(GLfloat delta) { mHealth += delta; }
+
   void draw(GLfloat * opacity) {
     GLfloat offset = 450.0f;
     HUDButton * b = 0;
@@ -71,7 +74,7 @@ public:
       i++;
     }
     glColor3f(0.3f, 0.6f, 0.9f);
-    glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%.0f", mHealth);
+    glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%3.0f", mHealth);
 
     GLSprite * s = mTurboLoading ? mTurboIcon->inactive : mTurboIcon->active;
     s->moveTo(GL_SCREEN_BOTTOMLEFT.x + 110.0f, GL_SCREEN_BOTTOMLEFT.y + 30.0f);

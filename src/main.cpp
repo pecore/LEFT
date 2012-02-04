@@ -12,7 +12,7 @@
 #define _WIN32_WINNT 0x0601
 #include "LEFTnet.h"
 boost::asio::io_service io_service;
-tcp_server server(io_service);
+tcp_server * server;
 message_pool * gMessagePool;
 
 #include "LEFTsettings.h"
@@ -56,7 +56,11 @@ typedef struct {
   struct {
     boost::asio::io_service * io_service;
     tcp_client * client;
-    RobotModel * friends[1024];
+    struct {
+      RobotModel * model;
+      char name[256];
+      GLfloat health;
+    } friends[1024];
   } net;
 
   struct {
@@ -124,9 +128,45 @@ void updateMousePosition(left_handle * left)
   }
 }
 
-void collide(void * vleft, Polygon & polygon)
+int isPlayer(left_handle * left, Collidable * c)
+{
+  for(int i = 0; i < 1024; i++) {
+    if(left->net.friends[i].model == c) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+GLfloat getDamage(unsigned int type)
+{
+  switch(type) {
+  case PROJECTILE_TYPE_ROCKET:
+    return 33.3f;
+  case PROJECTILE_TYPE_SHOTGUN:
+    return 15.0f;
+  case PROJECTILE_TYPE_GRENADE:
+    return 50.0f;
+  } 
+  return 0.0f;
+}
+
+void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
 {
   left_handle * left = (left_handle *) vleft;
+
+  if(c) {
+    int index = isPlayer(left, c);
+    if(index > 0 && !left->net.client) {
+      left->net.friends[index].health -= getDamage(type);
+      left_message * stats = new_message(LEFT_NET_MSG_UPDATE_STATS);
+      stats->msg.stats.health = left->net.friends[index].health;
+      server->send_message(stats, index);
+      gMessagePool->del(stats);
+    } else if(c == left->robot) {
+      left->robot->getHUD()->addHealth(- getDamage(type));
+    }
+  } else
   if(!left->net.client) {
     Polygons cmap = left->map->polygons();
     left_message * map = new_message(LEFT_NET_MSG_DESTROY_MAP);
@@ -151,7 +191,7 @@ void collide(void * vleft, Polygon & polygon)
     map->header.size = sizeof(unsigned int) +
                        sizeof(float) * 2 * vertcount;
 
-    server.distribute(map);
+    server->distribute(map);
 
     gMessagePool->del(map);
   }
@@ -161,7 +201,7 @@ void renderScene(left_handle * left)
 {
   updateMousePosition(left);
   
-  if(server.clientcount() > 0 || left->net.client) {
+  if(server->clientcount() > 0 || left->net.client) {
     left->map->setUpdate(left->net.client == 0);
 
     if(left->net.client && !left->net.client->isconnected()) {
@@ -173,10 +213,10 @@ void renderScene(left_handle * left)
 
       if(!timeout) {
         for(int i = 0; i < 1024; i++) {
-          if(left->net.friends[i]) {
-            left->map->removeCollidable(left->net.friends[i]);
-            delete left->net.friends[i];
-            left->net.friends[i] = 0;
+          if(left->net.friends[i].model) {
+            left->map->removeCollidable(left->net.friends[i].model);
+            delete left->net.friends[i].model;
+            left->net.friends[i].model = 0;
           }
         }
         delete left->net.client;
@@ -196,7 +236,7 @@ void renderScene(left_handle * left)
     if(left->net.client) {
       left->net.client->send_message(posmsg);
     } else {
-      server.distribute(posmsg);
+      server->distribute(posmsg);
     }
     gMessagePool->del(posmsg);
 
@@ -206,14 +246,14 @@ void renderScene(left_handle * left)
     if(left->net.client) {
       m = left->net.client->get_message();
     } else {
-      m = server.get_message();
+      m = server->get_message();
     }
 
     if(m && m->header.sender < 1024U) {
       left_message * reply = 0;
       switch(m->header.msg) {
       case LEFT_NET_MSG_WUI:
-        cprintf(left, "> %sconnected", !left->net.client ? "client " : "");
+        cprintf(left, "> %sconnected: %s", !left->net.client ? "client " : "", m->msg.wui.name);
         if(!left->net.client) {     
           Polygons cmap = left->map->polygons();
           #define uintptr unsigned long
@@ -252,46 +292,60 @@ void renderScene(left_handle * left)
                              sizeof(float) * 2 * allvertcount;
 
           cprintf(left, "> sending map p:%d", polycount);
-          server.send_message(map, m->header.sender);
+          server->send_message(map, m->header.sender);
 
+          left->net.friends[m->header.sender].health = 100.0f;
+          strcpy(left->net.friends[m->header.sender].name, m->msg.wui.name);
+           
           gMessagePool->del(map);
+        } else {
+          left_message * wui = new_message(LEFT_NET_MSG_WUI);
+          strcpy(wui->msg.wui.name, left->settings->gets("p_name").c_str());
+          left->net.client->send_message(wui);
+          gMessagePool->del(wui);
         }
         break;
+      case LEFT_NET_MSG_UPDATE_STATS:{
+          if(left->net.client) {
+            left->robot->getHUD()->setHealth(m->msg.stats.health);
+          }
+        } break;
       case LEFT_NET_MSG_PROJECTILE: {
           Projectile * p = 0;
           switch(m->msg.projectile.type) {
           case PROJECTILE_TYPE_ROCKET:
-            p = new RocketProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            p = new RocketProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
             break;
           case PROJECTILE_TYPE_SHOTGUN:
-            p = new ShotgunProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            p = new ShotgunProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
             break;
           case PROJECTILE_TYPE_GRENADE:
-            p = new GrenadeProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            p = new GrenadeProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
             break;
           }
-          p->owner = left->net.friends[m->header.sender];
+          p->owner = left->net.friends[m->header.sender].model;
           left->map->addProjectile(p);
         } break;
       case LEFT_NET_MSG_BYE:
         cprintf(left, "> client disconnected from server");
-        left->map->removeCollidable(left->net.friends[m->header.sender]);
-        delete left->net.friends[m->header.sender];
-        left->net.friends[m->header.sender] = 0;
+        left->map->removeCollidable(left->net.friends[m->header.sender].model);
+        delete left->net.friends[m->header.sender].model;
+        left->net.friends[m->header.sender].model = 0;
         break;
       case LEFT_NET_MSG_CHAT:
         cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
         break;
       case LEFT_NET_MSG_UPDATE_POS: {
-          if(!left->net.friends[m->header.sender]) {
-            left->net.friends[m->header.sender] = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
-            left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
-            left->map->addCollidable(left->net.friends[m->header.sender]);
+          if(!left->net.friends[m->header.sender].model) {
+            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
+            left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
+            left->net.friends[m->header.sender].model->setHUD(false);
+            left->map->addCollidable(left->net.friends[m->header.sender].model);
           }
           GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
-          left->net.friends[m->header.sender]->setVelocity(newpos - left->net.friends[m->header.sender]->pos());
-          left->net.friends[m->header.sender]->setWeaponAngle(m->msg.position.weaponangle);
-          left->net.friends[m->header.sender]->setAngle(m->msg.position.robotangle);
+          left->net.friends[m->header.sender].model->setVelocity(newpos - left->net.friends[m->header.sender].model->pos());
+          left->net.friends[m->header.sender].model->setWeaponAngle(m->msg.position.weaponangle);
+          left->net.friends[m->header.sender].model->setAngle(m->msg.position.robotangle);
         } break;
       case LEFT_NET_MSG_UPDATE_MAP: {
           if(left->net.client) {
@@ -361,7 +415,7 @@ void renderScene(left_handle * left)
         if(left->net.client) {
           left->net.client->send_message(reply);
         } else {
-          server.distribute(reply);
+          server->distribute(reply);
         }
         delete reply;
       }
@@ -391,7 +445,7 @@ void renderScene(left_handle * left)
       if(left->net.client) {
         left->net.client->send_message(proj);
       } else {
-        server.distribute(proj);
+        server->distribute(proj);
       }
     }
     gMessagePool->del(proj);
@@ -414,10 +468,10 @@ void renderScene(left_handle * left)
   left->cross->draw();
 
   for(int i = 0; i < 1024; i++) {
-    if(left->net.friends[i]) {
-      left->net.friends[i]->integrate(0.1f);
-      left->net.friends[i]->setAlpha(left->map->getOpacity(left->net.friends[i]->pos()));
-      left->net.friends[i]->draw();
+    if(left->net.friends[i].model) {
+      left->net.friends[i].model->integrate(0.1f);
+      left->net.friends[i].model->setAlpha(left->map->getOpacity(left->net.friends[i].model->pos()));
+      left->net.friends[i].model->draw();
     }
   }
 
@@ -589,7 +643,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
     if(left->net.client) {
       left->net.client->send_message(chat);
     } else {
-      server.distribute(chat);
+      server->distribute(chat);
     }
     cprintf(left, "<%s> %s", left->settings->gets("p_name").c_str(), left->console.linebuffer[0]);
     gMessagePool->del(chat);
@@ -786,13 +840,14 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->ballcount = 0;
   left->control.mousebutton = 0;
   
+  left->settings = new Settings();
+  gSettings = left->settings;
+
   left->net.client = 0;
   left->net.io_service = &io_service;
   memset(left->net.friends, 0, sizeof(left->net.friends));
   gMessagePool = new message_pool();
-
-  left->settings = new Settings();
-  gSettings = left->settings;
+  server = new tcp_server(io_service, left->settings->gets("p_name"));
 
   std::ifstream f("data\\config.cfg");
   if(f.good()) {
@@ -848,8 +903,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   CloseHandle(left->console.mutex);
 
   for(int i = 0; i < 1024; i++) {
-    if(left->net.friends[i]) {
-      delete left->net.friends[i];
+    if(left->net.friends[i].model) {
+      delete left->net.friends[i].model;
     }
   }
   if(left->net.client) {
