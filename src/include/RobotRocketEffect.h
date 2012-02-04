@@ -26,6 +26,7 @@ public:
 
   GLvector2f direction() { return (mdestMid - msrcMid); };
   void setHeight(GLfloat h) { mHeight = h; }
+  void setAlpha(GLfloat o) { mAlpha = o; }
   void draw();
 
 private:
@@ -35,6 +36,7 @@ private:
   GLvector2f mVelocity;
   GLvector2f mRotation;
   GLfloat mAngle;
+  GLfloat mAlpha;
 
   void recalculateVectors();
   void spawn(GLParticleDummy * p, int i);

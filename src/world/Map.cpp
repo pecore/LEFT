@@ -79,14 +79,16 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
 
     renderTarget(true);
     GLParticle * spot = s->particle ? s->particle : mSpot;
+
+// flicker
 #if 0
     GLfloat dt = 0.1f;
     GLfloat RC = 3.0f;
     GLfloat r = dt / (RC + dt);
     s->size = r * (2 * frand()) * GL_SCREEN_FWIDTH + (1-r) * s->size;
-   
     spot->setSize(s->size, s->size);
 #endif
+
     spot->setColor((GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb) * s->intensity, 1.0f);
     spot->moveTo(pos.x, pos.y);
     spot->setRotation(pos.x , pos.y, s->angle);
@@ -146,6 +148,7 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
     }
     }
 
+// shader
 #if 0
     glUseProgram(shader);
     glUniform2f(dirloc, 1.0f, 0.0f);
@@ -258,7 +261,7 @@ GLfloat Map::getOpacity(GLvector2f pos)
     alpha = 0.0f;
   }
   if(alpha > 1.0f) alpha = 1.0f; 
-  return alpha;
+  return alpha > GL_ALPHA_CUTOFF ? alpha : 0.0f;
 }
 
 void Map::updateCollision()

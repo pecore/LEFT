@@ -31,6 +31,7 @@ RobotModel::RobotModel(Map * map) : mMap(map)
   mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT, 10, 500);
   mStablizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y, 40.0f);
 
+  mAlpha = 1.0f;
   mMass = 1.0f;
   mRocketBoost = 1.0f;
   mAngle = 0.0f;
@@ -215,6 +216,10 @@ void RobotModel::moveTo(GLfloat x, GLfloat y)
 
 void RobotModel::draw()
 {
+  mBodySprite->setAlpha(mAlpha);
+  mWeaponArmSprite->setAlpha(mAlpha);
+  mRocketEffect->setAlpha(mAlpha);
+
   mBodySprite->draw();
   mWeaponArmSprite->draw();
   if(mStable) {

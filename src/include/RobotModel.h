@@ -36,6 +36,7 @@ public:
   void setWeaponAngle(GLfloat a) { mWeaponAngle = a; }
 
   ProjectileList control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate);
+  void setAlpha(GLfloat o) { mAlpha = o; }
   void draw();
 
 private:
@@ -48,6 +49,7 @@ private:
   RobotStabilizeEffect * mStablizeEffect;
   GLSprite * mWeaponArmSprite;
 
+  GLfloat mAlpha;
   GLfloat mRocketBoost;
   GLfloat mAngle;
   GLfloat mWeaponAngle;

@@ -149,6 +149,7 @@ void RobotRocketEffect::draw()
     GLParticleDummy * p = getParticle(i);
     spawn(p, i);
     p->move();
+    p->setAlpha(mAlpha);
     p->draw();
   }
 }

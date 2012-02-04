@@ -31,6 +31,7 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
 #define LEFT_NET_MSG_PROJECTILE             FOURCC('P', 'R', 'O', 'J')
 
+#define uintptr unsigned long
 struct left_message {
   struct {
     unsigned int msg;
@@ -81,12 +82,51 @@ inline unsigned int sizeof_message(unsigned int msg)
   }
 }
 
+#define LEFT_NET_POOL_SIZE 2048
+class message_pool {
+public:
+  message_pool() {
+    memset(inuse, 0, LEFT_NET_POOL_SIZE * sizeof(bool));
+  }
+
+  left_message * get() {
+    for(int i = 0; i < LEFT_NET_POOL_SIZE; i++) {
+      if(!inuse[i]) {
+        inuse[i] = true;
+        return &pool[i];
+      }
+    }
+    return 0;
+  }
+
+  void del(left_message * m) {
+    if(!m) {
+      return;
+    }
+    unsigned int index = ((uintptr) m - (uintptr) pool) / sizeof(left_message);
+    inuse[index] = false;
+  }
+
+private:
+  left_message pool[LEFT_NET_POOL_SIZE];
+  bool inuse[LEFT_NET_POOL_SIZE];
+};
+
+extern message_pool * gMessagePool;
+
 inline left_message * new_message(unsigned int msg) 
 { 
-  left_message * ret = new left_message;
+  left_message * ret = gMessagePool->get();
   memset(ret, 0, sizeof(left_message));
   ret->header.msg = msg;
   ret->header.size = sizeof_message(msg);
+  return ret;
+}
+
+inline left_message * new_message(left_message * value) 
+{ 
+  left_message * ret = gMessagePool->get();
+  memcpy(ret, value, sizeof(value->header) + value->header.size);
   return ret;
 }
 
@@ -201,6 +241,8 @@ public:
     start_accept();
   }
 
+  unsigned int clientcount() { return connections.size(); }
+
   left_message * get_message()
   {
     if(messages.size() == 0) return 0;
@@ -254,8 +296,7 @@ public:
 
   void push(left_message * m)
   {
-
-    messages.push(new left_message(*m));
+    messages.push(new_message(m));
   }
 
 private:
@@ -362,7 +403,7 @@ private:
       handle_error();
       return;
     }
-    messages.push(new left_message(recv));
+    messages.push(new_message(&recv));
     memset(&recv, 0, sizeof(left_message));
     next_header();
   }

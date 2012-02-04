@@ -167,6 +167,7 @@ bool GLWindow::initOpenGL()
     result = false;
   }
 
+// shader
 #if 0
   GLuint fragmentShader;
   static const char * fragmentShaderSource =

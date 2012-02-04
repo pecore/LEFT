@@ -13,6 +13,7 @@
 #include "LEFTnet.h"
 boost::asio::io_service io_service;
 tcp_server server(io_service);
+message_pool * gMessagePool;
 
 #include "LEFTsettings.h"
 #include "GLResources.h"
@@ -128,7 +129,6 @@ void collide(void * vleft, Polygon & polygon)
   left_handle * left = (left_handle *) vleft;
   if(!left->net.client) {
     Polygons cmap = left->map->polygons();
-    #define uintptr unsigned long
     left_message * map = new_message(LEFT_NET_MSG_DESTROY_MAP);
     uintptr p = (uintptr) &map->msg;
 
@@ -153,7 +153,7 @@ void collide(void * vleft, Polygon & polygon)
 
     server.distribute(map);
 
-    delete map;
+    gMessagePool->del(map);
   }
 }
 
@@ -161,8 +161,7 @@ void renderScene(left_handle * left)
 {
   updateMousePosition(left);
   
-  {
-    left_message * m = 0;
+  if(server.clientcount() > 0 || left->net.client) {
     left->map->setUpdate(left->net.client == 0);
 
     if(left->net.client && !left->net.client->isconnected()) {
@@ -199,139 +198,111 @@ void renderScene(left_handle * left)
     } else {
       server.distribute(posmsg);
     }
-    delete posmsg;
+    gMessagePool->del(posmsg);
 
-    do {
-      m = 0;
-      if(left->net.client) {
-        m = left->net.client->get_message();
-      } else {
-        m = server.get_message();
-      }
+  }
+  left_message * m = 0;
+  do {
+    if(left->net.client) {
+      m = left->net.client->get_message();
+    } else {
+      m = server.get_message();
+    }
 
-      if(m && m->header.sender < 1024U) {
-        left_message * reply = 0;
-        switch(m->header.msg) {
-        case LEFT_NET_MSG_WUI:
-          cprintf(left, "> %sconnected", !left->net.client ? "client " : "");
-          if(!left->net.client) {     
-            Polygons cmap = left->map->polygons();
-            #define uintptr unsigned long
-            left_message * map = new_message(LEFT_NET_MSG_UPDATE_MAP);
+    if(m && m->header.sender < 1024U) {
+      left_message * reply = 0;
+      switch(m->header.msg) {
+      case LEFT_NET_MSG_WUI:
+        cprintf(left, "> %sconnected", !left->net.client ? "client " : "");
+        if(!left->net.client) {     
+          Polygons cmap = left->map->polygons();
+          #define uintptr unsigned long
+          left_message * map = new_message(LEFT_NET_MSG_UPDATE_MAP);
 
-            uintptr p = (uintptr) &map->msg;
-            unsigned int polycount = cmap.size();
-            unsigned int allvertcount = 0;
+          uintptr p = (uintptr) &map->msg;
+          unsigned int polycount = cmap.size();
+          unsigned int allvertcount = 0;
 
-            memcpy((void *) p, &polycount, sizeof(unsigned int));
+          memcpy((void *) p, &polycount, sizeof(unsigned int));
+          p += sizeof(unsigned int);
+
+          Polygons::iterator pit;
+          for(pit = cmap.begin(); pit != cmap.end(); ++pit) {
+            Polygon polygon = *pit;
+            unsigned int vertcount = polygon.size();
+            allvertcount += vertcount;
+
+            memcpy((void *) p, &vertcount, sizeof(unsigned int));
             p += sizeof(unsigned int);
 
-            Polygons::iterator pit;
-            for(pit = cmap.begin(); pit != cmap.end(); ++pit) {
-              Polygon polygon = *pit;
-              unsigned int vertcount = polygon.size();
-              allvertcount += vertcount;
-
-              memcpy((void *) p, &vertcount, sizeof(unsigned int));
-              p += sizeof(unsigned int);
-
-              Polygon::iterator vit;
-              for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
-                IntPoint current = *vit;
-                float x = (GLfloat) (current.X / CLIPPER_PRECISION);
-                float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
-                memcpy((void *) p, &x, sizeof(float));
-                p += sizeof(float);
-                memcpy((void *) p, &y, sizeof(float));
-                p += sizeof(float);
-              }
+            Polygon::iterator vit;
+            for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
+              IntPoint current = *vit;
+              float x = (GLfloat) (current.X / CLIPPER_PRECISION);
+              float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
+              memcpy((void *) p, &x, sizeof(float));
+              p += sizeof(float);
+              memcpy((void *) p, &y, sizeof(float));
+              p += sizeof(float);
             }
-
-            map->header.size = sizeof(unsigned int) +
-                               polycount * sizeof(unsigned int) +
-                               sizeof(float) * 2 * allvertcount;
-
-            cprintf(left, "> sending map p:%d", polycount);
-            server.send_message(map, m->header.sender);
-
-            delete map;
           }
-          break;
-        case LEFT_NET_MSG_PROJECTILE: {
-            Projectile * p = 0;
-            switch(m->msg.projectile.type) {
-            case PROJECTILE_TYPE_ROCKET:
-              p = new RocketProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-              break;
-            case PROJECTILE_TYPE_SHOTGUN:
-              p = new ShotgunProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-              break;
-            case PROJECTILE_TYPE_GRENADE:
-              p = new GrenadeProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-              break;
-            }
-            p->owner = left->net.friends[m->header.sender];
-            left->map->addProjectile(p);
-          } break;
-        case LEFT_NET_MSG_BYE:
-          cprintf(left, "> client disconnected from server");
-          left->map->removeCollidable(left->net.friends[m->header.sender]);
-          delete left->net.friends[m->header.sender];
-          left->net.friends[m->header.sender] = 0;
-          break;
-        case LEFT_NET_MSG_CHAT:
-          cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
-          break;
-        case LEFT_NET_MSG_UPDATE_POS: {
-            if(!left->net.friends[m->header.sender]) {
-              left->net.friends[m->header.sender] = new RobotModel(left->map);
-              left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
-              left->map->addCollidable(left->net.friends[m->header.sender]);
-            }
-            GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
-            left->net.friends[m->header.sender]->setVelocity(newpos - left->net.friends[m->header.sender]->pos());
-            left->net.friends[m->header.sender]->setWeaponAngle(m->msg.position.weaponangle);
-            left->net.friends[m->header.sender]->setAngle(m->msg.position.robotangle);
-          } break;
-        case LEFT_NET_MSG_UPDATE_MAP: {
-            if(left->net.client) {
-              uintptr p = (uintptr) &m->msg.buffer;
-              Polygons servermap;
-              unsigned int polycount = 0;
-              
-              memcpy(&polycount, (void *) p, sizeof(unsigned int));
-              p += sizeof(unsigned int);
 
-              for(int poly = 0; poly < polycount; poly++) {
-                Polygon polygon;
-                unsigned int vertcount = 0;
-                
-                memcpy(&vertcount, (void *) p, sizeof(unsigned int));
-                p += sizeof(unsigned int);
+          map->header.size = sizeof(unsigned int) +
+                             polycount * sizeof(unsigned int) +
+                             sizeof(float) * 2 * allvertcount;
 
-                for(int vert = 0; vert < vertcount; vert++) {
-                  IntPoint point;
-                  float x = 0.0f;
-                  float y = 0.0f;
-                  memcpy(&x, (void *) p, sizeof(float));
-                  p += sizeof(float);
-                  memcpy(&y, (void *) p, sizeof(float));
-                  p += sizeof(float);
-                
-                  point.X = (x * CLIPPER_PRECISION);
-                  point.Y = (y * CLIPPER_PRECISION);
-                  polygon.push_back(point);
-                }
+          cprintf(left, "> sending map p:%d", polycount);
+          server.send_message(map, m->header.sender);
 
-                servermap.push_back(polygon);
-              }
-              left->map->setPolygons(servermap);
-            }
-          } break;
+          gMessagePool->del(map);
+        }
+        break;
+      case LEFT_NET_MSG_PROJECTILE: {
+          Projectile * p = 0;
+          switch(m->msg.projectile.type) {
+          case PROJECTILE_TYPE_ROCKET:
+            p = new RocketProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          case PROJECTILE_TYPE_SHOTGUN:
+            p = new ShotgunProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          case PROJECTILE_TYPE_GRENADE:
+            p = new GrenadeProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          }
+          p->owner = left->net.friends[m->header.sender];
+          left->map->addProjectile(p);
+        } break;
+      case LEFT_NET_MSG_BYE:
+        cprintf(left, "> client disconnected from server");
+        left->map->removeCollidable(left->net.friends[m->header.sender]);
+        delete left->net.friends[m->header.sender];
+        left->net.friends[m->header.sender] = 0;
+        break;
+      case LEFT_NET_MSG_CHAT:
+        cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
+        break;
+      case LEFT_NET_MSG_UPDATE_POS: {
+          if(!left->net.friends[m->header.sender]) {
+            left->net.friends[m->header.sender] = new RobotModel(left->map);
+            left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
+            left->map->addCollidable(left->net.friends[m->header.sender]);
+          }
+          GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
+          left->net.friends[m->header.sender]->setVelocity(newpos - left->net.friends[m->header.sender]->pos());
+          left->net.friends[m->header.sender]->setWeaponAngle(m->msg.position.weaponangle);
+          left->net.friends[m->header.sender]->setAngle(m->msg.position.robotangle);
+        } break;
+      case LEFT_NET_MSG_UPDATE_MAP: {
+          if(left->net.client) {
+            uintptr p = (uintptr) &m->msg.buffer;
+            Polygons servermap;
+            unsigned int polycount = 0;
+            
+            memcpy(&polycount, (void *) p, sizeof(unsigned int));
+            p += sizeof(unsigned int);
 
-        case LEFT_NET_MSG_DESTROY_MAP: {
-            if(left->net.client) {
-              uintptr p = (uintptr) &m->msg.buffer;
+            for(int poly = 0; poly < polycount; poly++) {
               Polygon polygon;
               unsigned int vertcount = 0;
               
@@ -352,24 +323,52 @@ void renderScene(left_handle * left)
                 polygon.push_back(point);
               }
 
-              left->map->addPolygon(polygon);
+              servermap.push_back(polygon);
             }
-          } break;
-        }
-
-        if(reply) {
-          if(left->net.client) {
-            left->net.client->send_message(reply);
-          } else {
-            server.distribute(reply);
+            left->map->setPolygons(servermap);
           }
-          delete reply;
-        }
+        } break;
 
-        delete m;
+      case LEFT_NET_MSG_DESTROY_MAP: {
+          if(left->net.client) {
+            uintptr p = (uintptr) &m->msg.buffer;
+            Polygon polygon;
+            unsigned int vertcount = 0;
+            
+            memcpy(&vertcount, (void *) p, sizeof(unsigned int));
+            p += sizeof(unsigned int);
+
+            for(int vert = 0; vert < vertcount; vert++) {
+              IntPoint point;
+              float x = 0.0f;
+              float y = 0.0f;
+              memcpy(&x, (void *) p, sizeof(float));
+              p += sizeof(float);
+              memcpy(&y, (void *) p, sizeof(float));
+              p += sizeof(float);
+            
+              point.X = (x * CLIPPER_PRECISION);
+              point.Y = (y * CLIPPER_PRECISION);
+              polygon.push_back(point);
+            }
+
+            left->map->addPolygon(polygon);
+          }
+        } break;
       }
-    } while(m);
-  }
+
+      if(reply) {
+        if(left->net.client) {
+          left->net.client->send_message(reply);
+        } else {
+          server.distribute(reply);
+        }
+        delete reply;
+      }
+
+      gMessagePool->del(m);
+    }
+  } while(m);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -395,7 +394,7 @@ void renderScene(left_handle * left)
         server.distribute(proj);
       }
     }
-    delete proj;
+    gMessagePool->del(proj);
   }
 
   left->robot->integrate(0.1f);
@@ -417,6 +416,7 @@ void renderScene(left_handle * left)
   for(int i = 0; i < 1024; i++) {
     if(left->net.friends[i]) {
       left->net.friends[i]->integrate(0.1f);
+      left->net.friends[i]->setAlpha(left->map->getOpacity(left->net.friends[i]->pos()));
       left->net.friends[i]->draw();
     }
   }
@@ -592,7 +592,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
       server.distribute(chat);
     }
     cprintf(left, "<%s> %s", left->settings->gets("p_name").c_str(), left->console.linebuffer[0]);
-    delete chat;
+    gMessagePool->del(chat);
   }
 
   memset(left->console.linebuffer[0], 0, 129);
@@ -730,7 +730,7 @@ DWORD WINAPI run(void * lh)
     left->map->updateCollision();
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 6; i++) {
       unsigned int ballcount = left->ballcount;
       left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
       left->balls[ballcount]->moveTo(1000.0f, 1000.0f);
@@ -789,10 +789,11 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->net.client = 0;
   left->net.io_service = &io_service;
   memset(left->net.friends, 0, sizeof(left->net.friends));
-  
+  gMessagePool = new message_pool();
+
   left->settings = new Settings();
   gSettings = left->settings;
-  
+
   std::ifstream f("data\\config.cfg");
   if(f.good()) {
     char line[128];
@@ -854,6 +855,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   if(left->net.client) {
     delete left->net.client;
   }
+  delete gMessagePool;
   delete left->window;
   delete left->settings;
   delete left;
