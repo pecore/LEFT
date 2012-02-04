@@ -28,7 +28,7 @@ RobotModel::RobotModel(Map * map) : mMap(map)
   mBodySprite->moveTo(mPos.x, mPos.y);
   mWeaponArmSprite->moveTo(mPos.x, mPos.y);
 
-  mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT);
+  mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT, 10, 500);
   mStablizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y, 40.0f);
 
   mMass = 1.0f;
@@ -72,6 +72,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     switch(mHUD->getActive()) {
     case 1: {
         Projectile * p = new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap);
+        p->owner = this;
         result.push_back(p);
         mMap->addProjectile(p);
         mWeaponTimeout[0] = 0.1f; // in sec
@@ -79,6 +80,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     case 2: {
         for(int i = 0; i < 6; i++) {
           Projectile * p = new ShotgunProjectile(mPos, (mousepos - mPos).rotate(frand() * 0.6).normal() * (frand() + 3.0f) * 4.0f, mMap);
+          p->owner = this;
           result.push_back(p);
           mMap->addProjectile(p);
         }
@@ -88,6 +90,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
       } break;
     case 3: {
         Projectile * p = new GrenadeProjectile(mPos, (mousepos - mPos).normal() * 8.0f, mMap);
+        p->owner = this;
         result.push_back(p);
         mMap->addProjectile(p);
         mWeaponTimeout[2] = 3.0f; // in sec
@@ -110,7 +113,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     }
   }
   if(mousestate & MK_RBUTTON) {
-    mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.1f, 0.1f, 0.1f), 1.0f));
+    mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.0f, 0.0f, 0.0f), 1.0f));
   }
 
   if(keydown['1']) mHUD->setActive(1);
@@ -118,6 +121,9 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   if(keydown['3']) mHUD->setActive(3);
 
   // Stabilize
+  if(mStable && !keydown[VK_SPACE]) {
+    mVelocity += (mousepos - mPos) * 0.15f;
+  }
   mStable = keydown[VK_SPACE];
   mStablizeEffect->moveTo(mPos.x, mPos.y);
   if(mStable) {
@@ -148,15 +154,18 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     }
 
     // Control Boost
-    if(keydown['W']) {
-      mRocketBoost = 2.0f;
+    if(keydown['W'] && mRocketBoost < 3.5f) {
+      mRocketBoost += 0.4f;
     } else 
-    if(keydown['S']) {
-      mRocketBoost = 0.5f;
-    } else {
-      mRocketBoost = 1.0f;
+    if(keydown['S'] && mRocketBoost > 0.0f) {
+      mRocketBoost -= 0.5f;
+    } else if(mRocketBoost > 1.0f) {
+      mRocketBoost -= 0.1f;
+    } else if(mRocketBoost < 1.0f && !keydown['S']) {
+      mRocketBoost += 0.1f;
     }
   }
+  mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * mRocketBoost);
 
   // Auto Adjust Angle
   if(mStable || (!keydown['A'] && !keydown['D'])) {

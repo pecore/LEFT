@@ -20,9 +20,8 @@ public:
   HGLRC RC() { return mhRC; };
   HWND hWnd() { return mhWnd; };
 
-  GLuint getLightShaderObject() { return mLightShaderObject; }
-  GLint getLightSourcesLocation() { return mLightSourcesLocation; }
-  GLint getLightMapLocation() { return mLightMapLocation; }
+  GLuint getGaussianShader() { return mGaussianShader; }
+  GLint getGaussDirLoc() { return mGaussDirLoc; }
 
   bool initOpenGL();
   void swapBuffers() { SwapBuffers(mhDC); };
@@ -38,9 +37,8 @@ private:
   HINSTANCE	mhInstance;
   bool mInitialized;
 
-  GLuint mLightShaderObject;
-  GLint mLightSourcesLocation;
-  GLint mLightMapLocation;
+  GLuint mGaussianShader;
+  GLint mGaussDirLoc;
 
   int mScreenX;
   int mScreenY;

@@ -10,6 +10,8 @@
 #define _LEFTSETTINGS_H_
 
 #include <map>
+#include <list>
+#include <string>
 
 enum SettingsType {
   stNone = 0,

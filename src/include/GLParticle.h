@@ -16,7 +16,7 @@ typedef enum {
   glpCross,
   glpSolid,
   glpLight,
-  glpLeftLight
+  glpLightCone
 } particle_t;
 
 class GLParticle : public GLSprite {
@@ -30,6 +30,7 @@ public:
   void setColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a) { mr = r; mg = g; mb = b; ma = a; };
   void setColor(GLvector3f & c, GLfloat a) { mr = c.x; mg = c.y; mb = c.z; ma = a; };
   GLvector3f getColor() { return GLvector3f(mr, mg, mb); }
+  int getForm() { return mForm; }
 
   void move() { mPos += mVelocity; };
   void setVelocity2f(GLfloat x, GLfloat y) { mVelocity.x = x; mVelocity.y = y; };
@@ -48,7 +49,7 @@ protected:
   int mForm;
 
   void generate();
-  char getAlpha(int x, int y);
+  unsigned char getAlpha(int x, int y);
   void colorMask();
 };
 

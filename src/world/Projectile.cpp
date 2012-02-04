@@ -18,6 +18,7 @@
 ShotgunProjectile::ShotgunProjectile(GLvector2f pos, GLvector2f velocity, Map * map) 
 { 
   type = PROJECTILE_TYPE_SHOTGUN;
+  owner = 0;
   mInitialized = false;
   mMap = map;
   mPos = pos;
@@ -77,11 +78,12 @@ bool ShotgunProjectile::collide(GLvector2f n, GLfloat distance)
 RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
   type = PROJECTILE_TYPE_ROCKET;
+  owner = 0;
   mInitialized = false;
   mMap = map;
   mPos = pos;
   mVelocity = velocity;
-  mMaxDistance = 0.0f;
+  mMaxDistance = 10000.0f;
   mStart = pos;
   init();
 }
@@ -143,6 +145,7 @@ void RocketProjectile::draw()
 BFGProjectile::BFGProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
   type = PROJECTILE_TYPE_BFG;
+  owner = 0;
   mInitialized = false;
   mMap = map;
   mPos = pos;
@@ -198,6 +201,7 @@ void BFGProjectile::draw()
 GrenadeProjectile::GrenadeProjectile(GLvector2f pos, GLvector2f velocity, Map * map)
 {
   type = PROJECTILE_TYPE_GRENADE;
+  owner = 0;
   mInitialized = false;
   mMap = map;
   mPos = pos;

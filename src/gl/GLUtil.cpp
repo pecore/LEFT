@@ -100,21 +100,20 @@ GLfloat GLvector2f::angle()
 
 GLfloat GLvector2f::len() 
 {
-  return sqrt(x * x + y * y);
-}
+#if LEFT_USE_FAST_SQRT
+  union {
+    int tmp;
+    float f;
+  } u;
 
-GLfloat GLvector2f::fastlen() 
-{
-    union {
-      int tmp;
-      float f;
-    } u;
- 
-    u.f = x * x + y * y; 
-    u.tmp -= 1 << 23; 
-    u.tmp >>= 1;      
-    u.tmp += 1 << 29;
-    return u.f;
+  u.f = x * x + y * y; 
+  u.tmp -= 1 << 23; 
+  u.tmp >>= 1;      
+  u.tmp += 1 << 29;
+  return u.f;
+#else
+  return sqrt(x * x + y * y);
+#endif
 }
 
 GLvector2f GLvector2f::normal() 
@@ -123,7 +122,8 @@ GLvector2f GLvector2f::normal()
   if(length == 0.0f) {
     return GLvector2f(x, y);
   }
-  return GLvector2f(x / length, y / length);
+  GLfloat coeff = 1.0f / length;
+  return GLvector2f(x * coeff, y * coeff);
 }
 
 void GLvector2f::crossing(const GLvector2f & baseA, const GLvector2f & dirA, const GLvector2f & baseB, const GLvector2f & dirB, GLfloat & coeffA, GLfloat & coeffB) 
@@ -182,11 +182,11 @@ GLtriangle::~GLtriangle()
 {
 }
 
-GLplane::GLplane()
+GLplane::GLplane() : bordered(false)
 {
 }
 
-GLplane::GLplane(GLvector2f & _base, GLvector2f & _dir) : base(_base), dir(_dir), dest(base + dir)
+GLplane::GLplane(GLvector2f & _base, GLvector2f & _dir) : base(_base), dir(_dir), dest(base + dir), bordered(false)
 {
 }
 

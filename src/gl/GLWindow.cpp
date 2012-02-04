@@ -155,7 +155,7 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
 
 GLWindow::~GLWindow()
 {
-  glDeleteProgram(mLightShaderObject);
+  glDeleteProgram(mGaussianShader);
   free();
 }
 
@@ -170,29 +170,32 @@ bool GLWindow::initOpenGL()
 #if 0
   GLuint fragmentShader;
   static const char * fragmentShaderSource =
+    "#version 120\n"
     "uniform sampler2D tex;"
-    "uniform vec2 lightsources[128];"
-    "void main (void) {"
-	  "  vec4 texel, color = gl_Color;"
-    "  if(gl_Color.rgb == vec3(0.4, 0.3, 0.3)) { "
-    "    int i = 0;"
-    "    float tmp;"
-    "    float coeff = 0.0;"
-    "    while( lightsources[i] != vec2(0.0, 0.0) ) {"
-    "      vec2 ray = lightsources[i] - gl_FragCoord.xy;"
-    "      float distance = length(ray);"
-    "      tmp = -1.0 / 300.0 * distance + 1.1;"
-    "      if(tmp > 0.0) coeff += tmp;"
-    "      i++;"
-    "    }"
-    "    color *= coeff;"
-    "  } else {"
-    "    texel = texture2D(tex, gl_TexCoord[0].xy);"
-    "    color *= texel;"
+    "uniform vec2 u_direction;"
+    ""
+    "const vec2 gaussFilter[7] = const vec2[7]("
+    "  -3.0,	0.015625,"
+    "  -2.0,	0.09375 ,"
+    "  -1.0,	0.234375,"
+    "   0.0,	0.3125  ,"
+    "   1.0,	0.234375,"
+    "   2.0,	0.09375 ,"
+    "   3.0,	0.015625"
+    ");"
+    ""
+    "void main()"
+    "{"
+    "  vec4 color;"
+    "  color = vec4(0.0, 0.0, 0.0, 0.0);"
+    "  for(int i = 0; i < 7; i++) {"
+    "    color += texture2D( tex, vec2( gl_TexCoord[0].x + gaussFilter[i].x * u_direction.x,"
+    "                                   gl_TexCoord[0].y + gaussFilter[i].x * u_direction.y ) ) * gaussFilter[i].y;"
     "  }"
-
+    ""
     "  gl_FragColor = color;"
-    "}";
+    "}"
+    "";
 
   if(result) {
     GLint length = strlen(fragmentShaderSource);
@@ -214,25 +217,24 @@ bool GLWindow::initOpenGL()
   }
 
   if(result) {
-    mLightShaderObject = glCreateProgram();
-    glAttachShader(mLightShaderObject, fragmentShader);
-    glLinkProgram(mLightShaderObject);    
+    mGaussianShader = glCreateProgram();
+    glAttachShader(mGaussianShader, fragmentShader);
+    glLinkProgram(mGaussianShader);    
 
     GLint linked;
-    glGetProgramiv(mLightShaderObject, GL_LINK_STATUS, &linked);
+    glGetProgramiv(mGaussianShader, GL_LINK_STATUS, &linked);
     if(!linked) {
       Debug::Log("Could not link, saving log.");
       GLchar* log = new GLchar[65636];
-      glGetProgramInfoLog(mLightShaderObject, 65636, NULL, log);
+      glGetProgramInfoLog(mGaussianShader, 65636, NULL, log);
       Debug::LogToFile("linkerlog.txt", "Could not link:\n %s", log);
+      result = false;
       delete[] log;
+    } else {
+      mGaussDirLoc = glGetUniformLocation(mGaussianShader, "u_direction");
+      GL_ASSERT();
     }
     glDeleteShader(fragmentShader);
-  }
-
-  if(result) {
-    mLightSourcesLocation = glGetUniformLocation(mLightShaderObject, "lightsources");
-    mLightMapLocation = glGetUniformLocation(mLightShaderObject, "lightmap");
   }
 #endif
 

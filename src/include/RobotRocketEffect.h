@@ -25,7 +25,7 @@ public:
   void setRotation(GLfloat x, GLfloat y, GLfloat angle);
 
   GLvector2f direction() { return (mdestMid - msrcMid); };
-
+  void setHeight(GLfloat h) { mHeight = h; }
   void draw();
 
 private:

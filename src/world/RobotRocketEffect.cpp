@@ -144,6 +144,7 @@ void RobotRocketEffect::setRotation(GLfloat x, GLfloat y, GLfloat angle)
 
 void RobotRocketEffect::draw()
 {
+  if(mHeight <= 0.0f) return;
   for(int i = 0; i < mCount; i++) {
     GLParticleDummy * p = getParticle(i);
     spawn(p, i);

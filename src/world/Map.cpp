@@ -13,7 +13,7 @@
 Map::Map()
 {
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
-  mSpot = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IWIDTH, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
+  mSpot = new GLParticle(1280, 1280, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -61,10 +61,10 @@ void Map::draw()
   }
 }
 
-void Map::drawShadows()
+void Map::drawShadows(GLuint shader, GLint dirloc)
 {
   GLplane * p;
-  GLfloat radius = 1280.0f;
+  GLfloat radius = 2500.0f;
 
   Lock(mMutex);
   LightSource * s = 0;
@@ -78,17 +78,20 @@ void Map::drawShadows()
     }
 
     renderTarget(true);
-    
-    GLParticle * spot = s->particle;
-    if(spot) {
-      spot->setRotation(spot->pos().x, spot->pos().y, s->angle);
-      spot->setScale(0.3);
-    }
-    else spot = mSpot;
-
+    GLParticle * spot = s->particle ? s->particle : mSpot;
+#if 0
+    GLfloat dt = 0.1f;
+    GLfloat RC = 3.0f;
+    GLfloat r = dt / (RC + dt);
+    s->size = r * (2 * frand()) * GL_SCREEN_FWIDTH + (1-r) * s->size;
+   
+    spot->setSize(s->size, s->size);
+#endif
     spot->setColor((GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb) * s->intensity, 1.0f);
     spot->moveTo(pos.x, pos.y);
+    spot->setRotation(pos.x , pos.y, s->angle);
     spot->draw();
+    radius = spot->w();
 
     {
     foreach(GLplaneList, p, mCollision) {
@@ -96,19 +99,12 @@ void Map::drawShadows()
       GLvector2f dest = p->dest;
       GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
 
-#if 1
-      if((base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
-      ||  base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
-      || (base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
-      ||  base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
-#endif
-
       GLvector2f baseproj = base - pos;
       GLvector2f destproj = dest - pos;
-      GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
-      GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
+      GLvector2f bproj = base + baseproj.normal() * (radius);
+      GLvector2f dproj = dest + destproj.normal() * (radius);  
 
-      //if(baseproj.len() > radius || destproj.len() > radius) continue; 
+      if(baseproj.len() > radius || destproj.len() > radius) continue; 
 
       base -= GL_SCREEN_BOTTOMLEFT;
       dest -= GL_SCREEN_BOTTOMLEFT;
@@ -149,6 +145,14 @@ void Map::drawShadows()
       glEnd();
     }
     }
+
+#if 0
+    glUseProgram(shader);
+    glUniform2f(dirloc, 1.0f, 0.0f);
+    glUseProgram(shader);
+    glUniform2f(dirloc, 0.0f, 1.0f);
+#endif
+
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     renderTarget(false);
@@ -200,27 +204,27 @@ void Map::generate()
   Polygons p, q;
   p.resize(1); q.resize(1);
 
-  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, *(p.begin()));
-  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, *(q.begin()));
+  genCirclePolygon(GLvector2f(1000.0f, 1000.0f), 300.0f, *(p.begin()), true, 30);
+  genCirclePolygon(GLvector2f(1300.0f, 1000.0f), 300.0f, *(q.begin()), true, 30);
   c.AddPolygons(p, ptSubject);
   c.AddPolygons(q, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
 
-  addCirclePolygon(GLvector2f(1600.0f, 1000.0f), 300.0f);
-  addCirclePolygon(GLvector2f(1900.0f, 1000.0f), 300.0f);
-  addCirclePolygon(GLvector2f(2200.0f, 1000.0f), 300.0f);
-  addCirclePolygon(GLvector2f(2500.0f, 1000.0f), 300.0f);
+  addCirclePolygon(GLvector2f(1600.0f, 1000.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(1900.0f, 1000.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(2200.0f, 1000.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(2500.0f, 1000.0f), 300.0f, 30);
 
-  addCirclePolygon(GLvector2f(2500.0f, 1300.0f), 300.0f);
-  addCirclePolygon(GLvector2f(2500.0f, 1600.0f), 300.0f);
-  addCirclePolygon(GLvector2f(2500.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2500.0f, 1300.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(2500.0f, 1600.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(2500.0f, 1900.0f), 300.0f, 30);
 
-  addCirclePolygon(GLvector2f(2200.0f, 1900.0f), 300.0f);
-  addCirclePolygon(GLvector2f(1900.0f, 1900.0f), 300.0f);
-  addCirclePolygon(GLvector2f(1600.0f, 1900.0f), 300.0f);
+  addCirclePolygon(GLvector2f(2200.0f, 1900.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(1900.0f, 1900.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(1600.0f, 1900.0f), 300.0f, 30);
                               
-  addCirclePolygon(GLvector2f(1300.0f, 1900.0f), 300.0f);
-  addCirclePolygon(GLvector2f(1300.0f, 1600.0f), 450.0f);
+  addCirclePolygon(GLvector2f(1300.0f, 1900.0f), 300.0f, 30);
+  addCirclePolygon(GLvector2f(1300.0f, 1600.0f), 450.0f, 30);
 
   updateCollision();
 }                           
@@ -230,16 +234,26 @@ GLfloat Map::getOpacity(GLvector2f pos)
   LightSource * s = 0;
   const GLfloat maxdistance = 1200.0f;
   GLfloat mindistance = maxdistance;
-  
+  bool iscone = false;
+  bool hitcone = false;
+
   foreach(LightSourceList, s, mLightSources) {
-    if((pos - s->pos).len() < mindistance) {
-      mindistance = (pos - s->pos).len();
+    GLvector2f delta = (pos - s->pos);
+    GLfloat len = delta.len();
+    if(s->particle && s->particle->getForm() == glpLightCone) {
+      GLfloat angle = (delta.angle() / M_PI) * 180.0f;
+      hitcone = (s->angle > angle - 25.0f) && (s->angle < angle + 25.0f);
+    } else {
+      hitcone = true;
+    }
+    if(len < mindistance && hitcone) {
+      mindistance = len;
     }
   }
 
   GLfloat alpha = 0.0f;
   if(mindistance <= maxdistance) {
-    alpha = 5000.0f / (mindistance * mindistance);
+    alpha =  pow(2, -mindistance/200);
   } else {
     alpha = 0.0f;
   }
@@ -267,7 +281,10 @@ void Map::updateCollision()
       if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
       GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
       GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
-      mCollision.push_back(new GLplane(A, B - A));
+
+      GLplane * add = new GLplane(A, B - A);
+      add->bordered = true;
+      mCollision.push_back(add);
     }
   }
   MapObject * o = 0;
@@ -337,14 +354,37 @@ void Map::collide()
   Projectile * proj = 0;
   foreach(ProjectileList, proj, mProjectiles) {
     proj->move();
-  }
 
-  GLfloat record = 200.0f;
+    Collidable * c = 0;
+    foreach(CollidableList, c, mCollidables) {
+      if(isProjectile(c) || c == proj->owner) continue;
+      GLfloat distance = (c->pos() - proj->pos()).len();
+      if(distance < c->h()) {
+        proj->collide(GLvector2f(0.0f, 0.0f), distance);
+        toremove.push_back(proj);
+        proj_ref = mProjectiles.erase(proj_ref);
+        switch(proj->type) {
+        case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
+        case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
+        case PROJECTILE_TYPE_BFG: delete ((BFGProjectile *) proj); break;
+        }
+        break;
+      }
+    }
+    if(toremove.size() > 0) {
+      Collidable * c = 0;
+      foreach(CollidableList, c, toremove) {
+        mCollidables.remove(c);
+      }
+      update = true;
+    } toremove.clear();
+    if(proj_ref == mProjectiles.end()) break;
+  }
 
   Lock(mMutex);
   GLplane * p = 0;
   foreach(GLplaneList, p, mCollision) {
-    Debug::drawVector(p->base, p->dir, GL_SCREEN_CENTER, GLvector3f(1.0f, 1.0f, 1.0f));
+    if(p->bordered) Debug::drawVector(p->base, p->dir, GL_SCREEN_CENTER, GLvector3f(1.0f, 1.0f, 1.0f));
 
     Collidable * c = 0;
     foreach(CollidableList, c, mCollidables) {
@@ -353,7 +393,7 @@ void Map::collide()
 
       if((p->base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
       ||  p->base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
-      && (p->base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
+      || (p->base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
       ||  p->base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) continue;
 
       Projectile * proj = isProjectile(c) ? (Projectile *) c : 0;
@@ -384,11 +424,7 @@ void Map::collide()
         mCollidables.remove(c);
       }
       update = true;
-    }
-  }
-
-  if(record != 200.0f) {
-    record = record;
+    } toremove.clear();
   }
 
   Unlock(mMutex);
@@ -398,6 +434,11 @@ void Map::collide()
 void Map::addCollidable(Collidable * c)
 { 
   mCollidables.push_back(c);
+}
+
+void Map::removeCollidable(Collidable * c)
+{
+  mCollidables.remove(c);
 }
 
 void Map::addProjectile(Projectile * proj)
@@ -418,6 +459,7 @@ void Map::removeProjectile(Projectile * proj)
 
 bool Map::isProjectile(Collidable * c)
 {
+  if(mProjectiles.size() == 0) return false;
   Projectile * proj = 0;
   foreach(ProjectileList, proj, mProjectiles) {
     if(proj == c) {

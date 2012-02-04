@@ -31,7 +31,9 @@ public:
   //virtual ~Projectile() { };
   virtual void init() = 0;
   unsigned int type;
+  void * owner;
 
+  void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
   GLfloat h() { return mHeight; };

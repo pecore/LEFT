@@ -81,7 +81,7 @@ bool GLParticle::collide(GLvector2f n, GLfloat distance)
   return true;
 }
 
-char GLParticle::getAlpha(int x, int y)
+unsigned char GLParticle::getAlpha(int x, int y)
 {
   double cx = x - (mWidth / 2);
   double cy = mHeight - (y + (mHeight / 2));
@@ -113,21 +113,22 @@ char GLParticle::getAlpha(int x, int y)
   case glpSolid:
     alpha = ma;
     break;
-  case glpLeftLight:
-    if(x < mWidth / 2) {
-      if(distance <= max_distance) {
-        alpha = 5000.0f / (distance * distance);
-      } else {
-        alpha = 0.0f;
-      }
-      if(alpha > 1.0f) alpha = 1.0f; 
+  case glpLightCone:
+    if(distance <= max_distance) {
+      alpha = pow(2, -distance/200);
     } else {
       alpha = 0.0f;
     }
+    x -= mWidth / 2;
+    y -= mHeight /2;
+    if(x > 0 && y > (0.2f * x + 12)) alpha = 0.0f;
+    if(x > 0 && y < (-0.2f * x - 12)) alpha = 0.0f;
+    if(x <= 0 && distance > 12) alpha = 0.0f;
+    if(alpha > 1.0f) alpha = 1.0f;
     break;
   case glpLight:
     if(distance <= max_distance) {
-      alpha = 5000.0f / (distance * distance);
+      alpha = pow(2, -distance/100); //mWidth / (distance * distance);
     } else {
       alpha = 0.0f;
     }
@@ -135,5 +136,5 @@ char GLParticle::getAlpha(int x, int y)
     break;
   }
 
-  return (char)(alpha * 255.0f); 
+  return (unsigned char)(alpha * 255.0f); 
 }

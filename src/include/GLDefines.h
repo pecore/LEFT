@@ -87,6 +87,8 @@ public:
   GLvector2f dest;
   GLvector2f n() { return GLvector2f((dest.y - base.y), -(dest.x - base.x)); }
 
+  bool bordered;
+
   GLplane();
   GLplane(GLvector2f & _base, GLvector2f & _dir);
   ~GLplane();
@@ -124,7 +126,6 @@ extern GLvector2f gScreenSize;
 #define GL_SCREEN_FWIDTH     gScreenSize.x
 #define GL_SCREEN_IHEIGHT    (int)gScreenSize.y
 #define GL_SCREEN_FHEIGHT    gScreenSize.y
-#define GL_MAP_THRESHOLD     500
 #ifndef _DEBUG
 #define GL_ASSERT() assert(GL_NO_ERROR == glGetError());
 #else

@@ -15,6 +15,7 @@
 #include "Collidable.h"
 #include "Projectile.h"
 #include "GLParticle.h"
+#include "GLFont.h"
 
 class HUDButton {
 public:
@@ -36,6 +37,8 @@ public:
     mButtons.push_back(new HUDButton("data\\btn_rocket_inactive.png", "data\\btn_rocket_active.png"));
     mButtons.push_back(new HUDButton("data\\btn_shotgun_inactive.png", "data\\btn_shotgun_active.png"));
     mButtons.push_back(new HUDButton("data\\btn_grenade_inactive.png", "data\\btn_grenade_active.png"));
+    mFont = gResources->getFont("data\\euphemia.fnt")->font;
+    mHealth = 100.0f;
     mActive = 0;
   }
   ~HUD() {
@@ -58,11 +61,16 @@ public:
       s->draw();
       i++;
     }
+    glColor3f(0.3f, 0.6f, 0.9f);
+    glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%.0f", mHealth);
   }
 
 private:
   std::list<HUDButton *> mButtons;
   unsigned int mActive;
+  bm_font * mFont;
+
+  GLfloat mHealth;
 };
 
 #endif

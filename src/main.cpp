@@ -7,6 +7,7 @@
 */
 
 #define LEFT_VERSION "0.62"
+#define LEFT_USE_FAST_SQRT 1
 
 #define _WIN32_WINNT 0x0601
 #include "LEFTnet.h"
@@ -82,9 +83,8 @@ typedef struct {
   } timing;
 } left_handle;
 
-GLParticle * Debug::DebugParticle = 0;
 std::list<Debug::DebugVectorType> Debug::DebugVectors;
-bool Debug::DebugActive = false;
+bool Debug::DebugActive = true;
 void * Debug::DebugMutex;
 GLfloat gDebugValue;
 
@@ -175,6 +175,7 @@ void renderScene(left_handle * left)
       if(!timeout) {
         for(int i = 0; i < 1024; i++) {
           if(left->net.friends[i]) {
+            left->map->removeCollidable(left->net.friends[i]);
             delete left->net.friends[i];
             left->net.friends[i] = 0;
           }
@@ -257,20 +258,24 @@ void renderScene(left_handle * left)
           }
           break;
         case LEFT_NET_MSG_PROJECTILE: {
+            Projectile * p = 0;
             switch(m->msg.projectile.type) {
             case PROJECTILE_TYPE_ROCKET:
-              left->map->addProjectile(new RocketProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map));
+              p = new RocketProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
               break;
             case PROJECTILE_TYPE_SHOTGUN:
-              left->map->addProjectile(new ShotgunProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map));
+              p = new ShotgunProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
               break;
             case PROJECTILE_TYPE_GRENADE:
-              left->map->addProjectile(new GrenadeProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map));
+              p = new GrenadeProjectile(left->net.friends[m->header.sender]->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
               break;
             }
+            p->owner = left->net.friends[m->header.sender];
+            left->map->addProjectile(p);
           } break;
         case LEFT_NET_MSG_BYE:
           cprintf(left, "> client disconnected from server");
+          left->map->removeCollidable(left->net.friends[m->header.sender]);
           delete left->net.friends[m->header.sender];
           left->net.friends[m->header.sender] = 0;
           break;
@@ -280,10 +285,11 @@ void renderScene(left_handle * left)
         case LEFT_NET_MSG_UPDATE_POS: {
             if(!left->net.friends[m->header.sender]) {
               left->net.friends[m->header.sender] = new RobotModel(left->map);
+              left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
+              left->map->addCollidable(left->net.friends[m->header.sender]);
             }
             GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
             left->net.friends[m->header.sender]->setVelocity(newpos - left->net.friends[m->header.sender]->pos());
-            //left->net.friends[m->header.sender]->moveTo(m->msg.position.xpos, m->msg.position.ypos);
             left->net.friends[m->header.sender]->setWeaponAngle(m->msg.position.weaponangle);
             left->net.friends[m->header.sender]->setAngle(m->msg.position.robotangle);
           } break;
@@ -394,11 +400,12 @@ void renderScene(left_handle * left)
 
   left->robot->integrate(0.1f);
   left->robotlight->pos = left->robot->pos();
+  left->robotlight->angle = ((left->control.mousepos - left->robot->pos()).angle() / M_PI) * 180.0f;
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
 
   left->map->draw();
-  left->map->drawShadows();
+  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
   left->map->collide();
   left->map->drawProjectiles();
   left->map->drawAnimations();
@@ -711,7 +718,7 @@ DWORD WINAPI run(void * lh)
     left->robot = new RobotModel(left->map);
     left->robot->moveTo(1100.0f, 1000.0f);
     left->map->addCollidable(left->robot);
-    left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f);
+    left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
     left->map->LightSources().push_back(left->robotlight);
     
     left->house = new MapObject("house");
@@ -728,7 +735,7 @@ DWORD WINAPI run(void * lh)
       left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
       left->balls[ballcount]->moveTo(1000.0f, 1000.0f);
       left->balls[ballcount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
-      left->lightballs[ballcount] = new LightSource(left->balls[ballcount]->pos(), left->balls[ballcount]->getColor() / 5.0f, 0.1f);
+      left->lightballs[ballcount] = new LightSource(left->balls[ballcount]->pos(), left->balls[ballcount]->getColor() / 5.0f, 0.3f);
       left->map->LightSources().push_back(left->lightballs[ballcount]);
       left->map->addCollidable(left->balls[ballcount]);
       left->ballcount++;
@@ -757,7 +764,6 @@ DWORD WINAPI run(void * lh)
   delete left->map;
   delete left->cross;
   delete left->robot;
-  delete Debug::DebugParticle;
   delete left->resources;
   delete left->console.bg;
   return 0;

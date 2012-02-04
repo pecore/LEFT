@@ -6,24 +6,29 @@
     Jan Christian Meyer
 */
 
+#include "LEFTsettings.h"
+
+#include "GLResources.h"
 #include "GLWindow.h"
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+#include "GLSprite.h"
+#include "GLParticle.h"
+#include "GLFont.h"
+
+#include <fstream>
+
 bool running = false;
+GLResources * gResources;
+GLvector2f gScreen(0.0f, 0.0f);
+GLvector2f gScreenSize(1280.0f, 720.0f);
+Settings * gSettings = 0;
+GLvector2f gMousePos;
 
 #include "Debug.h"
 GLParticle * Debug::DebugParticle = 0;
 std::list<Debug::DebugVectorType> Debug::DebugVectors;
 bool Debug::DebugActive = true;
 void * Debug::DebugMutex;
-
-#include <fstream>
-#include "GLResources.h"
-#include "GLSprite.h"
-#include "GLParticle.h"
-#include "GLFont.h"
-GLResources * gResources;
-GLvector2f gScreen(0.0f, 0.0f);
-GLvector2f gMousePos;
 
 bool showpolygon = false;
 Polygon polygon;
@@ -246,6 +251,29 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
       case VK_F4:
         showpolygon = !showpolygon;
         break;
+      case VK_F5: {
+        OPENFILENAME ofn;
+        char szFile[260];
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = hWnd;
+        ofn.lpstrFile = szFile;
+        ofn.lpstrFile[0] = '\0';
+        ofn.nMaxFile = sizeof(szFile);
+        ofn.lpstrFilter = "All\0*.*\0Text\0*.TXT\0";
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrInitialDir = ".\\";
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        if(GetOpenFileName(&ofn)) {
+          std::ifstream f(ofn.lpstrFile);
+          Polygons p;
+          f >> p;
+          polygon = p[0];
+          f.close();
+        } break;
+      }
     }
     return 0;								
   case WM_KEYUP:

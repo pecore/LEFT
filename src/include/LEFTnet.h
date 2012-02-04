@@ -131,7 +131,7 @@ public:
 
   void send_message(left_message * m) 
   {
-    send = *m;
+    memcpy(&send, m, sizeof(m->header) + m->header.size);
     boost::asio::async_write(socket_, boost::asio::buffer(&send, sizeof(send.header) + send.header.size),
           boost::bind(&tcp_connection::handle_write, shared_from_this(),
           boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
@@ -254,6 +254,7 @@ public:
 
   void push(left_message * m)
   {
+
     messages.push(new left_message(*m));
   }
 
@@ -334,7 +335,7 @@ public:
 
   void send_message(left_message * m) 
   {
-    send = *m;
+    memcpy(&send, m, sizeof(m->header) + m->header.size);
     boost::asio::async_write(socket_, boost::asio::buffer(&send, sizeof(send.header) + send.header.size), 
           boost::bind(&tcp_client::handle_write, this,
           boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));

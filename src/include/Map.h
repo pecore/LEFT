@@ -23,9 +23,9 @@ struct Animation {
 
 class LightSource {
 public:
-  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : pos(_pos), rgb(_rgb), intensity(_intensity) {
+  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : size(GL_SCREEN_IWIDTH), pos(_pos), rgb(_rgb), intensity(_intensity) {
     if(form != glpLight) {
-      particle = new GLParticle(GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, rgb.x, rgb.y, rgb.z, 1.0f, form);
+      particle = new GLParticle(size, size, rgb.x, rgb.y, rgb.z, 1.0f, form);
     } else {
       particle = 0;
     }
@@ -40,6 +40,7 @@ public:
   GLvector3f rgb;
   GLfloat intensity;
   GLfloat angle;
+  GLfloat size;
 
   GLParticle * particle;
 };
@@ -111,12 +112,13 @@ public:
   void unlock() { Unlock(mMutex); }
 
   void draw();
-  void drawShadows();
+  void drawShadows(GLuint shader, GLint dirloc);
   void drawProjectiles();
   void drawAnimations();
   void collide();
 
   void addCollidable(Collidable * c);
+  void removeCollidable(Collidable * c);
   void addProjectile(Projectile * proj);
   void removeProjectile(Projectile * proj);
   bool isProjectile(Collidable * c);
@@ -156,6 +158,7 @@ private:
   void * mCallbackUserData;
 
   GLParticle * mSpot;
+  GLParticle * mConeSpot;
   MapObjectList mMapObjects;
   LightSourceList mLightSources;
   CollidableList mCollidables;
