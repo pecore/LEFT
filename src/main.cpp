@@ -75,8 +75,10 @@ typedef struct {
   } control;
 
   bool consoleactive;
+  bool inputactive;
   struct {
     HANDLE mutex;
+    unsigned int recent;
     unsigned int recorder;
     unsigned int linecount;
     char linebuffer[16][129];
@@ -289,15 +291,23 @@ void renderScene(left_handle * left)
 
   bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
   Lock(left->console.mutex);
-  if(left->consoleactive) {
+  if(left->consoleactive || left->inputactive || left->console.recent > 0) {
+    unsigned int count = (left->console.recent > 0 && !left->consoleactive ? left->console.recent : left->console.linecount);
+    unsigned int offset = left->console.recent > 0 ? 1 : 0;
     char s[129];
-    left->console.bg->setSize(GL_SCREEN_FWIDTH, 3.0f + left->console.linecount * font->line_h);
+    if(left->console.recent == 0 && left->inputactive) count = 1;
+    if(left->console.recent > 0 && left->inputactive) { 
+      count += 1;
+      offset = 0;
+    }
+
+    left->console.bg->setSize(GL_SCREEN_FWIDTH, 3.0f + count * font->line_h);
     left->console.bg->moveTo(GL_SCREEN_BOTTOMLEFT.x + left->console.bg->w() / 2.0f, GL_SCREEN_BOTTOMLEFT.y + left->console.bg->h() / 2.0f);
     left->console.bg->draw();
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    for(int i = 0; i < left->console.linecount; i++) {
+    for(int i = offset; i < offset+count; i++) {
       if(left->console.linebuffer[i][0]) {
-        glFontPrint(font, GLvector2f(0.0f, 3.0f + i * font->line_h), left->console.linebuffer[i]);
+        glFontPrint(font, GLvector2f(0.0f, (3.0f + (i - (left->inputactive ? 0 : offset)) * font->line_h)), left->console.linebuffer[i]);
       }
     }
   }
@@ -314,6 +324,7 @@ void renderScene(left_handle * left)
     left->timing.fps = (GLfloat) left->timing.framecounter / delta;
     left->timing.framecounter = 0;
   }
+  if(left->console.recent && !(left->timing.timer % 3000)) left->console.recent--;
   left->timing.timer += tickdelta;
   left->timing.framecounter++;
 }
@@ -458,6 +469,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
       server->distribute(chat);
     }
     cprintf(left, "<%s> %s", left->settings->gets("p_name").c_str(), left->console.linebuffer[0]);
+    if(left->console.recent < 4) left->console.recent++;
     left_net_message_pool->del(chat);
   }
 
@@ -486,6 +498,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     switch (wParam) {
     case '\r':
       parseConsoleCommand(left, (char *) left->console.linebuffer[0]);
+      left->inputactive = false;
       break;
     case '\b':
       if(left->console.recorder <= 0)
@@ -519,6 +532,12 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
       left->control.keydown[VK_SPACE] = left->consoleactive;
       left->console.recorder = 0;
       break;
+    case VK_F3:
+      left->inputactive = !left->inputactive;
+      break;
+    case 'T':
+      if(!left->consoleactive) left->inputactive = true;
+      break;
     case VK_F5: {
         if(!left->net.client) {
           tcp::resolver resolver(io_service);
@@ -551,7 +570,6 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
 DWORD WINAPI run_messages(void * data)
 {
   left_handle * left = (left_handle *) data;
-  Polygons mapdestruction;
   while(left->running) {
     if(left->net.client && !left->net.client->isconnected()) {
       int timeout = 1000; // 1 sec
@@ -578,10 +596,6 @@ DWORD WINAPI run_messages(void * data)
     }
 
     if(!m) {
-      if(!mapdestruction.empty()) {
-        left->map->addPolygons(mapdestruction);
-        mapdestruction.clear();
-      }
       Sleep(0);    
       continue;
     }
@@ -671,6 +685,7 @@ DWORD WINAPI run_messages(void * data)
         break;
       case LEFT_NET_MSG_CHAT:
         cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
+        if(left->console.recent < 4) left->console.recent++;
         break;
       case LEFT_NET_MSG_UPDATE_POS: {
           Lock(left->net.friendmutex);
@@ -745,14 +760,7 @@ DWORD WINAPI run_messages(void * data)
               polygon.push_back(point);
             }
 
-            Clipper c;
-            Polygons clip;
-            clip.push_back(polygon);
-            c.AddPolygons(mapdestruction, ptSubject);
-            c.AddPolygons(clip, ptClip);
-            c.Execute(ctUnion, mapdestruction, pftEvenOdd, pftEvenOdd);
-            //mapdestruction.push_back(polygon);
-            //left->map->addPolygon(polygon);
+            left->map->addPolygon(polygon);
           }
         } break;
       }
@@ -871,8 +879,10 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   memset(&left->timing, 0, sizeof(left->timing));
   memset(&left->console, 0, sizeof(left->console));
   left->console.mutex = CreateMutex(0, FALSE, "LeftConsoleMutex");
+  left->console.recent = 0;
   left->console.linecount = 16;
   left->consoleactive = false;
+  left->inputactive = false;
   left->ballcount = 0;
   left->control.mousebutton = 0;
   
@@ -933,7 +943,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
         left->running = false;
         break;
       }
-      if(left->consoleactive) TranslateMessage(&msg);
+      if(left->consoleactive || left->inputactive) TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
     Sleep(16);
