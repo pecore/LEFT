@@ -10,10 +10,12 @@
 #define LEFT_USE_FAST_SQRT 1
 
 #define _WIN32_WINNT 0x0601
+#define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
+#define Unlock(mutex) ReleaseMutex(mutex)
 #include "LEFTnet.h"
 boost::asio::io_service io_service;
 tcp_server * server;
-message_pool * gMessagePool;
+message_pool * left_net_message_pool;
 
 #include "LEFTsettings.h"
 #include "GLResources.h"
@@ -61,11 +63,11 @@ typedef struct {
       char name[256];
       GLfloat health;
     } friends[1024];
+    HANDLE friendmutex;
   } net;
 
   struct {
     bool keydown[256];
-    // FIXME mutex
     GLvector2f mousepos;
     unsigned int mousebutton;
   } control;
@@ -138,6 +140,17 @@ int isPlayer(left_handle * left, Collidable * c)
   return -1;
 }
 
+void removePlayer(left_handle * left, int index)
+{
+  Lock(left->net.friendmutex);
+  if(left->net.friends[index].model) {
+    left->map->removeCollidable(left->net.friends[index].model);
+    delete left->net.friends[index].model;
+    left->net.friends[index].model = 0;
+  }
+  Unlock(left->net.friendmutex);
+}
+
 GLfloat getDamage(unsigned int type)
 {
   switch(type) {
@@ -162,7 +175,7 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
       left_message * stats = new_message(LEFT_NET_MSG_UPDATE_STATS);
       stats->msg.stats.health = left->net.friends[index].health;
       server->send_message(stats, index);
-      gMessagePool->del(stats);
+      left_net_message_pool->del(stats);
     } else if(c == left->robot) {
       left->robot->getHUD()->addHealth(- getDamage(type));
     }
@@ -193,40 +206,16 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
 
     server->distribute(map);
 
-    gMessagePool->del(map);
+    left_net_message_pool->del(map);
   }
 }
 
 void renderScene(left_handle * left)	
 {
   updateMousePosition(left);
-  
-  if(server->clientcount() > 0 || left->net.client) {
-    left->map->setUpdate(left->net.client == 0);
+  left->map->setUpdate(left->net.client == 0);
 
-    if(left->net.client && !left->net.client->isconnected()) {
-      int timeout = 1000; // 1 sec
-      while(!left->net.client->isconnected() && --timeout) {
-        cprintf(left, "> connecting %d", timeout);
-        Sleep(1);
-      }
-
-      if(!timeout) {
-        for(int i = 0; i < 1024; i++) {
-          if(left->net.friends[i].model) {
-            left->map->removeCollidable(left->net.friends[i].model);
-            delete left->net.friends[i].model;
-            left->net.friends[i].model = 0;
-          }
-        }
-        delete left->net.client;
-        left->net.client = 0;
-
-        cprintf(left, "> disconnected from server");
-      }
-    }
-
-    // update position
+  if(server->count() > 0 || left->net.client) {
     GLvector2f pos = left->robot->pos();
     left_message * posmsg = new_message(LEFT_NET_MSG_UPDATE_POS);
     posmsg->msg.position.weaponangle = ((left->control.mousepos - pos).angle() / M_PI) * 180.0f;
@@ -238,191 +227,8 @@ void renderScene(left_handle * left)
     } else {
       server->distribute(posmsg);
     }
-    gMessagePool->del(posmsg);
-
+    left_net_message_pool->del(posmsg);
   }
-  left_message * m = 0;
-  do {
-    if(left->net.client) {
-      m = left->net.client->get_message();
-    } else {
-      m = server->get_message();
-    }
-
-    if(m && m->header.sender < 1024U) {
-      left_message * reply = 0;
-      switch(m->header.msg) {
-      case LEFT_NET_MSG_WUI:
-        cprintf(left, "> %sconnected: %s", !left->net.client ? "client " : "", m->msg.wui.name);
-        if(!left->net.client) {     
-          Polygons cmap = left->map->polygons();
-          #define uintptr unsigned long
-          left_message * map = new_message(LEFT_NET_MSG_UPDATE_MAP);
-
-          uintptr p = (uintptr) &map->msg;
-          unsigned int polycount = cmap.size();
-          unsigned int allvertcount = 0;
-
-          memcpy((void *) p, &polycount, sizeof(unsigned int));
-          p += sizeof(unsigned int);
-
-          Polygons::iterator pit;
-          for(pit = cmap.begin(); pit != cmap.end(); ++pit) {
-            Polygon polygon = *pit;
-            unsigned int vertcount = polygon.size();
-            allvertcount += vertcount;
-
-            memcpy((void *) p, &vertcount, sizeof(unsigned int));
-            p += sizeof(unsigned int);
-
-            Polygon::iterator vit;
-            for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
-              IntPoint current = *vit;
-              float x = (GLfloat) (current.X / CLIPPER_PRECISION);
-              float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
-              memcpy((void *) p, &x, sizeof(float));
-              p += sizeof(float);
-              memcpy((void *) p, &y, sizeof(float));
-              p += sizeof(float);
-            }
-          }
-
-          map->header.size = sizeof(unsigned int) +
-                             polycount * sizeof(unsigned int) +
-                             sizeof(float) * 2 * allvertcount;
-
-          cprintf(left, "> sending map p:%d", polycount);
-          server->send_message(map, m->header.sender);
-
-          left->net.friends[m->header.sender].health = 100.0f;
-          strcpy(left->net.friends[m->header.sender].name, m->msg.wui.name);
-           
-          gMessagePool->del(map);
-        } else {
-          left_message * wui = new_message(LEFT_NET_MSG_WUI);
-          strcpy(wui->msg.wui.name, left->settings->gets("p_name").c_str());
-          left->net.client->send_message(wui);
-          gMessagePool->del(wui);
-        }
-        break;
-      case LEFT_NET_MSG_UPDATE_STATS:{
-          if(left->net.client) {
-            left->robot->getHUD()->setHealth(m->msg.stats.health);
-          }
-        } break;
-      case LEFT_NET_MSG_PROJECTILE: {
-          Projectile * p = 0;
-          switch(m->msg.projectile.type) {
-          case PROJECTILE_TYPE_ROCKET:
-            p = new RocketProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-            break;
-          case PROJECTILE_TYPE_SHOTGUN:
-            p = new ShotgunProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-            break;
-          case PROJECTILE_TYPE_GRENADE:
-            p = new GrenadeProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
-            break;
-          }
-          p->owner = left->net.friends[m->header.sender].model;
-          left->map->addProjectile(p);
-        } break;
-      case LEFT_NET_MSG_BYE:
-        cprintf(left, "> client disconnected from server");
-        left->map->removeCollidable(left->net.friends[m->header.sender].model);
-        delete left->net.friends[m->header.sender].model;
-        left->net.friends[m->header.sender].model = 0;
-        break;
-      case LEFT_NET_MSG_CHAT:
-        cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
-        break;
-      case LEFT_NET_MSG_UPDATE_POS: {
-          if(!left->net.friends[m->header.sender].model) {
-            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
-            left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
-            left->net.friends[m->header.sender].model->setHUD(false);
-            left->map->addCollidable(left->net.friends[m->header.sender].model);
-          }
-          GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
-          left->net.friends[m->header.sender].model->setVelocity(newpos - left->net.friends[m->header.sender].model->pos());
-          left->net.friends[m->header.sender].model->setWeaponAngle(m->msg.position.weaponangle);
-          left->net.friends[m->header.sender].model->setAngle(m->msg.position.robotangle);
-        } break;
-      case LEFT_NET_MSG_UPDATE_MAP: {
-          if(left->net.client) {
-            uintptr p = (uintptr) &m->msg.buffer;
-            Polygons servermap;
-            unsigned int polycount = 0;
-            
-            memcpy(&polycount, (void *) p, sizeof(unsigned int));
-            p += sizeof(unsigned int);
-
-            for(int poly = 0; poly < polycount; poly++) {
-              Polygon polygon;
-              unsigned int vertcount = 0;
-              
-              memcpy(&vertcount, (void *) p, sizeof(unsigned int));
-              p += sizeof(unsigned int);
-
-              for(int vert = 0; vert < vertcount; vert++) {
-                IntPoint point;
-                float x = 0.0f;
-                float y = 0.0f;
-                memcpy(&x, (void *) p, sizeof(float));
-                p += sizeof(float);
-                memcpy(&y, (void *) p, sizeof(float));
-                p += sizeof(float);
-              
-                point.X = (x * CLIPPER_PRECISION);
-                point.Y = (y * CLIPPER_PRECISION);
-                polygon.push_back(point);
-              }
-
-              servermap.push_back(polygon);
-            }
-            left->map->setPolygons(servermap);
-          }
-        } break;
-
-      case LEFT_NET_MSG_DESTROY_MAP: {
-          if(left->net.client) {
-            uintptr p = (uintptr) &m->msg.buffer;
-            Polygon polygon;
-            unsigned int vertcount = 0;
-            
-            memcpy(&vertcount, (void *) p, sizeof(unsigned int));
-            p += sizeof(unsigned int);
-
-            for(int vert = 0; vert < vertcount; vert++) {
-              IntPoint point;
-              float x = 0.0f;
-              float y = 0.0f;
-              memcpy(&x, (void *) p, sizeof(float));
-              p += sizeof(float);
-              memcpy(&y, (void *) p, sizeof(float));
-              p += sizeof(float);
-            
-              point.X = (x * CLIPPER_PRECISION);
-              point.Y = (y * CLIPPER_PRECISION);
-              polygon.push_back(point);
-            }
-
-            left->map->addPolygon(polygon);
-          }
-        } break;
-      }
-
-      if(reply) {
-        if(left->net.client) {
-          left->net.client->send_message(reply);
-        } else {
-          server->distribute(reply);
-        }
-        delete reply;
-      }
-
-      gMessagePool->del(m);
-    }
-  } while(m);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -448,7 +254,7 @@ void renderScene(left_handle * left)
         server->distribute(proj);
       }
     }
-    gMessagePool->del(proj);
+    left_net_message_pool->del(proj);
   }
 
   left->robot->integrate(0.1f);
@@ -468,11 +274,13 @@ void renderScene(left_handle * left)
   left->cross->draw();
 
   for(int i = 0; i < 1024; i++) {
+    Lock(left->net.friendmutex);
     if(left->net.friends[i].model) {
       left->net.friends[i].model->integrate(0.1f);
       left->net.friends[i].model->setAlpha(left->map->getOpacity(left->net.friends[i].model->pos()));
       left->net.friends[i].model->draw();
     }
+    Unlock(left->net.friendmutex);
   }
 
   bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
@@ -642,11 +450,11 @@ void parseConsoleCommand(left_handle * left, char * cmd)
     strcpy(chat->msg.chat.msg, cmd);
     if(left->net.client) {
       left->net.client->send_message(chat);
-    } else {
+    } else {  
       server->distribute(chat);
     }
     cprintf(left, "<%s> %s", left->settings->gets("p_name").c_str(), left->console.linebuffer[0]);
-    gMessagePool->del(chat);
+    left_net_message_pool->del(chat);
   }
 
   memset(left->console.linebuffer[0], 0, 129);
@@ -734,6 +542,218 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
   }
 
   return DefWindowProc(hWnd,uMsg,wParam,lParam);
+}
+
+DWORD WINAPI run_messages(void * data)
+{
+  left_handle * left = (left_handle *) data;
+  while(left->running) {
+    if(left->net.client && !left->net.client->isconnected()) {
+      int timeout = 1000; // 1 sec
+      cprintf(left, "> connecting");
+      while(!left->net.client->isconnected() && --timeout) { 
+        Sleep(1);
+      }
+
+      if(!timeout) {
+        for(int i = 0; i < 1024; i++) {
+          removePlayer(left, i);
+        }
+        delete left->net.client;
+        left->net.client = 0;
+        cprintf(left, "> disconnected from server");
+      }
+    }
+    
+    left_message * m = 0;
+    if(left->net.client) {
+      m = left->net.client->get_message();
+    } else {
+      m = server->get_message();
+    }
+    if(!m) {
+      Sleep(5);    
+      continue;
+    }
+
+    if(m && m->header.sender < 1024U) {
+      left_message * reply = 0;
+      switch(m->header.msg) {
+      case LEFT_NET_MSG_WUI:
+        cprintf(left, "> %sconnected: %s", !left->net.client ? "client " : "", m->msg.wui.name);
+        if(!left->net.client) {     
+          Polygons cmap = left->map->polygons();
+          #define uintptr unsigned long
+          left_message * map = new_message(LEFT_NET_MSG_UPDATE_MAP);
+
+          uintptr p = (uintptr) &map->msg;
+          unsigned int polycount = cmap.size();
+          unsigned int allvertcount = 0;
+
+          memcpy((void *) p, &polycount, sizeof(unsigned int));
+          p += sizeof(unsigned int);
+
+          Polygons::iterator pit;
+          for(pit = cmap.begin(); pit != cmap.end(); ++pit) {
+            Polygon polygon = *pit;
+            unsigned int vertcount = polygon.size();
+            allvertcount += vertcount;
+
+            memcpy((void *) p, &vertcount, sizeof(unsigned int));
+            p += sizeof(unsigned int);
+
+            Polygon::iterator vit;
+            for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
+              IntPoint current = *vit;
+              float x = (GLfloat) (current.X / CLIPPER_PRECISION);
+              float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
+              memcpy((void *) p, &x, sizeof(float));
+              p += sizeof(float);
+              memcpy((void *) p, &y, sizeof(float));
+              p += sizeof(float);
+            }
+          }
+
+          map->header.size = sizeof(unsigned int) +
+                             polycount * sizeof(unsigned int) +
+                             sizeof(float) * 2 * allvertcount;
+
+          cprintf(left, "> sending map p:%d size:%db", polycount, sizeof(map->header) + map->header.size);
+          server->send_message(map, m->header.sender);
+
+          left->net.friends[m->header.sender].health = 100.0f;
+          strcpy(left->net.friends[m->header.sender].name, m->msg.wui.name);
+           
+          left_net_message_pool->del(map);
+        } else {
+          left_message * wui = new_message(LEFT_NET_MSG_WUI);
+          strcpy(wui->msg.wui.name, left->settings->gets("p_name").c_str());
+          left->net.client->send_message(wui);
+          left_net_message_pool->del(wui);
+        }
+        break;
+      case LEFT_NET_MSG_UPDATE_STATS:{
+          if(left->net.client) {
+            left->robot->getHUD()->setHealth(m->msg.stats.health);
+          }
+        } break;
+      case LEFT_NET_MSG_PROJECTILE: {
+          Projectile * p = 0;
+          Lock(left->net.friendmutex);
+          switch(m->msg.projectile.type) {
+          case PROJECTILE_TYPE_ROCKET:
+            p = new RocketProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          case PROJECTILE_TYPE_SHOTGUN:
+            p = new ShotgunProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          case PROJECTILE_TYPE_GRENADE:
+            p = new GrenadeProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
+          }
+          p->owner = left->net.friends[m->header.sender].model;
+          Unlock(left->net.friendmutex);
+          left->map->addProjectile(p);
+        } break;
+      case LEFT_NET_MSG_BYE:
+        cprintf(left, "> client disconnected from server");
+        removePlayer(left, m->header.sender);
+        break;
+      case LEFT_NET_MSG_CHAT:
+        cprintf(left, "<%s> %s", m->msg.chat.name, m->msg.chat.msg);
+        break;
+      case LEFT_NET_MSG_UPDATE_POS: {
+          Lock(left->net.friendmutex);
+          if(!left->net.friends[m->header.sender].model) {
+            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
+            left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
+            left->net.friends[m->header.sender].model->setHUD(false);
+            left->map->addCollidable(left->net.friends[m->header.sender].model);
+          }
+          GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
+          left->net.friends[m->header.sender].model->setVelocity(newpos - left->net.friends[m->header.sender].model->pos());
+          left->net.friends[m->header.sender].model->setWeaponAngle(m->msg.position.weaponangle);
+          left->net.friends[m->header.sender].model->setAngle(m->msg.position.robotangle);
+          Unlock(left->net.friendmutex);
+        } break;
+      case LEFT_NET_MSG_UPDATE_MAP: {
+          if(left->net.client) {
+            uintptr p = (uintptr) &m->msg.buffer;
+            Polygons servermap;
+            unsigned int polycount = 0;
+            
+            memcpy(&polycount, (void *) p, sizeof(unsigned int));
+            p += sizeof(unsigned int);
+
+            for(int poly = 0; poly < polycount; poly++) {
+              Polygon polygon;
+              unsigned int vertcount = 0;
+              
+              memcpy(&vertcount, (void *) p, sizeof(unsigned int));
+              p += sizeof(unsigned int);
+
+              for(int vert = 0; vert < vertcount; vert++) {
+                IntPoint point;
+                float x = 0.0f;
+                float y = 0.0f;
+                memcpy(&x, (void *) p, sizeof(float));
+                p += sizeof(float);
+                memcpy(&y, (void *) p, sizeof(float));
+                p += sizeof(float);
+              
+                point.X = (x * CLIPPER_PRECISION);
+                point.Y = (y * CLIPPER_PRECISION);
+                polygon.push_back(point);
+              }
+
+              servermap.push_back(polygon);
+            }
+            left->map->setPolygons(servermap);
+          }
+        } break;
+
+      case LEFT_NET_MSG_DESTROY_MAP: {
+          if(left->net.client) {
+            uintptr p = (uintptr) &m->msg.buffer;
+            Polygon polygon;
+            unsigned int vertcount = 0;
+            
+            memcpy(&vertcount, (void *) p, sizeof(unsigned int));
+            p += sizeof(unsigned int);
+
+            for(int vert = 0; vert < vertcount; vert++) {
+              IntPoint point;
+              float x = 0.0f;
+              float y = 0.0f;
+              memcpy(&x, (void *) p, sizeof(float));
+              p += sizeof(float);
+              memcpy(&y, (void *) p, sizeof(float));
+              p += sizeof(float);
+            
+              point.X = (x * CLIPPER_PRECISION);
+              point.Y = (y * CLIPPER_PRECISION);
+              polygon.push_back(point);
+            }
+
+            left->map->addPolygon(polygon);
+          }
+        } break;
+      }
+
+      if(reply) {
+        if(left->net.client) {
+          left->net.client->send_message(reply);
+        } else {
+          server->distribute(reply);
+        }
+        delete reply;
+      }
+
+      left_net_message_pool->del(m);
+    }
+  };
+
+  return 0;
 }
 
 DWORD WINAPI run_asio(void * data)
@@ -825,7 +845,7 @@ DWORD WINAPI run(void * lh)
 
 int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-  HANDLE renderThread, tcpThread;
+  HANDLE renderThread, tcpThread, msgThread;
 	MSG msg;
   timeBeginPeriod(1);
   srand( (unsigned int)GetTickCount() );
@@ -846,7 +866,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->net.client = 0;
   left->net.io_service = &io_service;
   memset(left->net.friends, 0, sizeof(left->net.friends));
-  gMessagePool = new message_pool();
+  left->net.friendmutex = CreateMutex(0, FALSE, "LeftFriendMutex");
+  left_net_message_pool = new message_pool();
   server = new tcp_server(io_service, left->settings->gets("p_name"));
 
   std::ifstream f("data\\config.cfg");
@@ -882,6 +903,11 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
         delete left->window;
         return 0;
       }
+      msgThread = CreateThread(0, 0, &run_messages, left, 0, 0);
+      if(msgThread == INVALID_HANDLE_VALUE) {
+        delete left->window;
+        return 0;
+      }
     }
   }
 
@@ -896,11 +922,13 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
     Sleep(16);
 	}
+  WaitForSingleObject(msgThread, INFINITE);
   WaitForSingleObject(renderThread, INFINITE);
   left->net.io_service->stop();
   WaitForSingleObject(tcpThread, INFINITE);
   CloseHandle(Debug::DebugMutex);
   CloseHandle(left->console.mutex);
+  CloseHandle(left->net.friendmutex);
 
   for(int i = 0; i < 1024; i++) {
     if(left->net.friends[i].model) {
@@ -910,7 +938,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   if(left->net.client) {
     delete left->net.client;
   }
-  delete gMessagePool;
+  delete left_net_message_pool;
   delete left->window;
   delete left->settings;
   delete left;

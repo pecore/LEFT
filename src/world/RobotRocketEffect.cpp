@@ -18,6 +18,7 @@ RobotRocketEffect::RobotRocketEffect(GLfloat x, GLfloat y, GLfloat width, GLfloa
   mRotation.x = 0.0f;
   mRotation.y = 0.0f;
   mAngle = 0.0f;
+  mAlpha = 1.0f;
 
   mWidth = width;
   mHeight = height;

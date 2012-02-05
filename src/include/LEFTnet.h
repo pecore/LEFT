@@ -102,41 +102,50 @@ inline unsigned int sizeof_message(unsigned int msg)
   }
 }
 
-#define LEFT_NET_POOL_SIZE 2048
 class message_pool {
 public:
-  message_pool() {
-    memset(inuse, 0, LEFT_NET_POOL_SIZE * sizeof(bool));
+  static const unsigned int pool_size = 2048;
+
+  message_pool() 
+  { 
+    mutex = CreateMutex(0, FALSE, "LeftMsgPoolMutex");
+    memset(inuse, 0, pool_size * sizeof(bool)); 
   }
 
-  left_message * get() {
-    for(int i = 0; i < LEFT_NET_POOL_SIZE; i++) {
+  left_message * get() 
+  {
+    left_message * result = 0;
+    Lock(mutex);   
+    for(int i = 0; !result && i < pool_size; i++) {
       if(!inuse[i]) {
         inuse[i] = true;
-        return &pool[i];
+        result = &pool[i];
       }
     }
-    return 0;
+    Unlock(mutex);
+    return result;
   }
 
-  void del(left_message * m) {
-    if(!m) {
-      return;
-    }
+  void del(left_message * m) 
+  {
+    if(!m) return;
     unsigned int index = ((uintptr) m - (uintptr) pool) / sizeof(left_message);
+    Lock(mutex);
     inuse[index] = false;
+    Unlock(mutex);
   }
 
 private:
-  left_message pool[LEFT_NET_POOL_SIZE];
-  bool inuse[LEFT_NET_POOL_SIZE];
+  left_message pool[pool_size];
+  bool inuse[pool_size];
+  HANDLE mutex;
 };
 
-extern message_pool * gMessagePool;
+extern message_pool * left_net_message_pool;
 
 inline left_message * new_message(unsigned int msg) 
 { 
-  left_message * ret = gMessagePool->get();
+  left_message * ret = left_net_message_pool->get();
   memset(ret, 0, sizeof(left_message));
   ret->header.msg = msg;
   ret->header.size = sizeof_message(msg);
@@ -145,12 +154,19 @@ inline left_message * new_message(unsigned int msg)
 
 inline left_message * new_message(left_message * value) 
 { 
-  left_message * ret = gMessagePool->get();
+  left_message * ret = left_net_message_pool->get();
   memcpy(ret, value, sizeof(value->header) + value->header.size);
   return ret;
 }
 
 #ifndef _LEFT_NET_TYPES
+
+/***************************/
+//                         //
+// SERVER                  //
+//                         //
+/***************************/
+
 class distributor {
 public:
   virtual ~distributor() {}
@@ -255,20 +271,22 @@ private:
 class tcp_server : public distributor {
 public:
   typedef std::queue<left_message *> message_fifo;
+  unsigned int count() { return connections.size(); }
 
   tcp_server(boost::asio::io_service& io_service, std::string _name) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(1), name(_name)
   {
+    mutex = CreateMutex(0, FALSE, "LeftServerMsgMutex");
     next_id = 1;
     start_accept();
   }
 
-  unsigned int clientcount() { return connections.size(); }
-
   left_message * get_message()
   {
     if(messages.size() == 0) return 0;
+    Lock(mutex);
     left_message * m = messages.front();
     messages.pop();
+    Unlock(mutex);
     return m;
   }
 
@@ -317,7 +335,9 @@ public:
 
   void push(left_message * m)
   {
+    Lock(mutex);
     messages.push(new_message(m));
+    Unlock(mutex);
   }
 
 private:
@@ -336,6 +356,7 @@ private:
     start_accept();
   }
 
+  HANDLE mutex;
   std::string name;
   unsigned int next_id;
   tcp::acceptor acceptor_;
@@ -343,17 +364,11 @@ private:
   message_fifo messages;
 };
 
-
-
-
-
-
-
-
-
-
-
-
+/***************************/
+//                         //
+// CLIENT                  //
+//                         //
+/***************************/
 
 class tcp_client {
 public:
@@ -361,6 +376,7 @@ public:
 
   tcp_client(boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iterator) : io_service_(io_service), socket_(io_service)
   {
+    mutex = CreateMutex(0, FALSE, "LeftClientMsgMutex");
     connected = false;
     boost::asio::async_connect(socket_, endpoint_iterator,
           boost::bind(&tcp_client::handle_connect, this,
@@ -372,8 +388,10 @@ public:
   left_message * get_message()
   {
     if(messages.size() == 0) return 0;
+    Lock(mutex);
     left_message * m = messages.front();
     messages.pop();
+    Unlock(mutex);
     return m;
   }
 
@@ -425,7 +443,9 @@ private:
       handle_error();
       return;
     }
+    Lock(mutex);
     messages.push(new_message(&recv));
+    Unlock(mutex);
     memset(&recv, 0, sizeof(left_message));
     next_header();
   }
@@ -445,6 +465,7 @@ private:
   }
 
   bool connected;
+  HANDLE mutex;
   left_message recv;
   left_message send;
   message_fifo messages;

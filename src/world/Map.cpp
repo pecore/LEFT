@@ -334,7 +334,9 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments)
 
   c.AddPolygons(mCMap, ptSubject);
   c.AddPolygons(p, ptClip);
+  Lock(mMutex);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
+  Unlock(mMutex);
 }
 
 void Map::addPolygon(Polygon & polygon)
@@ -344,7 +346,9 @@ void Map::addPolygon(Polygon & polygon)
   p.push_back(polygon);
   c.AddPolygons(mCMap, ptSubject);
   c.AddPolygons(p, ptClip);
+  Lock(mMutex);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
+  Unlock(mMutex);
 }
 
 void Map::collide()
@@ -437,28 +441,36 @@ void Map::collide()
 
 void Map::addCollidable(Collidable * c)
 { 
+  Lock(mMutex);
   mCollidables.push_back(c);
+  Unlock(mMutex);
 }
 
 void Map::removeCollidable(Collidable * c)
 {
+  Lock(mMutex);
   mCollidables.remove(c);
+  Unlock(mMutex);
 }
 
 void Map::addProjectile(Projectile * proj)
 {
+  Lock(mMutex);
   mProjectiles.push_back(proj);
   addCollidable((Collidable *) proj);
+  Unlock(mMutex);
 }
 
 void Map::removeProjectile(Projectile * proj)
 {
+  Lock(mMutex);
   mProjectiles.remove(proj);
   switch(proj->type) {
   case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
   case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
   case PROJECTILE_TYPE_BFG: delete ((BFGProjectile *) proj); break;
   }
+  Unlock(mMutex);
 }
 
 bool Map::isProjectile(Collidable * c)

@@ -39,7 +39,7 @@ GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, G
   ma = a;
 
   generate();
-  mInitialized = prepare();
+  mInitialized = false;
 }
 
 GLParticle::~GLParticle()

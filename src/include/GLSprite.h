@@ -17,7 +17,6 @@ public:
   GLSprite(const char * filename, int width = -1, int height = -1);
   ~GLSprite();
 
-  bool isInitialized() { return mInitialized; };
   GLuint texture() { return mTexture; };
 
   GLvector2f pos() { return mPos; };

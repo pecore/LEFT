@@ -17,8 +17,10 @@ extern GLResources * gResources;
 #include <gl\glew.h>
 #endif
 
+#ifndef Lock
 #define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
 #define Unlock(mutex) ReleaseMutex(mutex)
+#endif
 
 #define frand() ((GLfloat) rand() / (GLfloat)RAND_MAX)
 #define rfrand(from, to) ((((GLfloat) rand() / (GLfloat)RAND_MAX) + from) * (to - from))

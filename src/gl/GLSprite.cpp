@@ -32,11 +32,12 @@ GLSprite::GLSprite(const char * filename, int width, int height)
     gResources->load(filename, &mpData, width, height, size);
     mWidth = (GLfloat) (mSizeX = width);
     mHeight = (GLfloat) (mSizeY = height);
-    prepare();
+    mInitialized = false;
   } else {
     mTexture = res->texture;
     mWidth = res->width;
     mHeight = res->height;
+    mInitialized = true;
   }
   mScale = 1.0f;
   ma = 1.0f;
@@ -47,7 +48,6 @@ GLSprite::GLSprite(const char * filename, int width, int height)
   mAngle = 0.0f;
   mRotation.x = 0.0f;
   mRotation.y = 0.0f;
-  mInitialized = true;
 }
 
 GLSprite::~GLSprite()
@@ -89,7 +89,9 @@ bool GLSprite::prepare()
 
 void GLSprite::draw()
 {
-  if(!mInitialized) return;
+  if(!mInitialized) {
+    mInitialized = prepare();
+  } if(!mInitialized) return;
   GLfloat width = mWidth * mScale;
   GLfloat height = mHeight * mScale;
 
@@ -165,6 +167,7 @@ bool GLAnimatedSprite::draw(int index)
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
   glBindTexture(GL_TEXTURE_2D, mSprite->texture());
+  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
   glBegin(GL_QUADS);
 		glTexCoord2f(tindex.x, tindex.y); 
     glVertex3f(pos.x - (width / 2), pos.y - (height / 2),  0.0f);

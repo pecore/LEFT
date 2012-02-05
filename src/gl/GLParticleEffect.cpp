@@ -10,7 +10,7 @@
 
 GLParticleEffect::GLParticleEffect(int width, int height)
 {
-  mParticle = new GLParticle(width, height, 1.0f, 1.0f, 1.0f);
+  mParticle = new GLParticle(width, height, 1.0f, 1.0f, 1.0f, 1.0f, glpCircle);
   for(int i = 0; i < GL_EFFECT_MAX_PARTICLES; i++) {
     mDummies[i] = 0;
   }

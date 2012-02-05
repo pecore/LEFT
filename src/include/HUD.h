@@ -77,7 +77,7 @@ public:
     glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%3.0f", mHealth);
 
     GLSprite * s = mTurboLoading ? mTurboIcon->inactive : mTurboIcon->active;
-    s->moveTo(GL_SCREEN_BOTTOMLEFT.x + 110.0f, GL_SCREEN_BOTTOMLEFT.y + 30.0f);
+    s->moveTo(GL_SCREEN_BOTTOMLEFT.x + 115.0f, GL_SCREEN_BOTTOMLEFT.y + 30.0f);
     s->setAlpha(mTurboOpacity);
     s->draw();
   }
