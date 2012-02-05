@@ -21,6 +21,14 @@ struct Sound {
 };
 typedef std::list<Sound *> SoundList;
 
+struct SoundThread {
+  bool running;
+  bool occupied;
+  HANDLE handle;
+  Sound * sound;
+};
+typedef std::list<SoundThread *> SoundThreadList;
+
 class SoundPlayer {
 public:
   static void init();
@@ -31,6 +39,7 @@ public:
 private:
   SoundPlayer() { }
   ~SoundPlayer() { }
+  static SoundThreadList mThreads;
   static bool initOpenAL();
 };
 

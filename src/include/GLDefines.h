@@ -24,7 +24,7 @@ extern GLResources * gResources;
 
 #define frand() ((GLfloat) rand() / (GLfloat)RAND_MAX)
 #define rfrand(from, to) ((((GLfloat) rand() / (GLfloat)RAND_MAX) + from) * (to - from))
-#define GL_ALPHA_CUTOFF 0.02f
+#define GL_ALPHA_CUTOFF 0.08f
 
 class GLvector2f {
 public:

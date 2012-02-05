@@ -52,13 +52,5 @@ GLParticleDummy * GLParticleEffect::addParticle()
 
 GLParticleDummy * GLParticleEffect::getParticle(int id)
 {
-  int index = 0;
-  for(int i = 0; i < GL_EFFECT_MAX_PARTICLES; i++) {
-    if(mDummies[i]) {
-      if(index++ == id) {
-        return mDummies[i];
-      }
-    }
-  }
-  return 0;
+  return mDummies[id];
 }

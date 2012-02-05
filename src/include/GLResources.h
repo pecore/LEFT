@@ -37,9 +37,12 @@ using namespace ClipperLib;
 #include <list>
 #include <deque>
 
-#define foreach(T, iter, list)  T::iterator iter ## _ref = list.begin(); \
-                                if(iter ## _ref != list.end()) iter = *iter ## _ref; \
-                                for(; iter && iter ## _ref != list.end(); iter ## _ref++, iter = (iter ## _ref != list.end()) ? *iter ## _ref : 0)
+#define foreach(T, iter, list)    T::iterator iter ## _ref = list.begin(); \
+                                  if(iter ## _ref != list.end()) iter = *iter ## _ref; \
+                                  for(; iter && iter ## _ref != list.end(); iter ## _ref++, iter = (iter ## _ref != list.end()) ? *iter ## _ref : 0)
+
+#define foreach_erase(iter, list) iter ## _ref = list.erase(iter ## _ref); \
+                                  if(iter ## _ref == list.end()) break;
 
 #define GL_RESOURCE_TEXTURE   0
 #define GL_RESOURCE_SOUND     1

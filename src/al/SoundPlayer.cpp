@@ -13,9 +13,89 @@
 
 #include "Debug.h"
 
+#define LEFT_SOUNDPLAYER_THREADCOUNT 16
+
+DWORD WINAPI stream_run(void * data)
+{
+  SoundThread * me = (SoundThread *) data;
+  while(me->running) {
+    if(me->sound) {
+      Sound * sound = me->sound;
+      ALuint uiSource;
+      ALint iState = AL_PLAYING;
+      ALuint uiBuffers[1];
+
+      alGenBuffers(1, uiBuffers);
+      alGenSources(1, &uiSource);
+      alBufferData(uiBuffers[0], sound->format, sound->data, sound->size, sound->freq);
+      assert(AL_NO_ERROR == alGetError());
+      alSourceQueueBuffers(uiSource, 1, &uiBuffers[0]);
+      alSourcef(uiSource, AL_GAIN, sound->volume);
+      alSourcePlay(uiSource);
+
+      while(iState == AL_PLAYING) {
+        Sleep(16);
+        alGetSourcei(uiSource, AL_SOURCE_STATE, &iState);
+      }
+
+      alSourceStop(uiSource);
+      alSourcei(uiSource, AL_BUFFER, 0);
+
+      alDeleteSources(1, &uiSource);
+      alDeleteBuffers(1, uiBuffers);
+
+      me->occupied = false;
+      me->sound = 0;
+    }
+    if(me->running) SuspendThread(me->handle);
+  }
+  return 0;
+}
+
+bool SoundPlayer::play(Sound * s)
+{
+  assert(s); s->volume = gSettings->getf("r_volume");
+  SoundThread * t = 0;
+  foreach(SoundThreadList, t, mThreads) {
+    if(!t->occupied) {
+      t->sound = s;
+      t->occupied = true;
+      ResumeThread(t->handle);
+      return true;
+    }
+  }
+  return false;
+}
+
 void SoundPlayer::init()
 {
   assert(initOpenAL());
+  while(mThreads.size() < LEFT_SOUNDPLAYER_THREADCOUNT) {
+    SoundThread * current = new SoundThread;
+    current->handle = CreateThread(0, 0, &stream_run, current, CREATE_SUSPENDED, 0);
+    current->running = true;
+    current->occupied = false;
+    current->sound = 0;
+    mThreads.push_back(current);
+  }
+}
+
+void SoundPlayer::clear()
+{
+  SoundThread * t = 0;
+  foreach(SoundThreadList, t, mThreads) {
+    t->running = false;
+    ResumeThread(t->handle);
+    WaitForSingleObject(t->handle, INFINITE);
+    delete t;
+  }
+  ALCcontext * pContext = 0;
+	ALCdevice * pDevice = 0;
+	pContext = alcGetCurrentContext();
+	pDevice = alcGetContextsDevice(pContext);
+	alcMakeContextCurrent(0);
+	alcDestroyContext(pContext);
+	alcCloseDevice(pDevice);
 }
 
 bool SoundPlayer::initOpenAL()
@@ -127,54 +207,4 @@ Sound * SoundPlayer::load(const char * filename)
 
   assert(result);
   return result;
-}
-
-void SoundPlayer::clear()
-{
-	ALCcontext * pContext = 0;
-	ALCdevice * pDevice = 0;
-	pContext = alcGetCurrentContext();
-	pDevice = alcGetContextsDevice(pContext);
-	alcMakeContextCurrent(0);
-	alcDestroyContext(pContext);
-	alcCloseDevice(pDevice);
-}
-
-DWORD WINAPI stream_run(void * data)
-{
-  Sound * sound = (Sound *) data;
-  ALuint uiSource;
-  ALint iState = AL_PLAYING;
-  ALuint uiBuffers[1];
-
-  alGenBuffers(1, uiBuffers);
-  alGenSources(1, &uiSource);
-  alBufferData(uiBuffers[0], sound->format, sound->data, sound->size, sound->freq);
-  assert(AL_NO_ERROR == alGetError());
-  alSourceQueueBuffers(uiSource, 1, &uiBuffers[0]);
-  alSourcef(uiSource, AL_GAIN, sound->volume);
-  alSourcePlay(uiSource);
-
-  while(iState == AL_PLAYING) {
-    Sleep(16);
-    alGetSourcei(uiSource, AL_SOURCE_STATE, &iState);
-  }
-
-  alSourceStop(uiSource);
-  alSourcei(uiSource, AL_BUFFER, 0);
-
-  alDeleteSources(1, &uiSource);
-  alDeleteBuffers(1, uiBuffers);
-
-  return 0;
-}
-
-bool SoundPlayer::play(Sound * s)
-{
-  assert(s); s->volume = gSettings->getf("r_volume");
-  HANDLE althread = CreateThread(0, 0, &stream_run, s, 0, 0);
-  if(althread != INVALID_HANDLE_VALUE) {
-    return true;
-  }
-  return false;
 }

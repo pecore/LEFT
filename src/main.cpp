@@ -37,6 +37,8 @@ GLvector2f gScreen;
 GLvector2f gScreenSize;
 const unsigned int gFramerate = 60;
 
+SoundThreadList SoundPlayer::mThreads;
+
 typedef struct {
   bool running;
   
@@ -241,7 +243,7 @@ void renderScene(left_handle * left)
   ProjectileList projectiles = left->robot->control(left->control.keydown, left->control.mousepos, left->control.mousebutton);
   left->control.mousebutton = 0;
   
-  if(projectiles.size() > 0) {
+  if(!projectiles.empty()) {
     Projectile * p = 0;
     left_message * proj = new_message(LEFT_NET_MSG_PROJECTILE);
     foreach(ProjectileList, p, projectiles) {
@@ -263,11 +265,13 @@ void renderScene(left_handle * left)
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
 
-  left->map->draw();
+  left->map->collision();
   left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
-  left->map->collide();
+  
+  left->map->draw();
   left->map->drawProjectiles();
   left->map->drawAnimations();
+
   left->robot->draw();
   for(int i = 0; i < left->ballcount; i++)
     left->balls[i]->draw();
@@ -354,7 +358,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
       if(f.good()) {
         Polygons p;
         f >> p;
-        if(p.size() > 0) {
+        if(!p.empty()) {
           left->map->setPolygons(p);
         }
       }
@@ -547,6 +551,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
 DWORD WINAPI run_messages(void * data)
 {
   left_handle * left = (left_handle *) data;
+  Polygons mapdestruction;
   while(left->running) {
     if(left->net.client && !left->net.client->isconnected()) {
       int timeout = 1000; // 1 sec
@@ -571,8 +576,13 @@ DWORD WINAPI run_messages(void * data)
     } else {
       m = server->get_message();
     }
+
     if(!m) {
-      Sleep(5);    
+      if(!mapdestruction.empty()) {
+        left->map->addPolygons(mapdestruction);
+        mapdestruction.clear();
+      }
+      Sleep(0);    
       continue;
     }
 
@@ -735,7 +745,14 @@ DWORD WINAPI run_messages(void * data)
               polygon.push_back(point);
             }
 
-            left->map->addPolygon(polygon);
+            Clipper c;
+            Polygons clip;
+            clip.push_back(polygon);
+            c.AddPolygons(mapdestruction, ptSubject);
+            c.AddPolygons(clip, ptClip);
+            c.Execute(ctUnion, mapdestruction, pftEvenOdd, pftEvenOdd);
+            //mapdestruction.push_back(polygon);
+            //left->map->addPolygon(polygon);
           }
         } break;
       }
@@ -801,7 +818,6 @@ DWORD WINAPI run(void * lh)
     left->map->MapObjects().push_back(left->zombie);
     left->house->moveTo(2000.0f, 2000.0f);
     left->zombie->moveTo(2700.0f, 750.0f);
-    left->map->updateCollision();
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
     for(int i = 0; i < 6; i++) {

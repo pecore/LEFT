@@ -3322,7 +3322,7 @@ std::istream& operator >>(std::istream &s, Polygons &p)
       }
     }
   }
-  if(polygon.size() > 0) {
+  if(!polygon.empty()) {
     p.push_back(polygon);
   }
   return s;

@@ -84,13 +84,6 @@ class Map {
 public:
   Map();
   ~Map();
-
-  GLplaneList collision() { 
-    Lock(mMutex);
-    GLplaneList c = mCollision;
-    Unlock(mMutex);
-    return c;
-  }
   
   GLplaneList & shadows() { return mExtraShadows; }
 
@@ -104,23 +97,24 @@ public:
   void setPolygons(Polygons p) {
     Lock(mMutex);
     mCMap = p;
-    updateCollision();
     Unlock(mMutex);
   }
 
   void lock() { Lock(mMutex); }
   void unlock() { Unlock(mMutex); }
 
-  void draw();
+  void collision();
   void drawShadows(GLuint shader, GLint dirloc);
+
+  void draw();
   void drawProjectiles();
-  void drawAnimations();
-  void collide();
+  void drawAnimations();  
 
   void addCollidable(Collidable * c);
   void removeCollidable(Collidable * c);
   void addProjectile(Projectile * proj);
   void removeProjectile(Projectile * proj);
+  void deleteProjectile(Projectile * proj);
   bool isProjectile(Collidable * c);
   void playAnimation(GLAnimatedSprite * sprite);
 
@@ -128,9 +122,9 @@ public:
   LightSourceList & LightSources() { return mLightSources; }
   ProjectileList & Projectiles() { return mProjectiles; }
 
-  void updateCollision();
   void addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments = 12);
   void addPolygon(Polygon & polygon);
+  void addPolygons(Polygons & p);
   void setUpdate(bool u) { mUpdate = u; }
   void setCallback(CollisionCallback cb, void * ud) { mCallback = cb; mCallbackUserData = ud; }
 
@@ -138,6 +132,7 @@ public:
 
 private:
   HANDLE mMutex;
+  HANDLE mCollidableMutex;
 
   GLuint mFramebufferTexture;
   GLuint mFramebuffer;
@@ -150,7 +145,6 @@ private:
   }
 
   Polygons mCMap;
-  GLplaneList mCollision;
   GLplaneList mExtraShadows;
   bool mUpdate;
 
@@ -166,6 +160,8 @@ private:
   AnimationList mAnimations;
 
   void generate();
+  void collide(GLplane * p);
+  void collideProjectiles();
   void genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool random = true, GLfloat segments = 12);
 };
 

@@ -83,7 +83,7 @@ RocketProjectile::RocketProjectile(GLvector2f pos, GLvector2f velocity, Map * ma
   mMap = map;
   mPos = pos;
   mVelocity = velocity;
-  mMaxDistance = 10000.0f;
+  mMaxDistance = 1000.0f;
   mStart = pos;
   init();
 }
@@ -106,13 +106,13 @@ void RocketProjectile::init()
 {
   if(mInitialized) return;
   mSprite = new GLSprite("data\\rocketprojectile.png");
-  mRocketEffect = new RobotRocketEffect(mPos.x, mPos.y, 14.0f, 18.0f, 2, 60);
+  mRocketEffect = new RobotRocketEffect(mPos.x, mPos.y, 14.0f, 18.0f, 4, 20);
   mLight = new LightSource(mPos, GLvector3f(1.0f, 1.0f, 0.0f), 0.1, glpLight);
   mMap->LightSources().push_back(mLight);
   mWidth = mSprite->w();
   mHeight = mSprite->h();
   mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
-  mInitialized = true;
+  mInitialized = true; 
 }
 
 bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
@@ -130,7 +130,6 @@ void RocketProjectile::draw()
   GLfloat angle = mVelocity.angle() * 360.0f / (2.0f * M_PI);
   
   mLight->pos = mPos;
-  mLight->angle = angle;
   mSprite->moveTo(mPos.x, mPos.y);
   mRocketEffect->moveTo(mPos.x - 7.0f, mPos.y - 3.0f);
   mSprite->setRotation(mSprite->pos().x, mSprite->pos().y, angle);

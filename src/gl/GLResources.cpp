@@ -62,7 +62,7 @@ GLResources::GLResources()
         if(f.good()) {
           Polygons p;
           f >> p;
-          if(p.size() > 0) {
+          if(!p.empty()) {
             ResourcePair * rp = new ResourcePair;
             strncpy(rp->path, filename, sizeof(rp->path)-1);
             rp->value = new GLPolygonResource(p);
