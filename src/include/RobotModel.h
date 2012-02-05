@@ -61,6 +61,7 @@ private:
   bool mReset;
   GLfloat mTurbo;
   bool mTurboReady;
+  bool mKeyCooldown[256];
 
   GLfloat mWeaponTimeout[3];
 };

@@ -56,10 +56,12 @@ public:
   void setTurboLoading(bool loading) { mTurboLoading = loading; }
 
   void setActive(unsigned int a) { mActive = (a >= 1 && a <= 3) ? a : mActive; }
+  void nextActive() { mActive++; if(mActive > 3) mActive = 1; }
   unsigned int getActive() { return mActive; }
   
   void setHealth(GLfloat health) { mHealth = health; }
   void addHealth(GLfloat delta) { mHealth += delta; }
+  GLfloat getHealth() { return mHealth; }
 
   void draw(GLfloat * opacity) {
     GLfloat offset = 450.0f;

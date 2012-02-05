@@ -72,6 +72,7 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
   LightSource * s = 0;
   foreach(LightSourceList, s, mLightSources) {
     GLvector2f pos = s->pos;
+    if(!s->visible) continue;
     if(pos.x < GL_SCREEN_BOTTOMLEFT.x - GL_SCREEN_FWIDTH / 2.0f ||
        pos.x > GL_SCREEN_BOTTOMLEFT.x + 1.5f * GL_SCREEN_FWIDTH ||
        pos.y < GL_SCREEN_BOTTOMLEFT.y - GL_SCREEN_FHEIGHT / 2.0f ||

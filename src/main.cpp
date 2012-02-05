@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.63"
+#define LEFT_VERSION "0.64"
 #define LEFT_USE_FAST_SQRT 1
 
 #define _WIN32_WINNT 0x0601
@@ -50,8 +50,10 @@ typedef struct {
   GLParticle * cross;
   RobotModel * robot;
   LightSource * robotlight;
+  LightSource * tactical[3];
   MapObject * house;
   MapObject * zombie;
+  bool dead;
 
   GLParticle * balls[1024];
   LightSource * lightballs[1024];
@@ -61,7 +63,9 @@ typedef struct {
     boost::asio::io_service * io_service;
     tcp_client * client;
     struct {
+      bool dead;
       RobotModel * model;
+      LightSource * robotlight;
       char name[256];
       GLfloat health;
     } friends[1024];
@@ -149,6 +153,8 @@ void removePlayer(left_handle * left, int index)
   Lock(left->net.friendmutex);
   if(left->net.friends[index].model) {
     left->map->removeCollidable(left->net.friends[index].model);
+    left->map->LightSources().remove(left->net.friends[index].robotlight);
+    delete left->net.friends[index].robotlight;
     delete left->net.friends[index].model;
     left->net.friends[index].model = 0;
   }
@@ -174,14 +180,27 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
 
   if(c) {
     int index = isPlayer(left, c);
-    if(index > 0 && !left->net.client) {
+    if(index > 0 && !left->net.client && !left->net.friends[index].dead) {
       left->net.friends[index].health -= getDamage(type);
-      left_message * stats = new_message(LEFT_NET_MSG_UPDATE_STATS);
-      stats->msg.stats.health = left->net.friends[index].health;
-      server->send_message(stats, index);
-      left_net_message_pool->del(stats);
-    } else if(c == left->robot) {
+      left_message * m = new_message(LEFT_NET_MSG_UPDATE_STATS);
+      m->msg.stats.health = left->net.friends[index].health;
+      server->send_message(m, index);
+      if(left->net.friends[index].health <= 0.0f) {
+        m->header.msg = LEFT_NET_MSG_DEAD;
+        m->header.sender = index;
+        m->header.size = 0;
+        server->distribute(m);
+        server->push(m);
+      }
+      left_net_message_pool->del(m);
+    } else if(c == left->robot && !left->dead) {
       left->robot->getHUD()->addHealth(- getDamage(type));
+      if(left->robot->getHUD()->getHealth() <= 0.0f) {
+        left_message * m = new_message(LEFT_NET_MSG_DEAD);
+        m->header.sender = 0;
+        left->dead = true;
+        server->distribute(m);
+      }
     }
   } else
   if(!left->net.client) {
@@ -242,6 +261,11 @@ void renderScene(left_handle * left)
     left->lightballs[i]->pos = left->balls[i]->pos();
   }
   if(!left->control.keydown[VK_SPACE]) left->control.keydown[VK_SPACE] = left->consoleactive;
+  
+  if(left->dead) {
+    left->control.mousebutton = 0;
+  }
+  
   ProjectileList projectiles = left->robot->control(left->control.keydown, left->control.mousepos, left->control.mousebutton);
   left->control.mousebutton = 0;
   
@@ -267,13 +291,27 @@ void renderScene(left_handle * left)
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
 
-  left->map->collision();
-  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
-  
   left->map->draw();
   left->map->drawProjectiles();
   left->map->drawAnimations();
+  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
 
+  if(left->dead && !left->net.client) {
+    left->robot->getHUD()->addHealth(0.1f);
+    if(left->robot->getHUD()->getHealth() >= 100.0f) {
+      left->dead = false;
+      left_message * m = new_message(LEFT_NET_MSG_RESPAWN);
+      m->header.sender = 0;
+      server->distribute(m);
+      left_net_message_pool->del(m);
+    }
+  }
+
+  if(left->dead) {
+    left->robot->setAlpha(0.1f);
+  } else {
+    left->robot->setAlpha(1.0f);
+  }
   left->robot->draw();
   for(int i = 0; i < left->ballcount; i++)
     left->balls[i]->draw();
@@ -282,12 +320,43 @@ void renderScene(left_handle * left)
   for(int i = 0; i < 1024; i++) {
     Lock(left->net.friendmutex);
     if(left->net.friends[i].model) {
-      left->net.friends[i].model->integrate(0.1f);
-      left->net.friends[i].model->setAlpha(left->map->getOpacity(left->net.friends[i].model->pos()));
-      left->net.friends[i].model->draw();
+      if(!left->net.friends[i].dead) {
+        left->net.friends[i].model->integrate(0.1f);
+        left->net.friends[i].model->setAlpha(left->map->getOpacity(left->net.friends[i].model->pos()));
+        left->net.friends[i].robotlight->pos = left->net.friends[i].model->pos();
+        left->net.friends[i].model->setAlpha(left->map->getOpacity(left->net.friends[i].model->pos()));
+        left->net.friends[i].model->draw();
+      } else {
+        left->net.friends[i].robotlight->visible = false;
+      }
+        
+      if(!left->net.client) {
+        left->net.friends[i].health += 0.1f;
+        if(left->net.friends[i].health >= 100.0f) {
+          left->net.friends[i].health = 100.0f;
+          left->net.friends[i].dead = false;
+          left->net.friends[i].robotlight->visible = true;
+          left_message * m = new_message(LEFT_NET_MSG_RESPAWN);
+          m->header.sender = i;
+          server->distribute(m);
+          m->header.msg = LEFT_NET_MSG_UPDATE_STATS;
+          m->header.size = sizeof_message(m->header.msg);
+          m->msg.stats.health = 100.0f;
+          server->send_message(m, i);
+          left_net_message_pool->del(m);
+        } else {
+          left_message * m = new_message(LEFT_NET_MSG_UPDATE_STATS);
+          m->msg.stats.health = left->net.friends[i].health;
+          server->send_message(m, i);
+          left_net_message_pool->del(m);
+        }
+      }
     }
+
     Unlock(left->net.friendmutex);
   }
+
+  left->map->collision();
 
   bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
   Lock(left->console.mutex);
@@ -603,6 +672,12 @@ DWORD WINAPI run_messages(void * data)
     if(m && m->header.sender < 1024U) {
       left_message * reply = 0;
       switch(m->header.msg) {
+      case LEFT_NET_MSG_DEAD:     
+        left->net.friends[m->header.sender].dead = true;
+        break;
+      case LEFT_NET_MSG_RESPAWN:
+        left->net.friends[m->header.sender].dead = false;
+        break;
       case LEFT_NET_MSG_WUI:
         cprintf(left, "> %sconnected: %s", !left->net.client ? "client " : "", m->msg.wui.name);
         if(!left->net.client) {     
@@ -659,6 +734,11 @@ DWORD WINAPI run_messages(void * data)
       case LEFT_NET_MSG_UPDATE_STATS:{
           if(left->net.client) {
             left->robot->getHUD()->setHealth(m->msg.stats.health);
+            if(left->robot->getHUD()->getHealth() <= 0.0f) {
+              left->dead = true;
+            } else if(left->robot->getHUD()->getHealth() >= 100.0f) {
+              left->dead = false;
+            }
           }
         } break;
       case LEFT_NET_MSG_PROJECTILE: {
@@ -691,6 +771,8 @@ DWORD WINAPI run_messages(void * data)
           Lock(left->net.friendmutex);
           if(!left->net.friends[m->header.sender].model) {
             left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
+            left->net.friends[m->header.sender].robotlight = new LightSource(GLvector2f(m->msg.position.xpos, m->msg.position.ypos), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
+            left->map->LightSources().push_back(left->net.friends[m->header.sender].robotlight);
             left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
             left->net.friends[m->header.sender].model->setHUD(false);
             left->map->addCollidable(left->net.friends[m->header.sender].model);
@@ -699,6 +781,7 @@ DWORD WINAPI run_messages(void * data)
           left->net.friends[m->header.sender].model->setVelocity(newpos - left->net.friends[m->header.sender].model->pos());
           left->net.friends[m->header.sender].model->setWeaponAngle(m->msg.position.weaponangle);
           left->net.friends[m->header.sender].model->setAngle(m->msg.position.robotangle);
+          left->net.friends[m->header.sender].robotlight->angle = m->msg.position.weaponangle;
           Unlock(left->net.friendmutex);
         } break;
       case LEFT_NET_MSG_UPDATE_MAP: {
@@ -819,7 +902,8 @@ DWORD WINAPI run(void * lh)
     left->map->addCollidable(left->robot);
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
     left->map->LightSources().push_back(left->robotlight);
-    
+    left->dead = false;
+
     left->house = new MapObject("house");
     left->zombie = new MapObject("deadzombie");
     left->map->MapObjects().push_back(left->house);

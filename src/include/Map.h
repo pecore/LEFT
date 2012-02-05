@@ -23,7 +23,7 @@ struct Animation {
 
 class LightSource {
 public:
-  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : size(GL_SCREEN_IWIDTH), pos(_pos), rgb(_rgb), intensity(_intensity) {
+  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : size(GL_SCREEN_IWIDTH), pos(_pos), rgb(_rgb), intensity(_intensity), visible(true) {
     if(form != glpLight) {
       particle = new GLParticle(size, size, rgb.x, rgb.y, rgb.z, 1.0f, form);
     } else {
@@ -41,6 +41,7 @@ public:
   GLfloat intensity;
   GLfloat angle;
   GLfloat size;
+  bool visible;
 
   GLParticle * particle;
 };

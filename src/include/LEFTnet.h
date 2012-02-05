@@ -36,6 +36,10 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
 #define LEFT_NET_MSG_PROJECTILE             FOURCC('P', 'R', 'O', 'J')
 #define LEFT_NET_MSG_UPDATE_STATS           FOURCC('S', 'T', 'A', 'T')
+#define LEFT_NET_MSG_DEAD                   FOURCC('D', 'E', 'A', 'D')
+#define LEFT_NET_MSG_RESPAWN                FOURCC('W', 'A', 'K', 'E')
+#define LEFT_NET_MSG_GET_SCORE              FOURCC('G', 'P', 'T', 'S')    
+#define LEFT_NET_MSG_SCORE                  FOURCC('S', 'C', 'R', 'E') 
 
 #define uintptr unsigned long
 struct left_message {
@@ -87,6 +91,8 @@ inline unsigned int sizeof_message(unsigned int msg)
   left_message d;
   switch(msg) {
   default:
+  case LEFT_NET_MSG_DEAD:     
+  case LEFT_NET_MSG_RESPAWN:
   case LEFT_NET_MSG_BYE:
     return 0;
   case LEFT_NET_MSG_WUI:
@@ -199,7 +205,7 @@ public:
   void start()
   {
     left_message * wui = new_message(LEFT_NET_MSG_WUI);
-    wui->header.sender = id;
+    wui->header.sender = 0;
     strcpy(wui->msg.wui.name, name.c_str());
     send_message(wui);
     next_header();

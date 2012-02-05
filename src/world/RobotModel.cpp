@@ -43,6 +43,7 @@ RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(m
   for(int i = 0; i < 3; i++) {
     mWeaponTimeout[i] = 0.0f;
   }
+  memset(mKeyCooldown, 0, 256 * sizeof(bool));
 }
 
 RobotModel::~RobotModel()
@@ -123,6 +124,11 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   if(keydown['1']) mHUD->setActive(1);
   if(keydown['2']) mHUD->setActive(2);
   if(keydown['3']) mHUD->setActive(3);
+  if(keydown['Q'] && !mKeyCooldown['Q']) {
+    mHUD->nextActive();
+    mKeyCooldown['Q'] = true;
+  }
+  if(!keydown['Q'] && mKeyCooldown['Q']) mKeyCooldown['Q'] = false;
 
   if(keydown[VK_SHIFT] && mTurboReady) {
     mVelocity += (mousepos - mPos) * 0.016f;
