@@ -94,6 +94,7 @@ inline unsigned int sizeof_message(unsigned int msg)
   case LEFT_NET_MSG_DEAD:     
   case LEFT_NET_MSG_RESPAWN:
   case LEFT_NET_MSG_BYE:
+  case LEFT_NET_MSG_GET_SCORE:
     return 0;
   case LEFT_NET_MSG_WUI:
     return sizeof(d.msg.wui);
@@ -230,8 +231,13 @@ public:
     if(size > 0) {
       next_msg(size);  
     } else {
-      dist->distribute(&recv);
-      dist->push(&recv);
+      switch(recv.header.msg) {
+      case LEFT_NET_MSG_GET_SCORE:
+        break;
+      default:
+        dist->distribute(&recv);
+        dist->push(&recv);
+      }
       memset(&recv, 0, sizeof(left_message));
       next_header();
     }

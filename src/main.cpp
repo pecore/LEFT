@@ -62,12 +62,18 @@ typedef struct {
   struct {
     boost::asio::io_service * io_service;
     tcp_client * client;
+
+    bool showscore;
+    char score[1024];
+
     struct {
       bool dead;
-      RobotModel * model;
-      LightSource * robotlight;
       char name[256];
       GLfloat health;
+      int frags;
+
+      RobotModel * model;
+      LightSource * robotlight;
     } friends[1024];
     HANDLE friendmutex;
   } net;
@@ -174,14 +180,15 @@ GLfloat getDamage(unsigned int type)
   return 0.0f;
 }
 
-void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
+void collide(void * vleft, Polygon & polygon, Collidable * c, Projectile * p)
 {
   left_handle * left = (left_handle *) vleft;
 
-  if(c) {
+  if(c && p) {
+    bool frag = false;
     int index = isPlayer(left, c);
     if(index > 0 && !left->net.client && !left->net.friends[index].dead) {
-      left->net.friends[index].health -= getDamage(type);
+      left->net.friends[index].health -= getDamage(p->type);
       left_message * m = new_message(LEFT_NET_MSG_UPDATE_STATS);
       m->msg.stats.health = left->net.friends[index].health;
       server->send_message(m, index);
@@ -191,20 +198,29 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
         m->header.size = 0;
         server->distribute(m);
         server->push(m);
+        frag = true;
       }
       left_net_message_pool->del(m);
     } else if(c == left->robot && !left->dead) {
-      left->robot->getHUD()->addHealth(- getDamage(type));
+      left->robot->getHUD()->addHealth(- getDamage(p->type));
       if(left->robot->getHUD()->getHealth() <= 0.0f) {
         left_message * m = new_message(LEFT_NET_MSG_DEAD);
         m->header.sender = 0;
         left->dead = true;
         server->distribute(m);
+        frag = true;
+      }
+    }
+    if(frag) {
+      int owner = isPlayer(left, (Collidable *) p->owner);
+      if(owner > 0) {
+        left->net.friends[owner].frags++;
+      } else if(p->owner == left->robot) {
+        left->net.friends[0].frags++;
       }
     }
   } else
   if(!left->net.client) {
-    Polygons cmap = left->map->polygons();
     left_message * map = new_message(LEFT_NET_MSG_DESTROY_MAP);
     uintptr p = (uintptr) &map->msg;
 
@@ -230,6 +246,39 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, unsigned int type)
     server->distribute(map);
 
     left_net_message_pool->del(map);
+  }
+}
+
+void drawScore(left_handle * left)
+{
+  bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
+
+  GLfloat width = 600.0f, height = 500.0f;
+  GLvector2f center = GL_SCREEN_CENTER;
+  GLvector2f cursor = (gScreenSize / 2.0f) - (GLvector2f(width, -height) / 2.0f);
+  cursor.x += 50.0f;
+  cursor.y -= 2 * font->line_h;
+
+  left->console.bg->setSize(width, height);
+  left->console.bg->moveTo(center.x, center.y);
+  left->console.bg->draw();
+
+  glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
+  glFontPrint(font, cursor, "LEFT SCORE - THINGS THAT MATTER");
+  cursor.y -= 3 * font->line_h;
+  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+  int index = 0, frags, len;
+  int scores;
+  memcpy(&scores, &left->net.score[index], sizeof(int));
+  index += sizeof(int);
+  for(int i = 0; i < scores; i++) {
+    len = strlen(&left->net.score[index]);
+    memcpy(&frags, &left->net.score[index + len + 1], sizeof(int));
+    // fixme spaces
+    glFontPrint(font, cursor, "%s                 %d", &left->net.score[index], frags);
+    cursor.y -= 1.5f * font->line_h;
+    index += len + 1 + sizeof(int);
   }
 }
 
@@ -330,7 +379,7 @@ void renderScene(left_handle * left)
         left->net.friends[i].robotlight->visible = false;
       }
         
-      if(!left->net.client) {
+      if(!left->net.client && left->net.friends[i].dead) {
         left->net.friends[i].health += 0.1f;
         if(left->net.friends[i].health >= 100.0f) {
           left->net.friends[i].health = 100.0f;
@@ -357,6 +406,10 @@ void renderScene(left_handle * left)
   }
 
   left->map->collision();
+
+  if(left->net.showscore) {
+    drawScore(left);
+  }
 
   bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
   Lock(left->console.mutex);
@@ -617,10 +670,27 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
           left->net.client = new tcp_client(io_service, iterator);
         }
       } break;
+    case VK_TAB: {
+      if(!left->net.showscore) {
+        left_message * m = new_message(LEFT_NET_MSG_GET_SCORE);
+        if(left->net.client) {
+          left->net.client->send_message(m);
+        } else {
+          server->push(m);
+        }
+        left_net_message_pool->del(m);
+      }
+      left->net.showscore = true;
+      } break;
     }
     return 0;								
   case WM_KEYUP:
     left->control.keydown[wParam] = false;
+    switch(wParam) {
+    case VK_TAB:
+      left->net.showscore = false;
+      break;
+    }
     return 0;
   case WM_RBUTTONDOWN:
   case WM_LBUTTONDOWN:
@@ -670,8 +740,53 @@ DWORD WINAPI run_messages(void * data)
     }
 
     if(m && m->header.sender < 1024U) {
-      left_message * reply = 0;
       switch(m->header.msg) {
+      case LEFT_NET_MSG_GET_SCORE: {
+          left_message * score = new_message(LEFT_NET_MSG_SCORE);
+          int indices[1024];
+          int frags[1024];
+          int scores = 0;
+          for(int i = 0; i < 1024; i++) {
+            if(left->net.friends[i].model || i == 0) {
+              indices[scores] = i; 
+              frags[scores++] = left->net.friends[i].frags;
+            }
+          }
+          bool swapped = true;
+          while(swapped) {
+            swapped = false;
+            for(int i = 0; i < scores - 1; i++) {
+              int tmp = 0;
+              if(frags[i] < frags[i + 1]) {
+                tmp = frags[i];
+                frags[i] = frags[i + 1];
+                frags[i+1] = tmp;
+                tmp = indices[i];
+                indices[i] = indices[i + 1];
+                indices[i+1] = tmp;
+                swapped = true;
+              }
+            }
+          }
+          
+          uintptr p = (uintptr) &score->msg;
+          memcpy((void *) p, &scores, sizeof(int));
+          p += sizeof(int);
+          for(int i = 0; i < scores; i++) {
+            strcpy((char *) p, left->net.friends[indices[i]].name);
+            p += strlen(left->net.friends[indices[i]].name) + 1;
+            memcpy((void *) p, &left->net.friends[indices[i]].frags, sizeof(int));
+            p += sizeof(int);
+          }
+          score->header.size = p - (uintptr) &score->msg;
+          server->send_message(score, m->header.sender);
+          server->push(score);
+          left_net_message_pool->del(score);
+        } break;
+      case LEFT_NET_MSG_SCORE: {
+          memcpy(left->net.score, &m->msg, m->header.size);
+          left->net.showscore = true;
+        } break;
       case LEFT_NET_MSG_DEAD:     
         left->net.friends[m->header.sender].dead = true;
         break;
@@ -684,7 +799,6 @@ DWORD WINAPI run_messages(void * data)
           Polygons cmap = left->map->polygons();
           #define uintptr unsigned long
           left_message * map = new_message(LEFT_NET_MSG_UPDATE_MAP);
-
           uintptr p = (uintptr) &map->msg;
           unsigned int polycount = cmap.size();
           unsigned int allvertcount = 0;
@@ -847,16 +961,6 @@ DWORD WINAPI run_messages(void * data)
           }
         } break;
       }
-
-      if(reply) {
-        if(left->net.client) {
-          left->net.client->send_message(reply);
-        } else {
-          server->distribute(reply);
-        }
-        delete reply;
-      }
-
       left_net_message_pool->del(m);
     }
   };
@@ -979,6 +1083,9 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->net.friendmutex = CreateMutex(0, FALSE, "LeftFriendMutex");
   left_net_message_pool = new message_pool();
   server = new tcp_server(io_service, left->settings->gets("p_name"));
+
+  left->net.showscore = false;
+  strcpy(left->net.friends[0].name, left->settings->gets("p_name").c_str());
 
   std::ifstream f("data\\config.cfg");
   if(f.good()) {

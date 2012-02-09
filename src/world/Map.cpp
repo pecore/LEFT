@@ -89,7 +89,6 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
     spot->draw();
     radius = spot->w();
 
-    GLplane * plane = new GLplane();
     Polygons::iterator pit;
     for(pit = copy.begin(); pit != copy.end(); pit++) {
       Polygon p = *pit;
@@ -99,11 +98,6 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
         if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
         GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
         GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
-
-        plane->bordered = true;
-        plane->base = A;
-        plane->dest = B;
-        plane->dir = B - A;
 
         GLvector2f base = A;
         GLvector2f dest = B;
@@ -287,7 +281,7 @@ void Map::addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments)
   Polygons p;
   p.resize(1);
   genCirclePolygon(pos, size, p[0], true, segments);
-  if(mCallback) (*mCallback)(mCallbackUserData, p[0], 0, -1);
+  if(mCallback) (*mCallback)(mCallbackUserData, p[0], 0, 0);
   if(!mUpdate) return;
 
   c.AddPolygons(mCMap, ptSubject);
@@ -340,7 +334,7 @@ void Map::collideProjectiles()
       GLfloat distance = (c->pos() - proj->pos()).len();
       if(distance < c->h()) {
         proj->collide(GLvector2f(0.0f, 0.0f), distance);
-        if(mCallback) (*mCallback)(mCallbackUserData, Polygon(), c, proj->type);
+        if(mCallback) (*mCallback)(mCallbackUserData, Polygon(), c, proj);
         deleteProjectile(proj);
         removeCollidable(proj);
         foreach_erase(proj, mProjectiles);
