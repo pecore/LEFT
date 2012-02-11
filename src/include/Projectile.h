@@ -25,6 +25,7 @@ class BFGEffect;
 #define PROJECTILE_TYPE_SHOTGUN  2
 #define PROJECTILE_TYPE_BFG      3
 #define PROJECTILE_TYPE_GRENADE  4
+#define PROJECTILE_TYPE_NAIL     5
 
 class Projectile : public Collidable {
 public:
@@ -121,5 +122,20 @@ private:
   Map * mMap;
   GLSprite * mSprite;
   Sound * mExplosionSound;
+};
+
+
+class NailProjectile : public Projectile {
+public:
+  NailProjectile(GLvector2f pos, GLvector2f velocity, Map * map);
+  ~NailProjectile();
+  void init();
+  void move();
+  void draw();
+  bool collide(GLvector2f n, GLfloat distance);
+private:
+  Map * mMap;
+  GLParticle * mParticle;
+  GLplane * mShadow;
 };
 #endif

@@ -128,7 +128,7 @@ unsigned char GLParticle::getAlpha(int x, int y)
     break;
   case glpLight:
     if(distance <= max_distance) {
-      alpha = pow(2, -distance/100); //mWidth / (distance * distance);
+      alpha = pow(2, -distance/80); //mWidth / (distance * distance);
     } else {
       alpha = 0.0f;
     }

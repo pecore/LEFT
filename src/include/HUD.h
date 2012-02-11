@@ -37,6 +37,7 @@ public:
     mButtons.push_back(new HUDButton("data\\btn_rocket_inactive.png", "data\\btn_rocket_active.png"));
     mButtons.push_back(new HUDButton("data\\btn_shotgun_inactive.png", "data\\btn_shotgun_active.png"));
     mButtons.push_back(new HUDButton("data\\btn_grenade_inactive.png", "data\\btn_grenade_active.png"));
+    mButtons.push_back(new HUDButton("data\\btn_bfg_inactive.png", "data\\btn_bfg_active.png"));
     mTurboIcon = new HUDButton("data\\turbo_loading.png", "data\\turbo.png");
     mTurboOpacity = 1.0f;
     mTurboLoading = false;
@@ -52,11 +53,13 @@ public:
     delete mTurboIcon;
   }
 
+  unsigned int count() { return mButtons.size(); }
+
   void setTurboOpacity(GLfloat o) { mTurboOpacity = o; }
   void setTurboLoading(bool loading) { mTurboLoading = loading; }
 
-  void setActive(unsigned int a) { mActive = (a >= 1 && a <= 3) ? a : mActive; }
-  void nextActive() { mActive++; if(mActive > 3) mActive = 1; }
+  void setActive(unsigned int a) { mActive = (a >= 1 && a <= mButtons.size()) ? a : mActive; }
+  void nextActive() { mActive++; if(mActive > mButtons.size()) mActive = 1; }
   unsigned int getActive() { return mActive; }
   
   void setHealth(GLfloat health) { mHealth = health; }

@@ -10,7 +10,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-RobotStabilizeEffect::RobotStabilizeEffect(GLfloat x, GLfloat y, GLfloat radius) : GLParticleEffect(6, 6)
+RobotStabilizeEffect::RobotStabilizeEffect(GLfloat x, GLfloat y, GLfloat radius) : GLParticleEffect(4, 4)
 {
   mPos.x = x;
   mPos.y = y;
@@ -49,7 +49,7 @@ void RobotStabilizeEffect::spawn(GLParticleDummy * p, int i)
     break;
   case 2:
     GLvector2f dir = (p->pos() - mPos);
-    p->setColor4f(0.8f, 0.9f, 1.0f, 0.4);
+    p->setColor4f(0.8f, 0.9f, 1.0f, 0.6f);
     p->setVelocity(dir.normal() * -1.0f * frand() * 5.0f);
     if(dir.len() < 5.0f) {
       reset(i);

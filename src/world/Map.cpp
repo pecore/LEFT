@@ -17,6 +17,7 @@ Map::Map()
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
   mCollidableMutex = CreateMutex(NULL, FALSE, "LeftMapCollidableMutex");
   mSpot = new GLParticle(1280, 1280, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
+  //mSpot->setSize(GL_SCREEN_FWIDTH * 1.2f, GL_SCREEN_FWIDTH * 1.2f);
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -29,6 +30,21 @@ Map::Map()
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
   
+  mFramebufferList = glGenLists(1);
+  glNewList(mFramebufferList, GL_COMPILE);
+  glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
+  glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f); 
+    glVertex3f(0.0f, 0.0f,  0.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(GL_SCREEN_FWIDTH, 0.0f,  0.0f);
+    glTexCoord2f(1.0f, 1.0f); 
+    glVertex3f(GL_SCREEN_FWIDTH, GL_SCREEN_FHEIGHT,  0.0f);
+    glTexCoord2f(0.0f, 1.0f); 
+    glVertex3f(0.0f, GL_SCREEN_FHEIGHT,  0.0f);
+  glEnd();
+  glEndList();
+
   mCallback = 0;
   mUpdate = true;
   generate();
@@ -63,25 +79,31 @@ void Map::draw()
 
 void Map::drawShadows(GLuint shader, GLint dirloc)
 {
-  GLfloat radius = GL_SCREEN_FWIDTH;
-
   Lock(mMutex);
   Polygons copy = mCMap;
   Unlock(mMutex);
 
+  //MapObject * o = 0;
+  //foreach(MapObjectList, o, mMapObjects) {
+  //  copy.push_back(Polygon(o->collision()));
+  //}
+
   LightSource * s = 0;
   foreach(LightSourceList, s, mLightSources) {
+    int shadowcount = 0;
+    GLParticle * spot = s->particle ? s->particle : mSpot;
+    GLfloat radius = sqrt(spot->w() * spot->w() + spot->h() * spot->h());
     GLvector2f pos = s->pos;
     if(!s->visible) continue;
-    if(pos.x < GL_SCREEN_BOTTOMLEFT.x - GL_SCREEN_FWIDTH / 2.0f ||
-       pos.x > GL_SCREEN_BOTTOMLEFT.x + 1.5f * GL_SCREEN_FWIDTH ||
-       pos.y < GL_SCREEN_BOTTOMLEFT.y - GL_SCREEN_FHEIGHT / 2.0f ||
-       pos.y > GL_SCREEN_BOTTOMLEFT.y + 1.5f * GL_SCREEN_FHEIGHT) {
+    if(pos.x < GL_SCREEN_BOTTOMLEFT.x - spot->w() / 2.0f ||
+       pos.x > GL_SCREEN_BOTTOMLEFT.x + 1.5f * spot->w() ||
+       pos.y < GL_SCREEN_BOTTOMLEFT.y - spot->h() / 2.0f ||
+       pos.y > GL_SCREEN_BOTTOMLEFT.y + 1.5f * spot->h()) {
       continue;
     }
 
     renderTarget(true);
-    GLParticle * spot = s->particle ? s->particle : mSpot;
+    
 
     spot->setColor((GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb) * s->intensity, 1.0f);
     spot->moveTo(pos.x, pos.y);
@@ -99,29 +121,27 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
         GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
         GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
 
-        GLvector2f base = A;
-        GLvector2f dest = B;
-        GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
+        GLvector2f baseproj = A - pos;
+        GLvector2f destproj = B - pos;
+        GLvector2f bproj = A + baseproj.normal() * (radius);
+        GLvector2f dproj = B + destproj.normal() * (radius);  
 
-        GLvector2f baseproj = base - pos;
-        GLvector2f destproj = dest - pos;
-        GLvector2f bproj = base + baseproj.normal() * (radius);
-        GLvector2f dproj = dest + destproj.normal() * (radius);  
+        if(baseproj.len() > radius && destproj.len() > radius) continue; 
+        GLplane plane(A, B - A); GLvector2f n = plane.n(); if(n.dot(baseproj) <= 0.0f && n.dot(destproj) <= 0.0f) continue;
 
-        if(baseproj.len() > radius || destproj.len() > radius) continue; 
-
-        base -= GL_SCREEN_BOTTOMLEFT;
-        dest -= GL_SCREEN_BOTTOMLEFT;
+        A -= GL_SCREEN_BOTTOMLEFT;
+        B -= GL_SCREEN_BOTTOMLEFT;
         bproj -= GL_SCREEN_BOTTOMLEFT;
         dproj -= GL_SCREEN_BOTTOMLEFT;
 
         glBegin(GL_QUADS);
-          glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
-          glVertex3f(base.x, base.y,  0.0f);
+          glColor4f(0.0f, 0.0f, 0.0f, 0.0f);
+          glVertex3f(A.x, A.y,  0.0f);
           glVertex3f(bproj.x, bproj.y,  0.0f);
           glVertex3f(dproj.x, dproj.y,  0.0f);
-          glVertex3f(dest.x, dest.y,  0.0f);
+          glVertex3f(B.x, B.y,  0.0f);
         glEnd();
+        shadowcount++;
       }
     }
     
@@ -129,12 +149,10 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
     foreach(GLplaneList, p, mExtraShadows) {
       GLvector2f base = p->base;
       GLvector2f dest = p->dest;
-      GLvector3f scolor = GLvector3f(0.0f, 0.0f, 0.0f);
-
-      GLvector2f baseproj = base - pos;
-      GLvector2f destproj = dest - pos;
-      GLvector2f bproj = base + baseproj.normal() * (radius - baseproj.len());
-      GLvector2f dproj = dest + destproj.normal() * (radius - destproj.len());  
+      GLvector2f baseproj = p->base - pos;
+      GLvector2f destproj = p->dest - pos;
+      GLvector2f bproj = p->base + baseproj.normal() * (radius - baseproj.len());
+      GLvector2f dproj = p->dest + destproj.normal() * (radius - destproj.len());  
 
       base -= GL_SCREEN_BOTTOMLEFT;
       dest -= GL_SCREEN_BOTTOMLEFT;
@@ -142,12 +160,13 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
       dproj -= GL_SCREEN_BOTTOMLEFT;
 
       glBegin(GL_QUADS);
-        glColor4f(scolor.x, scolor.y, scolor.z, 0.0f);
+        glColor4f(0.0f, 0.0f, 0.0f, 0.0f);
         glVertex3f(base.x, base.y,  0.0f);
         glVertex3f(bproj.x, bproj.y,  0.0f);
         glVertex3f(dproj.x, dproj.y,  0.0f);
         glVertex3f(dest.x, dest.y,  0.0f);
       glEnd();
+      shadowcount++;
     }
 
 // shader
@@ -161,21 +180,16 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     renderTarget(false);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
-    glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
-    glBegin(GL_QUADS);
-      glTexCoord2f(0.0f, 0.0f); 
-      glVertex3f(0.0f, 0.0f,  0.0f);
-      glTexCoord2f(1.0f, 0.0f);
-      glVertex3f(GL_SCREEN_FWIDTH, 0.0f,  0.0f);
-      glTexCoord2f(1.0f, 1.0f); 
-      glVertex3f(GL_SCREEN_FWIDTH, GL_SCREEN_FHEIGHT,  0.0f);
-      glTexCoord2f(0.0f, 1.0f); 
-      glVertex3f(0.0f, GL_SCREEN_FHEIGHT,  0.0f);
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDisable(GL_BLEND);
+    if(shadowcount > 0) {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_ONE, GL_ONE);
+      glCallList(mFramebufferList);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glDisable(GL_BLEND);
+    } else {
+      assert(shadowcount);
+      shadowcount = 0;
+    }
   }
 }
 
@@ -455,11 +469,7 @@ void Map::removeProjectile(Projectile * proj)
 {
   Lock(mCollidableMutex);
   mProjectiles.remove(proj);
-  switch(proj->type) {
-  case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
-  case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
-  case PROJECTILE_TYPE_BFG: delete ((BFGProjectile *) proj); break;
-  }
+  deleteProjectile(proj);
   Unlock(mCollidableMutex);
 }
 
@@ -469,6 +479,8 @@ void Map::deleteProjectile(Projectile * proj)
   case PROJECTILE_TYPE_ROCKET: delete ((RocketProjectile *) proj); break;
   case PROJECTILE_TYPE_SHOTGUN: delete ((ShotgunProjectile *) proj); break;
   case PROJECTILE_TYPE_BFG: delete ((BFGProjectile *) proj); break;
+  case PROJECTILE_TYPE_GRENADE: delete ((GrenadeProjectile *) proj); break;
+  case PROJECTILE_TYPE_NAIL: delete ((NailProjectile *) proj); break;
   }
 }
 

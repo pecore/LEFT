@@ -12,7 +12,7 @@
 #include "GLDefines.h"
 #include "GLParticleEffect.h"
 
-#define MAX_FIRE_PARTICLE_COUNT 512
+#define MAX_FIRE_PARTICLE_COUNT 4096
 
 class RobotRocketEffect : public GLParticleEffect {
 public:

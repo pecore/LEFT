@@ -13,7 +13,6 @@
 GLSprite::GLSprite()
 {
   mFilename = "";
-  mScale = 1.0f;
 
   mpData = 0;
   mAngle = 0.0f;
@@ -37,9 +36,9 @@ GLSprite::GLSprite(const char * filename, int width, int height)
     mTexture = res->texture;
     mWidth = res->width;
     mHeight = res->height;
+    mDisplayList = 0;
     mInitialized = true;
   }
-  mScale = 1.0f;
   ma = 1.0f;
 
   mpData = 0;
@@ -84,16 +83,44 @@ bool GLSprite::prepare()
     mpData = 0;
   }
 
+  if(result) {
+    buildList();
+  }
+
   return result;
+}
+
+void GLSprite::buildList()
+{
+  mDisplayList = glGenLists(1);
+  glNewList(mDisplayList, GL_COMPILE);
+  glBindTexture(GL_TEXTURE_2D, mTexture);
+  GL_ASSERT();
+  glBegin(GL_QUADS);
+	  glTexCoord2f(0.0f, 0.0f); 
+    glVertex3f( -(mWidth / 2.0f),  -(mHeight / 2.0f), 0.0f);
+		
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f( +(mWidth / 2.0f),  -(mHeight / 2.0f), 0.0f);
+
+    glTexCoord2f(1.0f, 1.0f); 
+    glVertex3f( +(mWidth / 2.0f),  +(mHeight / 2.0f), 0.0f);
+		
+    glTexCoord2f(0.0f, 1.0f); 
+    glVertex3f( -(mWidth / 2.0f),  +(mHeight / 2.0f), 0.0f);
+  glEnd();
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glEndList();
+  GL_ASSERT();
 }
 
 void GLSprite::draw()
 {
   if(!mInitialized) {
     mInitialized = prepare();
+  } else if(!mDisplayList) {
+    buildList();
   } if(!mInitialized) return;
-  GLfloat width = mWidth * mScale;
-  GLfloat height = mHeight * mScale;
 
   GLvector2f pos = mPos - GL_SCREEN_BOTTOMLEFT;
   GLvector2f rot = mRotation - GL_SCREEN_BOTTOMLEFT;
@@ -106,22 +133,9 @@ void GLSprite::draw()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
   colorMask();
-  glBindTexture(GL_TEXTURE_2D, mTexture);
-  GL_ASSERT();
-  glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 0.0f); 
-    glVertex3f(pos.x - (width / 2), pos.y - (height / 2),  0.0f);
-		
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(pos.x + (width / 2), pos.y - (height / 2),  0.0f);
-
-    glTexCoord2f(1.0f, 1.0f); 
-    glVertex3f(pos.x + (width / 2), pos.y + (height / 2),  0.0f);
-		
-    glTexCoord2f(0.0f, 1.0f); 
-    glVertex3f(pos.x - (width / 2), pos.y + (height / 2),  0.0f);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
+  glTranslatef(pos.x, pos.y, 0.0f);
+  glCallList(mDisplayList);
+  glTranslatef(-pos.x, -pos.y, 0.0f);
   glDisable(GL_BLEND);
   
   glPopMatrix();

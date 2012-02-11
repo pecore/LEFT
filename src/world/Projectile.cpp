@@ -25,7 +25,7 @@ ShotgunProjectile::ShotgunProjectile(GLvector2f pos, GLvector2f velocity, Map * 
   mVelocity = velocity;
   mWidth = 20.0f;
   mHeight = 20.0f;
-  mMaxDistance = 280.0f;
+  mMaxDistance = 500.0f;
   mStart = pos;
   init();
 }
@@ -62,7 +62,7 @@ void ShotgunProjectile::move()
   mShadow->base += mVelocity;
   mShadow->dest += mVelocity;
   mParticle->moveTo(mPos.x, mPos.y);
-  mParticle->setRotation(mPos.x, mPos.y, frand() * M_PI);
+  mParticle->setRotation(mPos.x, mPos.y, frand() * 2.0f * M_PI * 360.0f / (2.0f * M_PI));
   mPos += mVelocity;
 }
 
@@ -244,4 +244,70 @@ void GrenadeProjectile::draw()
   mSprite->setRotation(mSprite->pos().x, mSprite->pos().y, angle);
   mSprite->setAlpha(mMap->getOpacity(mPos));
   mSprite->draw();
+}
+
+NailProjectile::NailProjectile(GLvector2f pos, GLvector2f velocity, Map * map) 
+{ 
+  type = PROJECTILE_TYPE_NAIL;
+  owner = 0;
+  mInitialized = false;
+  mMap = map;
+  mPos = pos;
+  mVelocity = velocity;
+  mWidth = 20.0f;
+  mHeight = 2.0f;
+  mMaxDistance = 620.0f;
+  mStart = pos;
+  init();
+}
+
+NailProjectile::~NailProjectile() 
+{
+  mMap->shadows().remove(mShadow);
+  if(mShadow) {
+    delete mShadow;
+  }
+  if(mParticle) {
+    delete mParticle;
+  }
+}
+
+void NailProjectile::init() 
+{
+  if(mInitialized) return;
+  mInitialized = true;
+  char sound_filename[32];
+  sprintf(sound_filename, "data\\ric%d.wav", (int)(frand() * 100.0f) % 3);
+  GLSoundResource * res = gResources->getSound(sound_filename);
+  if(res) SoundPlayer::play(res->sound);
+
+
+  mShadow = new GLplane(mPos, mVelocity.normal() * mWidth);
+  mMap->shadows().push_back(mShadow);
+  mParticle = new GLParticle(mWidth, mHeight, 0.6f, 0.6f, 0.6f, 1.0f, glpSolid);
+}
+
+void NailProjectile::draw() 
+{
+  if(!mInitialized) return;
+  mParticle->draw();
+}
+
+void NailProjectile::move()
+{
+  if(!mInitialized) return;
+  GLfloat angle = mVelocity.angle() * 360.0f / (2.0f * M_PI);
+  
+  mShadow->base += mVelocity;
+  mShadow->dest += mVelocity;
+  mParticle->moveTo(mPos.x, mPos.y);
+  mParticle->setRotation(mPos.x, mPos.y, angle);
+  mPos += mVelocity;
+}
+
+bool NailProjectile::collide(GLvector2f n, GLfloat distance) 
+{ 
+  if(!mInitialized) return true;
+  mMap->addCirclePolygon(mPos, mWidth, 6);
+  return false; 
 }

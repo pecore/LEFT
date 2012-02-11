@@ -6,8 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.64"
-#define LEFT_USE_FAST_SQRT 1
+#define LEFT_VERSION "0.65"
 
 #define _WIN32_WINNT 0x0601
 #define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
@@ -171,11 +170,13 @@ GLfloat getDamage(unsigned int type)
 {
   switch(type) {
   case PROJECTILE_TYPE_ROCKET:
-    return 33.3f;
+    return 10.0f;
   case PROJECTILE_TYPE_SHOTGUN:
-    return 15.0f;
+    return 5.0f;
   case PROJECTILE_TYPE_GRENADE:
     return 50.0f;
+  case PROJECTILE_TYPE_NAIL:
+    return 3.0f;
   } 
   return 0.0f;
 }
@@ -316,7 +317,7 @@ void renderScene(left_handle * left)
   }
   
   ProjectileList projectiles = left->robot->control(left->control.keydown, left->control.mousepos, left->control.mousebutton);
-  left->control.mousebutton = 0;
+  //left->control.mousebutton = 0;
   
   if(!projectiles.empty()) {
     Projectile * p = 0;
@@ -339,11 +340,11 @@ void renderScene(left_handle * left)
   left->robotlight->angle = ((left->control.mousepos - left->robot->pos()).angle() / M_PI) * 180.0f;
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
+  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
 
   left->map->draw();
   left->map->drawProjectiles();
   left->map->drawAnimations();
-  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
 
   if(left->dead && !left->net.client) {
     left->robot->getHUD()->addHealth(0.1f);
@@ -697,6 +698,12 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
   case WM_MBUTTONDOWN:
   case WM_XBUTTONDOWN:
     return onMouseDown(left, wParam, lParam & 0xFFFF, GL_SCREEN_IHEIGHT - ((lParam >> 16) & 0xFFFF));
+  case WM_RBUTTONUP:
+  case WM_LBUTTONUP:
+  case WM_MBUTTONUP:
+  case WM_XBUTTONUP:
+    left->control.mousebutton = wParam;
+    return 0;
   case WM_SIZE:
     //gScreenSize.x = (GLfloat) ((lParam >> 16) & 0xFFFF);
     //gScreenSize.y = (GLfloat) (lParam & 0xFFFF);
@@ -868,6 +875,9 @@ DWORD WINAPI run_messages(void * data)
           case PROJECTILE_TYPE_GRENADE:
             p = new GrenadeProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
             break;
+          case PROJECTILE_TYPE_NAIL:
+            p = new NailProjectile(left->net.friends[m->header.sender].model->pos(), GLvector2f(m->msg.projectile.dirx, m->msg.projectile.diry), left->map);
+            break;
           }
           p->owner = left->net.friends[m->header.sender].model;
           Unlock(left->net.friendmutex);
@@ -1016,10 +1026,10 @@ DWORD WINAPI run(void * lh)
     left->zombie->moveTo(2700.0f, 750.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 6; i++) {
+    for(int i = 0; i < 12; i++) {
       unsigned int ballcount = left->ballcount;
-      left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpSolid);
-      left->balls[ballcount]->moveTo(1000.0f, 1000.0f);
+      left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
+      left->balls[ballcount]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
       left->balls[ballcount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
       left->lightballs[ballcount] = new LightSource(left->balls[ballcount]->pos(), left->balls[ballcount]->getColor() / 5.0f, 0.3f);
       left->map->LightSources().push_back(left->lightballs[ballcount]);

@@ -22,22 +22,28 @@ public:
   GLvector2f pos() { return mPos; };
   GLfloat w() { return mWidth; };
   GLfloat h() { return mHeight; };
-  void setSize(GLfloat w, GLfloat h) { mWidth = w; mHeight = h; }
+  void setSize(GLfloat w, GLfloat h) { 
+    if(w != mWidth || h != mHeight) {
+      mWidth = w;
+      mHeight = h;
+      buildList();
+    }
+  }
   bool collide(GLvector2f n, GLfloat distance) { return true; };
 
   void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   void setRotation(GLfloat x, GLfloat y, GLfloat angle) { mRotation.x = x; mRotation.y = y; mAngle = angle; };
-  void setScale(GLfloat scale) { mScale = scale; }
   void setAlpha(GLfloat alpha) { ma = alpha; }
   virtual void draw();
 
 protected:
   GLSprite();
   GLuint mTexture;
+  GLuint mDisplayList;
+
   GLvector2f mPos;
   GLvector2f mRotation;
   GLfloat mAngle;
-  GLfloat mScale;
   GLfloat ma;
 
   const char * mFilename;
@@ -49,6 +55,7 @@ protected:
   int mSizeX;
   int mSizeY;
 
+  void buildList();
   bool prepare();
   virtual void colorMask();
 };

@@ -58,7 +58,6 @@ public:
     mTexture = res->texture;
     mWidth = res->width;
     mHeight = res->height;
-    mScale = 1.0f;
 
     mpData = 0;
     mPos.x = 0.0f;
@@ -137,6 +136,7 @@ private:
 
   GLuint mFramebufferTexture;
   GLuint mFramebuffer;
+  GLuint mFramebufferList;
   void renderTarget(bool texture) {
     if(texture) {
       glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mFramebuffer);

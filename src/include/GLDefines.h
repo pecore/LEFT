@@ -9,6 +9,8 @@
 #ifndef _GLDEFINES_H_
 #define _GLDEFINES_H_
 
+#define LEFT_USE_FAST_SQRT 1
+
 #include "GLResources.h"
 extern GLResources * gResources;
 

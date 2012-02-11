@@ -12,7 +12,7 @@
 #include "GLDefines.h"
 #include "GLParticleEffect.h"
 
-#define STABILIZE_PARTICLE_COUNT 200
+#define STABILIZE_PARTICLE_COUNT 1000
 
 class RobotStabilizeEffect : public GLParticleEffect {
 public:

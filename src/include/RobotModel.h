@@ -46,7 +46,8 @@ private:
   Map * mMap;
   HUD * mHUD;
   bool mDrawHUD;
-  GLfloat mButtonOpacity[3];
+  GLfloat mButtonOpacity[4];
+  GLfloat mWeaponTimeout[4];
 
   GLSprite * mBodySprite;
   RobotRocketEffect * mRocketEffect;
@@ -62,8 +63,6 @@ private:
   GLfloat mTurbo;
   bool mTurboReady;
   bool mKeyCooldown[256];
-
-  GLfloat mWeaponTimeout[3];
 };
 
 #endif

@@ -28,7 +28,7 @@ RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(m
   mBodySprite->moveTo(mPos.x, mPos.y);
   mWeaponArmSprite->moveTo(mPos.x, mPos.y);
 
-  mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT, 10, 500);
+  mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT, 8, 500);
   mStablizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y, 40.0f);
 
   mDrawHUD = true;
@@ -80,7 +80,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
         p->owner = this;
         result.push_back(p);
         mMap->addProjectile(p);
-        mWeaponTimeout[0] = 0.1f; // in sec
+        mWeaponTimeout[0] = 0.15f; // in sec
       } break;
     case 2: {
         for(int i = 0; i < 6; i++) {
@@ -100,30 +100,39 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
         mMap->addProjectile(p);
         mWeaponTimeout[2] = 3.0f; // in sec
       } break;
+    case 4: {
+        Projectile * p = new NailProjectile(mPos, (mousepos - mPos).normal() * 8.0f, mMap);
+        p->owner = this;
+        result.push_back(p);
+        mMap->addProjectile(p);
+        mWeaponTimeout[3] = 0.08f; // in sec
+      } break;
     }
   } else {
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < mHUD->count(); i++) {
       mWeaponTimeout[i] -= 0.016f;
     }
   }
-  for(int i = 0; i < 3; i++) {
+  for(int i = 0; i < mHUD->count(); i++) {
     if(mWeaponTimeout[i] > 0.0f) {
       switch(i) {
-      case 0: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 0.1f)); break;
+      case 0: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 0.15f)); break;
       case 1: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 1.2f)); break;
       case 2: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 3.0f)); break;
+      case 3: mButtonOpacity[i] = 0.1f + (1.0f - (mWeaponTimeout[i] / 0.08f)); break;
       }
     } else {
       mButtonOpacity[i] = 1.0f;
     }
   }
-  if(mousestate & MK_RBUTTON) {
-    mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.0f, 0.0f, 0.0f), 1.0f));
-  }
+  //if(mousestate & MK_RBUTTON) {
+  //  mMap->LightSources().push_back(new LightSource(mPos, GLvector3f(0.0f, 0.0f, 0.0f), 1.0f));
+  //}
 
   if(keydown['1']) mHUD->setActive(1);
   if(keydown['2']) mHUD->setActive(2);
   if(keydown['3']) mHUD->setActive(3);
+  if(keydown['4']) mHUD->setActive(4);
   if(keydown['Q'] && !mKeyCooldown['Q']) {
     mHUD->nextActive();
     mKeyCooldown['Q'] = true;
