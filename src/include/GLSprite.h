@@ -69,6 +69,9 @@ public:
 
 private:
   GLSprite * mSprite;
+  GLuint mDisplayLists;
+  unsigned int mCount;
+
   GLfloat mWidth;
   GLfloat mHeight;
 

@@ -156,25 +156,49 @@ GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloa
   mWidth = width;
   mHeight = height;
   mPos = pos;
+
+  int colcount = (int)(mSprite->w() / mWidth);
+  int rowcount = (int)(mSprite->h() / mHeight);
+  mCount = colcount * rowcount;
+  mDisplayLists = glGenLists(mCount);
+
+  for(int index = 0; index < colcount * rowcount; index++) {
+    int xindex = index % colcount;
+    int yindex = (rowcount-1) - (index / colcount);
+
+    GLvector2f tsize(mWidth / mSprite->w(), mHeight / mSprite->h());
+    GLvector2f tindex(xindex * tsize.x, yindex * tsize.y);
+
+    glNewList(mDisplayLists + index, GL_COMPILE);
+    glBindTexture(GL_TEXTURE_2D, mSprite->texture());
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glBegin(GL_QUADS);
+		  glTexCoord2f(tindex.x, tindex.y); 
+      glVertex3f(-(width / 2), -(height / 2),  0.0f);
+  		
+      glTexCoord2f(tindex.x + tsize.x, tindex.y);
+      glVertex3f(+(width / 2), -(height / 2),  0.0f);
+
+      glTexCoord2f(tindex.x + tsize.x, tindex.y + tsize.y); 
+      glVertex3f(+(width / 2), +(height / 2),  0.0f);
+  		
+      glTexCoord2f(tindex.x, tindex.y + tsize.y); 
+      glVertex3f(-(width / 2), +(height / 2),  0.0f);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glEndList();
+  }
 }
 
 GLAnimatedSprite::~GLAnimatedSprite()
 {
+  glDeleteLists(mDisplayLists, mCount);
   delete mSprite;
 }
 
 bool GLAnimatedSprite::draw(int index)
 {
-  GLfloat width = mWidth;
-  GLfloat height = mHeight;
-  int colcount = (int)(mSprite->w() / mWidth);
-  int rowcount = (int)(mSprite->h() / mHeight);
-  if(index >= colcount * rowcount) {
-    return false;
-  }
-  int xindex = index % colcount;
-  int yindex = (rowcount-1) - (index / colcount);
-
+  if(index >= mCount) return false;
   GLvector2f pos = mPos - GL_SCREEN_BOTTOMLEFT;
   GLvector2f rot = mRotation - GL_SCREEN_BOTTOMLEFT;
 
@@ -184,27 +208,11 @@ bool GLAnimatedSprite::draw(int index)
   glTranslatef(-rot.x, -rot.y, 0.0f);
   glPopMatrix();
 
-  GLvector2f tsize(mWidth / mSprite->w(), mHeight / mSprite->h());
-  GLvector2f tindex(xindex * tsize.x, yindex * tsize.y);
-
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
-  glBindTexture(GL_TEXTURE_2D, mSprite->texture());
-  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-  glBegin(GL_QUADS);
-		glTexCoord2f(tindex.x, tindex.y); 
-    glVertex3f(pos.x - (width / 2), pos.y - (height / 2),  0.0f);
-		
-    glTexCoord2f(tindex.x + tsize.x, tindex.y);
-    glVertex3f(pos.x + (width / 2), pos.y - (height / 2),  0.0f);
-
-    glTexCoord2f(tindex.x + tsize.x, tindex.y + tsize.y); 
-    glVertex3f(pos.x + (width / 2), pos.y + (height / 2),  0.0f);
-		
-    glTexCoord2f(tindex.x, tindex.y + tsize.y); 
-    glVertex3f(pos.x - (width / 2), pos.y + (height / 2),  0.0f);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
+  glTranslatef(pos.x, pos.y, 0.0f);
+  glCallList(mDisplayLists + index);
+  glTranslatef(-pos.x, -pos.y, 0.0f);
   glDisable(GL_BLEND);
 
   return true;
