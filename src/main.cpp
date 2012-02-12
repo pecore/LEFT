@@ -51,7 +51,6 @@ typedef struct {
   LightSource * robotlight;
   LightSource * tactical[3];
   MapObject * house;
-  MapObject * zombie;
   bool dead;
 
   GLParticle * balls[1024];
@@ -488,6 +487,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
     cprintf(left, "set <name> <value>         : set setting");
     cprintf(left, "save <filename>            : save current map");
     cprintf(left, "load <filename>            : load map");
+    cprintf(left, "load <filename>            : load old map");
     cprintf(left, "help                       : show help");
     cprintf(left, "");
   } else
@@ -496,6 +496,33 @@ void parseConsoleCommand(left_handle * left, char * cmd)
     if(pcount == 1) {
       std::ofstream f(param[0]);
       f << left->map->polygons();
+      f.close();
+    }
+  } else
+  if(strcmp(op, "loadold") == 0) {
+    if(pcount == 1) {
+      std::ifstream f(param[0]);
+      if(f.good()) {
+        Polygons read, convert;
+        f >> read;
+        Polygons::iterator pit;
+        for(pit = read.begin(); pit != read.end(); pit++) {
+          Polygon p = *pit;
+          Polygon convertp;
+          Polygon::iterator vit;
+          for(vit = p.begin(); vit != p.end(); vit++) {
+            IntPoint current = *vit, next;
+            current.X /= 100000L;
+            current.Y /= 100000L;
+            convertp.push_back(current);
+          }
+          convert.push_back(convertp);
+        }
+
+        if(!convert.empty()) {
+          left->map->setPolygons(convert);
+        }
+      }
       f.close();
     }
   } else
@@ -1033,14 +1060,11 @@ DWORD WINAPI run(void * lh)
     left->dead = false;
 
     left->house = new MapObject("house");
-    left->zombie = new MapObject("deadzombie");
     left->map->MapObjects().push_back(left->house);
-    left->map->MapObjects().push_back(left->zombie);
     left->house->moveTo(2000.0f, 2000.0f);
-    left->zombie->moveTo(2700.0f, 750.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 128; i++) {
+    for(int i = 0; i < 16; i++) {
       left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
       left->balls[i]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
       left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
