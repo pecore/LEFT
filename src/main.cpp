@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.65"
+#define LEFT_VERSION "0.66"
 
 #define _WIN32_WINNT 0x0601
 #define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
@@ -87,6 +87,7 @@ typedef struct {
   bool inputactive;
   struct {
     HANDLE mutex;
+    bool timer;
     unsigned int recent;
     unsigned int recorder;
     unsigned int linecount;
@@ -103,7 +104,7 @@ typedef struct {
 } left_handle;
 
 std::list<Debug::DebugVectorType> Debug::DebugVectors;
-bool Debug::DebugActive = true;
+bool Debug::DebugActive = false;
 void * Debug::DebugMutex;
 GLfloat gDebugValue;
 
@@ -448,7 +449,15 @@ void renderScene(left_handle * left)
         left->timing.framecounter = 0;
         break;
       case 2: // 3 sec
-        if(left->console.recent > 0) left->console.recent--;
+        if(left->console.recent > 0) { 
+          if(left->console.timer) {
+            left->console.recent--;
+          } else {
+            left->console.timer = true;
+          }
+        } else {
+          left->console.timer = false;
+        }
         break;
       }
       left->timing.interval[interval] = now;
@@ -1031,14 +1040,13 @@ DWORD WINAPI run(void * lh)
     left->zombie->moveTo(2700.0f, 750.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 12; i++) {
-      unsigned int ballcount = left->ballcount;
-      left->balls[ballcount] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
-      left->balls[ballcount]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
-      left->balls[ballcount]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
-      left->lightballs[ballcount] = new LightSource(left->balls[ballcount]->pos(), left->balls[ballcount]->getColor() / 5.0f, 0.3f);
-      left->map->LightSources().push_back(left->lightballs[ballcount]);
-      left->map->addCollidable(left->balls[ballcount]);
+    for(int i = 0; i < 16; i++) {
+      left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
+      left->balls[i]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
+      left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
+      left->lightballs[i] = new LightSource(left->balls[i]->pos(), left->balls[i]->getColor(), 0.3f, glpLight);
+      left->map->LightSources().push_back(left->lightballs[i]);
+      left->map->addCollidable(left->balls[i]);
       left->ballcount++;
     }
   }

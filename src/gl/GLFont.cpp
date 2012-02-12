@@ -218,7 +218,6 @@ struct charsBlock
     font->chars[n].w = blk->chars[n].width;
 		font->chars[n].h = blk->chars[n].height;
     font->chars[n].x_ofs = blk->chars[n].xoffset;
-    // FIXME
 		font->chars[n].y_ofs = blk->chars[n].yoffset;
     font->chars[n].x_advance = blk->chars[n].xadvance;
 	}

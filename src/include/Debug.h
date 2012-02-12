@@ -78,19 +78,14 @@ public:
     Unlock(DebugMutex);
   }
 
-  static void drawVector(GLvector2f base, GLvector2f dir, GLvector2f pos, GLvector3f color = GLvector3f(1.0f, 1.0f, 1.0f), int size = 6) {
+  static void drawVector(GLvector2f base, GLvector2f dir, GLvector2f pos, GLvector3f color = GLvector3f(1.0f, 1.0f, 1.0f), GLfloat size = 1.0f) {
     if(!DebugActive) return;
-    if((base.x < pos.x - GL_SCREEN_FWIDTH / 2.0f 
-    ||  base.x > pos.x + GL_SCREEN_FWIDTH / 2.0f)
-    && (base.y < pos.y - GL_SCREEN_FHEIGHT / 2.0f 
-    ||  base.y > pos.y + GL_SCREEN_FHEIGHT / 2.0f)) return;
-
     Lock(DebugMutex);
     base -=  GL_SCREEN_BOTTOMLEFT;
     GLvector2f dest = base + dir;
-    glLineWidth(2.0f);
+    glLineWidth(size);
     glBegin(GL_LINES);
-    glColor3f(0.1f, 0.05f, 0.05f);
+    glColor3f(color.x, color.y, color.z);
     glVertex2f(base.x, base.y);
     glVertex2f(dest.x, dest.y);
     glEnd();

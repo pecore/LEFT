@@ -126,7 +126,7 @@ GLvector2f GLvector2f::normal()
   return GLvector2f(x * coeff, y * coeff);
 }
 
-void GLvector2f::crossing(const GLvector2f & baseA, const GLvector2f & dirA, const GLvector2f & baseB, const GLvector2f & dirB, GLfloat & coeffA, GLfloat & coeffB) 
+void GLvector2f::intersect(const GLvector2f & baseA, const GLvector2f & dirA, const GLvector2f & baseB, const GLvector2f & dirB, GLfloat & coeffA, GLfloat & coeffB) 
 {
   if(dirB.x != 0.0f) {
     GLfloat f = dirB.y / dirB.x;

@@ -12,9 +12,9 @@
 GLParticle::GLParticle()
 {
   mFilename = "";
-
   mWidth = (GLfloat) (mSizeX = 1);
   mHeight = (GLfloat) (mSizeY = 1);
+  mForm = glpCircle;
 
   mpData = 0;
   mAngle = 0.0f;
@@ -26,6 +26,8 @@ GLParticle::GLParticle()
   mb = 1.0f; 
   ma = 1.0f;
 
+  mpData = 0;
+  generate();
   mDisplayList = 0;
   mInitialized = false;
 }
@@ -42,6 +44,7 @@ GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, G
   mb = b; 
   ma = a;
 
+  mpData = 0;
   generate();
   mDisplayList = 0;
   mInitialized = false;
@@ -49,8 +52,10 @@ GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, G
 
 GLParticle::~GLParticle()
 {
-  if(mpData) delete mpData;
-  mpData = 0;
+  if(mpData) {
+    delete mpData;
+    mpData = 0;
+  }
 }
 
 void GLParticle::generate()
@@ -58,8 +63,11 @@ void GLParticle::generate()
   unsigned int width = (unsigned int)mWidth;
   unsigned int height = (unsigned int)mHeight;
 
-  if(mpData) delete mpData;
-  mpData = 0;
+  if(mpData) {
+    assert(false);
+    delete mpData;
+    mpData = 0;
+  }
 
   int size = width * height * 4;
   mpData = new unsigned char[size];
@@ -133,7 +141,7 @@ unsigned char GLParticle::getAlpha(int x, int y)
     break;
   case glpLight:
     if(distance <= max_distance) {
-      alpha = pow(2, -distance/80); //mWidth / (distance * distance);
+      alpha = pow(2, -distance/80);
     } else {
       alpha = 0.0f;
     }

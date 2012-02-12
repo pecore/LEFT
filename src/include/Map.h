@@ -23,11 +23,9 @@ struct Animation {
 
 class LightSource {
 public:
-  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : size(GL_SCREEN_IWIDTH), pos(_pos), rgb(_rgb), intensity(_intensity), visible(true) {
+  LightSource(GLvector2f _pos, GLvector3f _rgb, GLfloat _intensity, particle_t form = glpLight) : size(GL_SCREEN_IWIDTH), pos(_pos), rgb(_rgb), intensity(_intensity), angle(0.0f), particle(0), visible(true) {
     if(form != glpLight) {
       particle = new GLParticle(size, size, rgb.x, rgb.y, rgb.z, 1.0f, form);
-    } else {
-      particle = 0;
     }
   }
   ~LightSource() {
@@ -44,6 +42,9 @@ public:
   bool visible;
 
   GLParticle * particle;
+private:
+  LightSource() {}
+  LightSource(LightSource & source) {}
 };
 
 class MapObject : public GLSprite {
@@ -136,12 +137,13 @@ private:
 
   GLuint mFramebufferTexture;
   GLuint mFramebuffer;
+  GLuint mRenderbuffer;
   GLuint mFramebufferList;
-  void renderTarget(bool texture) {
+  inline void renderTarget(bool texture) {
     if(texture) {
       glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mFramebuffer);
-      glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, mFramebufferTexture, 0);
-      glClear(GL_COLOR_BUFFER_BIT);
+      glClearColor(0.0, 0.0, 0.0, 0.0);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     } else glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
   }
 
