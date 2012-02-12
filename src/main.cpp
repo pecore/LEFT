@@ -96,9 +96,8 @@ typedef struct {
 
   struct {
     GLfloat fps;
-    unsigned long long timer;
-    unsigned long long counter;
-    unsigned long long framecounter;
+    unsigned int framecounter;
+    LARGE_INTEGER interval[16];
     LARGE_INTEGER performancefrequency;
   } timing;
 } left_handle;
@@ -439,16 +438,22 @@ void renderScene(left_handle * left)
   glColor4f(0.8f, 0.8f, 0.0f, 1.0f);
   glFontPrint(font, fpspos, "%-2.0f", left->timing.fps);
 
-  unsigned long tickdelta = left->timing.timer - GetTickCount();
-  left->timing.timer = GetTickCount();
-  if(left->timing.timer / 1000 > left->timing.counter) {
-    int delta = (left->timing.timer / 1000) - left->timing.counter;
-    left->timing.counter = left->timing.timer / 1000;
-    left->timing.fps = (GLfloat) left->timing.framecounter / delta;
-    left->timing.framecounter = 0;
+  LARGE_INTEGER now;
+  QueryPerformanceCounter(&now);
+  for(int interval = 0; interval < 16; interval++) {
+    if(now.QuadPart - left->timing.interval[interval].QuadPart > (interval + 1) * left->timing.performancefrequency.QuadPart) {
+      switch(interval) {
+      case 0: // 1 sec
+        left->timing.fps = (GLfloat) left->timing.framecounter;
+        left->timing.framecounter = 0;
+        break;
+      case 2: // 3 sec
+        if(left->console.recent > 0) left->console.recent--;
+        break;
+      }
+      left->timing.interval[interval] = now;
+    }
   }
-  if(left->console.recent && !(left->timing.timer % 3000)) left->console.recent--;
-  left->timing.timer += tickdelta;
   left->timing.framecounter++;
 }
 
@@ -1043,13 +1048,13 @@ DWORD WINAPI run(void * lh)
       LARGE_INTEGER begin, end;
       QueryPerformanceCounter(&begin);
       renderScene(left);
-      left->window->swapBuffers();
       QueryPerformanceCounter(&end);
-      const unsigned __int64 waitinticks = (left->timing.performancefrequency.QuadPart / 60);
+      static const unsigned __int64 waitinticks = (left->timing.performancefrequency.QuadPart / 60);
       while(end.QuadPart - begin.QuadPart < waitinticks) {
         Sleep(0);
         QueryPerformanceCounter(&end);
       }
+      left->window->swapBuffers();
     }
   }
 
@@ -1073,28 +1078,16 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   srand( (unsigned int)GetTickCount() );
 
   left_handle * left = new left_handle;
-  memset(&left->control, 0, 256);
-  memset(&left->timing, 0, sizeof(left->timing));
-  memset(&left->console, 0, sizeof(left->console));
+  memset(left, 0, sizeof(left_handle));
   left->console.mutex = CreateMutex(0, FALSE, "LeftConsoleMutex");
-  left->console.recent = 0;
-  left->console.linecount = 16;
-  left->consoleactive = false;
-  left->inputactive = false;
-  left->ballcount = 0;
-  left->control.mousebutton = 0;
-  
+  left->console.linecount = 16; 
   left->settings = new Settings();
   gSettings = left->settings;
 
-  left->net.client = 0;
   left->net.io_service = &io_service;
-  memset(left->net.friends, 0, sizeof(left->net.friends));
   left->net.friendmutex = CreateMutex(0, FALSE, "LeftFriendMutex");
   left_net_message_pool = new message_pool();
   server = new tcp_server(io_service, left->settings->gets("p_name"));
-
-  left->net.showscore = false;
   strcpy(left->net.friends[0].name, left->settings->gets("p_name").c_str());
 
   std::ifstream f("data\\config.cfg");

@@ -111,7 +111,7 @@ inline unsigned int sizeof_message(unsigned int msg)
 
 class message_pool {
 public:
-  static const unsigned int pool_size = 2048;
+  static const unsigned int pool_size = 128;
 
   message_pool() 
   { 

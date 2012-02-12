@@ -13,6 +13,9 @@ GLParticle::GLParticle()
 {
   mFilename = "";
 
+  mWidth = (GLfloat) (mSizeX = 1);
+  mHeight = (GLfloat) (mSizeY = 1);
+
   mpData = 0;
   mAngle = 0.0f;
   mPos.x = 0.0f;
@@ -23,6 +26,7 @@ GLParticle::GLParticle()
   mb = 1.0f; 
   ma = 1.0f;
 
+  mDisplayList = 0;
   mInitialized = false;
 }
 
@@ -39,6 +43,7 @@ GLParticle::GLParticle(int width, int height, GLfloat r, GLfloat g, GLfloat b, G
   ma = a;
 
   generate();
+  mDisplayList = 0;
   mInitialized = false;
 }
 

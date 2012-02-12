@@ -441,6 +441,7 @@ void Map::collision()
       collide(plane);
     }
   }
+  delete plane;
 }
 
 void Map::addCollidable(Collidable * c)

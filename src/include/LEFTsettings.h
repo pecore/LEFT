@@ -87,10 +87,10 @@ private:
 
   void init()
   {
-    set("r_xsize", 1280);
-    set("r_ysize",  720);
+    set("r_xsize", 1066);
+    set("r_ysize",  600);
     set("r_fullscreen", 0);
-    set("r_volume", 0.5f);
+    set("r_volume", 0.01f);
 
     set("p_name", "pecore");
     //set("p_robot", "robotv3");
