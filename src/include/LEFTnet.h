@@ -40,6 +40,8 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_RESPAWN                FOURCC('W', 'A', 'K', 'E')
 #define LEFT_NET_MSG_GET_SCORE              FOURCC('G', 'P', 'T', 'S')    
 #define LEFT_NET_MSG_SCORE                  FOURCC('S', 'C', 'R', 'E') 
+#define LEFT_NET_MSG_PING                   FOURCC('P', 'I', 'N', 'G') 
+#define LEFT_NET_MSG_PONG                   FOURCC('P', 'O', 'N', 'G') 
 
 #define uintptr unsigned long
 struct left_message {
@@ -95,6 +97,8 @@ inline unsigned int sizeof_message(unsigned int msg)
   case LEFT_NET_MSG_RESPAWN:
   case LEFT_NET_MSG_BYE:
   case LEFT_NET_MSG_GET_SCORE:
+  case LEFT_NET_MSG_PING:
+  case LEFT_NET_MSG_PONG:
     return 0;
   case LEFT_NET_MSG_WUI:
     return sizeof(d.msg.wui);
@@ -111,7 +115,7 @@ inline unsigned int sizeof_message(unsigned int msg)
 
 class message_pool {
 public:
-  static const unsigned int pool_size = 128;
+  static const unsigned int pool_size = 2048;
 
   message_pool() 
   { 
@@ -233,11 +237,12 @@ public:
     } else {
       switch(recv.header.msg) {
       case LEFT_NET_MSG_GET_SCORE:
+      case LEFT_NET_MSG_PONG:
         break;
       default:
         dist->distribute(&recv);
-        dist->push(&recv);
       }
+      dist->push(&recv);
       memset(&recv, 0, sizeof(left_message));
       next_header();
     }

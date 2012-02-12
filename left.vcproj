@@ -115,7 +115,6 @@
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
 				PreprocessorDefinitions="GLEW_STATIC"
 				RuntimeLibrary="2"
-				EnableEnhancedInstructionSet="2"
 				FloatingPointModel="2"
 			/>
 			<Tool

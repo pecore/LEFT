@@ -69,6 +69,8 @@ typedef struct {
       char name[256];
       GLfloat health;
       int frags;
+      int latency;
+      LARGE_INTEGER latencytimer;
 
       RobotModel * model;
       LightSource * robotlight;
@@ -268,17 +270,19 @@ void drawScore(left_handle * left)
   cursor.y -= 3 * font->line_h;
   glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-  int index = 0, frags, len;
+  int index = 0, frags, latency, len;
   int scores;
   memcpy(&scores, &left->net.score[index], sizeof(int));
   index += sizeof(int);
   for(int i = 0; i < scores; i++) {
     len = strlen(&left->net.score[index]);
     memcpy(&frags, &left->net.score[index + len + 1], sizeof(int));
-    // fixme spaces
-    glFontPrint(font, cursor, "%s                 %d", &left->net.score[index], frags);
+    memcpy(&latency, &left->net.score[index + len + 1 + sizeof(int)], sizeof(int));
+    glFontPrint(font, cursor + GLvector2f( 0.0f, 0.0f), "%s", &left->net.score[index]);
+    glFontPrint(font, cursor + GLvector2f(350.0f, 0.0f), "%d", frags);
+    glFontPrint(font, cursor + GLvector2f(450.0f, 0.0f), "%d", latency);
     cursor.y -= 1.5f * font->line_h;
-    index += len + 1 + sizeof(int);
+    index += len + 1 + sizeof(int) + sizeof(int);
   }
 }
 
@@ -458,6 +462,17 @@ void renderScene(left_handle * left)
           left->console.recenttimer = false;
         }
         break;
+      case 4:
+        if(!left->net.client) {
+          left_message * ping = new_message(LEFT_NET_MSG_PING);
+          for(int i = 0; i < 1024; i++) {
+            if(left->net.friends[i].model) {
+              QueryPerformanceCounter(&left->net.friends[i].latencytimer);
+              server->send_message(ping, i);
+            }
+          }
+          left_net_message_pool->del(ping);
+        }
       }
       left->timing.interval[interval] = now;
     }
@@ -789,6 +804,20 @@ DWORD WINAPI run_messages(void * data)
 
     if(m && m->header.sender < 1024U) {
       switch(m->header.msg) {
+      case LEFT_NET_MSG_PING:
+        if(left->net.client) {
+          left_message * pong = new_message(LEFT_NET_MSG_PONG);
+          left->net.client->send_message(pong);
+          left_net_message_pool->del(pong);
+        }
+        break;
+      case LEFT_NET_MSG_PONG:
+        if(!left->net.client) {
+          LARGE_INTEGER now;
+          QueryPerformanceCounter(&now);
+          left->net.friends[m->header.sender].latency = ((GLfloat)(now.QuadPart - left->net.friends[m->header.sender].latencytimer.QuadPart) / (GLfloat)left->timing.performancefrequency.QuadPart) * 1000.0f;
+        }
+        break;
       case LEFT_NET_MSG_GET_SCORE: {
           left_message * score = new_message(LEFT_NET_MSG_SCORE);
           int indices[1024];
@@ -797,7 +826,8 @@ DWORD WINAPI run_messages(void * data)
           for(int i = 0; i < 1024; i++) {
             if(left->net.friends[i].model || i == 0) {
               indices[scores] = i; 
-              frags[scores++] = left->net.friends[i].frags;
+              frags[scores] = left->net.friends[i].frags;
+              scores++;
             }
           }
           bool swapped = true;
@@ -825,6 +855,8 @@ DWORD WINAPI run_messages(void * data)
             p += strlen(left->net.friends[indices[i]].name) + 1;
             memcpy((void *) p, &left->net.friends[indices[i]].frags, sizeof(int));
             p += sizeof(int);
+            memcpy((void *) p, &left->net.friends[indices[i]].latency, sizeof(int));
+            p += sizeof(int);
           }
           score->header.size = p - (uintptr) &score->msg;
           server->send_message(score, m->header.sender);
@@ -832,7 +864,7 @@ DWORD WINAPI run_messages(void * data)
           left_net_message_pool->del(score);
         } break;
       case LEFT_NET_MSG_SCORE: {
-          memcpy(left->net.score, &m->msg, m->header.size);
+          memcpy(left->net.score, &m->msg, sizeof(m->header) + m->header.size);
           left->net.showscore = true;
         } break;
       case LEFT_NET_MSG_DEAD:     

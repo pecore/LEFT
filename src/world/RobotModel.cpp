@@ -144,9 +144,6 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   }
   if(!keydown['M'] && mKeyCooldown['M']) mKeyCooldown['M'] = false;
 
-
-
-
   if(keydown[VK_SHIFT] && mTurboReady) {
     mVelocity += (mousepos - mPos) * 0.016f;
     mTurbo -= 0.015f;
@@ -185,36 +182,22 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
 
   if(!mStable) {
     // Turn Robot
-    if(keydown['A']) {
-      mAngle += 4.5f;
-      if(mAngle > 60.0f) mAngle = 60.0f;
-    }
-    if(keydown['D']) {
-      mAngle -= 4.5f;
-      if(mAngle < -60.0f) mAngle = -60.0f;
-    }
+    mAngle = ((mousepos - mPos).angle() / M_PI) * 180.0f - 90.0f;
 
     // Control Boost
-    if(keydown['W'] && mRocketBoost < 3.0f) {
-      mRocketBoost += 0.4f;
+    if(keydown['W'] && mRocketBoost < 4.0f) {
+      mRocketBoost += 0.8f;
     } else 
     if(keydown['S'] && mRocketBoost > 0.0f) {
       mRocketBoost -= 0.5f;
-    } else if(mRocketBoost > 1.0f) {
+    } else
+      if(mRocketBoost > 1.0f) {
       mRocketBoost -= 0.1f;
     } else if(mRocketBoost < 1.0f && !keydown['S']) {
       mRocketBoost += 0.1f;
     }
   }
   mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * mRocketBoost);
-
-  // Auto Adjust Angle
-  if(mStable || (!keydown['A'] && !keydown['D'])) {
-    GLfloat step = 2.0f;
-    if(mStable) step = abs(mAngle / 6.0f);
-    if(mAngle < 0.0f)  mAngle += step;
-    else               mAngle -= step;
-  }
 
   mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
   return result;
