@@ -128,6 +128,7 @@ public:
   void addPolygons(Polygons & p);
   void setUpdate(bool u) { mUpdate = u; }
   void setCallback(CollisionCallback cb, void * ud) { mCallback = cb; mCallbackUserData = ud; }
+  void toggleMinimap() { mMinimap = !mMinimap; }
 
   GLfloat getOpacity(GLvector2f pos);
 
@@ -150,6 +151,7 @@ private:
   Polygons mCMap;
   GLplaneList mExtraShadows;
   bool mUpdate;
+  bool mMinimap;
 
   CollisionCallback mCallback;
   void * mCallbackUserData;

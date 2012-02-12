@@ -17,7 +17,7 @@ Map::Map()
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
   mCollidableMutex = CreateMutex(NULL, FALSE, "LeftMapCollidableMutex");
   mSpot = new GLParticle(1280, 1280, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
-  //mSpot->setSize(GL_SCREEN_FWIDTH * 1.2f, GL_SCREEN_FWIDTH * 1.2f);
+  mMinimap = false;
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -388,6 +388,19 @@ void Map::collide(GLplane * p)
       glVertex2f(base.x, base.y);
       glVertex2f(dest.x, dest.y);
     glEnd();
+    if(mMinimap) {
+      GLvector2f base = p->base;
+      GLvector2f dest = p->dest;
+      GLvector2f center = GL_SCREEN_SIZE / 2.0f;
+      base = ((base - GL_SCREEN_CENTER) / 10.0f) + center;
+      dest = ((dest - GL_SCREEN_CENTER) / 10.0f) + center;
+      glLineWidth(2.0f);
+      glBegin(GL_LINES);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glVertex2f(base.x, base.y);
+        glVertex2f(dest.x, dest.y);
+      glEnd();
+    }
   }
 
   Lock(mCollidableMutex);
