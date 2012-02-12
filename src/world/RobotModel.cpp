@@ -138,6 +138,14 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     mKeyCooldown['Q'] = true;
   }
   if(!keydown['Q'] && mKeyCooldown['Q']) mKeyCooldown['Q'] = false;
+  if(keydown['M'] && !mKeyCooldown['M']) {
+    mMap->toggleMinimap();
+    mKeyCooldown['M'] = true;
+  }
+  if(!keydown['M'] && mKeyCooldown['M']) mKeyCooldown['M'] = false;
+
+
+
 
   if(keydown[VK_SHIFT] && mTurboReady) {
     mVelocity += (mousepos - mPos) * 0.016f;

@@ -87,7 +87,7 @@ typedef struct {
   bool inputactive;
   struct {
     HANDLE mutex;
-    bool timer;
+    bool recenttimer;
     unsigned int recent;
     unsigned int recorder;
     unsigned int linecount;
@@ -176,7 +176,7 @@ GLfloat getDamage(unsigned int type)
   case PROJECTILE_TYPE_GRENADE:
     return 50.0f;
   case PROJECTILE_TYPE_NAIL:
-    return 3.0f;
+    return 9.0f;
   } 
   return 0.0f;
 }
@@ -450,13 +450,13 @@ void renderScene(left_handle * left)
         break;
       case 2: // 3 sec
         if(left->console.recent > 0) { 
-          if(left->console.timer) {
+          if(left->console.recenttimer) {
             left->console.recent--;
           } else {
-            left->console.timer = true;
+            left->console.recenttimer = true;
           }
         } else {
-          left->console.timer = false;
+          left->console.recenttimer = false;
         }
         break;
       }

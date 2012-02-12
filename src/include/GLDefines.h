@@ -127,6 +127,7 @@ extern GLvector2f gScreen;
 extern GLvector2f gScreenSize;
 #define GL_SCREEN_BOTTOMLEFT gScreen
 #define GL_SCREEN_CENTER     (gScreen + GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f))
+#define GL_SCREEN_SIZE       gScreenSize
 #define GL_SCREEN_IWIDTH     (int)gScreenSize.x
 #define GL_SCREEN_FWIDTH     gScreenSize.x
 #define GL_SCREEN_IHEIGHT    (int)gScreenSize.y
