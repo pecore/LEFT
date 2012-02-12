@@ -43,7 +43,7 @@ public:
     mTurboLoading = false;
     mFont = gResources->getFont("data\\euphemia.fnt")->font;
     mHealth = 100.0f;
-    mActive = 0;
+    mActive = 2;
   }
   ~HUD() {
     HUDButton * b = 0;
@@ -67,24 +67,29 @@ public:
   GLfloat getHealth() { return mHealth; }
 
   void draw(GLfloat * opacity) {
-    GLfloat offset = 450.0f;
+    GLfloat offset = 150.0f;
     HUDButton * b = 0;
     unsigned int i = 1;
     foreach(std::list<HUDButton *>, b, mButtons) {
       GLSprite * s = (i == mActive) ? b->active : b->inactive;
-      s->moveTo(GL_SCREEN_BOTTOMLEFT.x + offset, GL_SCREEN_BOTTOMLEFT.y + s->h() / 2.0f);
-      offset += s->w() + 10.0f;
-      s->setAlpha(opacity[i-1]);
+      s->moveTo(GL_SCREEN_BOTTOMLEFT.x + s->w() / 2.0f, GL_SCREEN_BOTTOMLEFT.y + offset);
+      offset += s->h() + 10.0f;
+      if(i != mActive) { 
+        s->setAlpha(0.5f);
+      } else {
+        s->setAlpha(opacity[i-1]);
+      }
       s->draw();
       i++;
     }
     glColor3f(0.3f, 0.6f, 0.9f);
     glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%3.0f", mHealth);
 
-    GLSprite * s = mTurboLoading ? mTurboIcon->inactive : mTurboIcon->active;
-    s->moveTo(GL_SCREEN_BOTTOMLEFT.x + 115.0f, GL_SCREEN_BOTTOMLEFT.y + 30.0f);
-    s->setAlpha(mTurboOpacity);
-    s->draw();
+    mTurboIcon->inactive->moveTo(GL_SCREEN_BOTTOMLEFT.x + 50.0f, GL_SCREEN_BOTTOMLEFT.y + 85.0f);
+    mTurboIcon->inactive->draw();
+    mTurboIcon->active->setAlpha(mTurboOpacity);
+    mTurboIcon->active->moveTo(GL_SCREEN_BOTTOMLEFT.x + 50.0f, GL_SCREEN_BOTTOMLEFT.y + 85.0f);
+    mTurboIcon->active->draw();
   }
 
 private:

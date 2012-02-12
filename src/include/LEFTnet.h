@@ -237,13 +237,17 @@ public:
     } else {
       switch(recv.header.msg) {
       case LEFT_NET_MSG_GET_SCORE:
+      case LEFT_NET_MSG_PING:
       case LEFT_NET_MSG_PONG:
+        dist->push(&recv);
         break;
-      default:
+      case LEFT_NET_MSG_DEAD:     
+      case LEFT_NET_MSG_RESPAWN:
+      case LEFT_NET_MSG_BYE:
         dist->distribute(&recv);
+        dist->push(&recv);
       }
-      dist->push(&recv);
-      memset(&recv, 0, sizeof(left_message));
+      //memset(&recv, 0, sizeof(left_message));
       next_header();
     }
   }
@@ -254,9 +258,24 @@ public:
       dist->remove(id);
       return;
     }
-    dist->distribute(&recv);
-    dist->push(&recv);
-    memset(&recv, 0, sizeof(left_message));
+    switch(recv.header.msg) {
+    case LEFT_NET_MSG_SCORE:   
+      break;
+    case LEFT_NET_MSG_WUI:
+      dist->push(&recv);
+      break;
+    case LEFT_NET_MSG_CHAT:      
+    case LEFT_NET_MSG_UPDATE_POS:     
+    case LEFT_NET_MSG_UPDATE_MAP:     
+    case LEFT_NET_MSG_DESTROY_MAP:    
+    case LEFT_NET_MSG_PROJECTILE:     
+    case LEFT_NET_MSG_UPDATE_STATS:
+    case LEFT_NET_MSG_PING:         
+    case LEFT_NET_MSG_PONG:
+      dist->distribute(&recv);
+      dist->push(&recv);
+    }
+    //memset(&recv, 0, sizeof(left_message));
     next_header();
   }
 
@@ -463,7 +482,7 @@ private:
     Lock(mutex);
     messages.push(new_message(&recv));
     Unlock(mutex);
-    memset(&recv, 0, sizeof(left_message));
+    //memset(&recv, 0, sizeof(left_message));
     next_header();
   }
 

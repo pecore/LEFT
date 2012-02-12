@@ -123,12 +123,15 @@ public:
   LightSourceList & LightSources() { return mLightSources; }
   ProjectileList & Projectiles() { return mProjectiles; }
 
+  GLvector2f randomSpawn(GLfloat size = 100.0f);
   void addCirclePolygon(GLvector2f pos, GLfloat size, GLfloat segments = 12);
   void addPolygon(Polygon & polygon);
   void addPolygons(Polygons & p);
   void setUpdate(bool u) { mUpdate = u; }
   void setCallback(CollisionCallback cb, void * ud) { mCallback = cb; mCallbackUserData = ud; }
+  
   void toggleMinimap() { mMinimap = !mMinimap; }
+  void addMinimapZoom(GLfloat z) { if((mMinimapZoom > 2.0f && z < 0.0f) || (mMinimapZoom < 20.0f && z > 0.0f)) mMinimapZoom += z; }
 
   GLfloat getOpacity(GLvector2f pos);
 
@@ -151,7 +154,9 @@ private:
   Polygons mCMap;
   GLplaneList mExtraShadows;
   bool mUpdate;
+
   bool mMinimap;
+  GLfloat mMinimapZoom;
 
   CollisionCallback mCallback;
   void * mCallbackUserData;

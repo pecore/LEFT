@@ -17,7 +17,9 @@ Map::Map()
   mMutex = CreateMutex(NULL, FALSE, "LeftMapMutex");
   mCollidableMutex = CreateMutex(NULL, FALSE, "LeftMapCollidableMutex");
   mSpot = new GLParticle(1280, 1280, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
+  
   mMinimap = false;
+  mMinimapZoom = 10.0f;
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -232,6 +234,12 @@ void Map::drawAnimations()
   }
 }
 
+GLvector2f Map::randomSpawn(GLfloat size)
+{
+  GLvector2f spawn = GLvector2f(frand() * 8000.0f, frand() * 5000.0f);;
+  addCirclePolygon(spawn, size);
+  return spawn;
+}
 
 void Map::generate()
 {
@@ -245,21 +253,8 @@ void Map::generate()
   c.AddPolygons(q, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
 
-  addCirclePolygon(GLvector2f(1600.0f, 1000.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(1900.0f, 1000.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(2200.0f, 1000.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(2500.0f, 1000.0f), 300.0f, 30);
-
-  addCirclePolygon(GLvector2f(2500.0f, 1300.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(2500.0f, 1600.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(2500.0f, 1900.0f), 300.0f, 30);
-
-  addCirclePolygon(GLvector2f(2200.0f, 1900.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(1900.0f, 1900.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(1600.0f, 1900.0f), 300.0f, 30);
-                              
-  addCirclePolygon(GLvector2f(1300.0f, 1900.0f), 300.0f, 30);
-  addCirclePolygon(GLvector2f(1300.0f, 1600.0f), 450.0f, 30);
+  for(int shots = 0; shots < 64; shots++)
+    addCirclePolygon(GLvector2f(frand() * 8000.0f, frand() * 5000.0f), 500.0f, 30);
 }                           
 
 GLfloat Map::getOpacity(GLvector2f pos)
@@ -392,8 +387,8 @@ void Map::collide(GLplane * p)
       GLvector2f base = p->base;
       GLvector2f dest = p->dest;
       GLvector2f center = GL_SCREEN_SIZE / 2.0f;
-      base = ((base - GL_SCREEN_CENTER) / 10.0f) + center;
-      dest = ((dest - GL_SCREEN_CENTER) / 10.0f) + center;
+      base = ((base - GL_SCREEN_CENTER) / mMinimapZoom) + center;
+      dest = ((dest - GL_SCREEN_CENTER) / mMinimapZoom) + center;
       glLineWidth(2.0f);
       glBegin(GL_LINES);
         glColor3f(1.0f, 1.0f, 1.0f);

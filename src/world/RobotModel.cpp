@@ -15,7 +15,7 @@
 #include "Debug.h"
 
 #define ROCKET_EFFECT_WIDTH 18.0f
-#define ROCKET_EFFECT_HEIGHT 32.0f
+#define ROCKET_EFFECT_HEIGHT 48.0f
 
 RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(map)
 {
@@ -160,18 +160,18 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   }
 
   mHUD->setTurboLoading(!mTurboReady);
-  mHUD->setTurboOpacity(mTurbo);
+  mHUD->setTurboOpacity(mTurboReady ? mTurbo : 0.0f);
 
-  mStable = keydown[VK_SPACE];
+  if(keydown['A']) mVelocity.x -= 1.0f;
+  if(keydown['D']) mVelocity.x += 1.0f;
+  mStable = keydown['S'] || keydown[VK_SPACE];
   mStablizeEffect->moveTo(mPos.x, mPos.y);
   if(mStable) {
-    mRocketBoost = 1.0f + (0.81f/9.0f);
+    mRocketBoost = 0.0f;
     if(mVelocity.len() > 0.1f) {
-      mVelocity *= 0.90f;
-    } else {
-      mVelocity.x = 0;
-      mVelocity.y = 0;
-    } 
+      mVelocity *= 0.95f;
+    }
+    mVelocity += gravity * -0.1f;
     if(!mReset) {
       mStablizeEffect->reset();
       mReset = true;
@@ -188,16 +188,11 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     if(keydown['W'] && mRocketBoost < 4.0f) {
       mRocketBoost += 0.8f;
     } else 
-    if(keydown['S'] && mRocketBoost > 0.0f) {
+    if(mRocketBoost > 0.0f) {
       mRocketBoost -= 0.5f;
-    } else
-      if(mRocketBoost > 1.0f) {
-      mRocketBoost -= 0.1f;
-    } else if(mRocketBoost < 1.0f && !keydown['S']) {
-      mRocketBoost += 0.1f;
     }
   }
-  mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * mRocketBoost);
+  mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * (mRocketBoost / 4.0f));
 
   mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
   return result;

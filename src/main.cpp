@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.66"
+#define LEFT_VERSION "0.68"
 
 #define _WIN32_WINNT 0x0601
 #define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
@@ -313,7 +313,7 @@ void renderScene(left_handle * left)
     left->balls[i]->move();
     left->lightballs[i]->pos = left->balls[i]->pos();
   }
-  if(!left->control.keydown[VK_SPACE]) left->control.keydown[VK_SPACE] = left->consoleactive;
+  if(!left->control.keydown['S']) left->control.keydown['S'] = left->consoleactive;
   
   if(left->dead) {
     left->control.mousebutton = 0;
@@ -346,6 +346,7 @@ void renderScene(left_handle * left)
   left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
 
   left->map->draw();
+  left->map->collision();
   left->map->drawProjectiles();
   left->map->drawAnimations();
 
@@ -408,8 +409,6 @@ void renderScene(left_handle * left)
 
     Unlock(left->net.friendmutex);
   }
-
-  left->map->collision();
 
   if(left->net.showscore) {
     drawScore(left);
@@ -708,7 +707,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     case VK_F2:
     case VK_OEM_3: // '`' or '^'
       left->consoleactive = !left->consoleactive;
-      left->control.keydown[VK_SPACE] = left->consoleactive;
+      left->control.keydown['S'] = left->consoleactive;
       left->console.recorder = 0;
       break;
     case VK_F3:
@@ -753,13 +752,20 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
   case WM_LBUTTONDOWN:
   case WM_MBUTTONDOWN:
   case WM_XBUTTONDOWN:
-    return onMouseDown(left, wParam, lParam & 0xFFFF, GL_SCREEN_IHEIGHT - ((lParam >> 16) & 0xFFFF));
+    return onMouseDown(left, wParam, LOWORD(lParam), GL_SCREEN_IHEIGHT - HIWORD(lParam));
   case WM_RBUTTONUP:
   case WM_LBUTTONUP:
   case WM_MBUTTONUP:
   case WM_XBUTTONUP:
     left->control.mousebutton = wParam;
     return 0;
+  case WM_MOUSEWHEEL: {
+      if((int)wParam < 0) {
+        left->map->addMinimapZoom(1.0f);
+      } else {
+        left->map->addMinimapZoom(-1.0f);
+      }
+    } return 0;
   case WM_SIZE:
     //gScreenSize.x = (GLfloat) ((lParam >> 16) & 0xFFFF);
     //gScreenSize.y = (GLfloat) (lParam & 0xFFFF);
@@ -1085,7 +1091,8 @@ DWORD WINAPI run(void * lh)
     left->map->setCallback(&collide, left);
 
     left->robot = new RobotModel(left->map);
-    left->robot->moveTo(1100.0f, 1000.0f);
+    GLvector2f spawn = left->map->randomSpawn();
+    left->robot->moveTo(spawn.x, spawn.y);
     left->map->addCollidable(left->robot);
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
     left->map->LightSources().push_back(left->robotlight);
@@ -1096,9 +1103,10 @@ DWORD WINAPI run(void * lh)
     left->house->moveTo(2000.0f, 2000.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < 64; i++) {
       left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
-      left->balls[i]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
+      GLvector2f spawn = left->map->randomSpawn(300.0f);
+      left->balls[i]->moveTo(spawn.x, spawn.y);
       left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
       left->lightballs[i] = new LightSource(left->balls[i]->pos(), left->balls[i]->getColor(), 0.3f, glpLight);
       left->map->LightSources().push_back(left->lightballs[i]);
@@ -1172,7 +1180,11 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   left->window = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, left->settings->geti("r_fullscreen") != 0, (WNDPROC) WndProc);
   
   if(left->window) {
-    wglSwapIntervalEXT(0);
+    if(left->settings->geti("r_fullscreen") != 0) {
+      wglSwapIntervalEXT(1);
+    } else {
+      wglSwapIntervalEXT(0);
+    }
     left->running = left->window->isInitialized();
     if(left->running) {
       SetWindowLongPtr(left->window->hWnd(), GWLP_USERDATA, (LONG_PTR) left);
