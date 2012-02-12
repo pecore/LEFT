@@ -27,7 +27,6 @@
 #include "clipper.hpp"
 using namespace ClipperLib;
 #define Polygon ClipperLib::Polygon
-#define CLIPPER_PRECISION 100000L
 
 #include <stdarg.h>
 #define _USE_MATH_DEFINES

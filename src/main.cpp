@@ -233,8 +233,8 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, Projectile * p)
     Polygon::iterator vit;
     for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
       IntPoint current = *vit;
-      float x = (GLfloat) (current.X / CLIPPER_PRECISION);
-      float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
+      float x = (GLfloat) (current.X);
+      float y = (GLfloat) (current.Y);
       memcpy((void *) p, &x, sizeof(float));
       p += sizeof(float);
       memcpy((void *) p, &y, sizeof(float));
@@ -839,8 +839,8 @@ DWORD WINAPI run_messages(void * data)
             Polygon::iterator vit;
             for(vit = polygon.begin(); vit != polygon.end(); ++vit) {
               IntPoint current = *vit;
-              float x = (GLfloat) (current.X / CLIPPER_PRECISION);
-              float y = (GLfloat) (current.Y / CLIPPER_PRECISION);
+              float x = (GLfloat) (current.X);
+              float y = (GLfloat) (current.Y);
               memcpy((void *) p, &x, sizeof(float));
               p += sizeof(float);
               memcpy((void *) p, &y, sizeof(float));
@@ -947,8 +947,8 @@ DWORD WINAPI run_messages(void * data)
                 memcpy(&y, (void *) p, sizeof(float));
                 p += sizeof(float);
               
-                point.X = (x * CLIPPER_PRECISION);
-                point.Y = (y * CLIPPER_PRECISION);
+                point.X = (x);
+                point.Y = (y);
                 polygon.push_back(point);
               }
 
@@ -976,8 +976,8 @@ DWORD WINAPI run_messages(void * data)
               memcpy(&y, (void *) p, sizeof(float));
               p += sizeof(float);
             
-              point.X = (x * CLIPPER_PRECISION);
-              point.Y = (y * CLIPPER_PRECISION);
+              point.X = (x);
+              point.Y = (y);
               polygon.push_back(point);
             }
 
@@ -1040,7 +1040,7 @@ DWORD WINAPI run(void * lh)
     left->zombie->moveTo(2700.0f, 750.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < 128; i++) {
       left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
       left->balls[i]->moveTo(1000.0f + 100.0f*frand(), 1000.0f);
       left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));

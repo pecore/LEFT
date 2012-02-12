@@ -101,7 +101,7 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
 
   MapObject * o = 0;
   foreach(MapObjectList, o, mMapObjects) {
-    GLvector2f center((o->pos().x * CLIPPER_PRECISION) - (o->w() * CLIPPER_PRECISION / 2.0f), (o->pos().y * CLIPPER_PRECISION) - (o->h() * CLIPPER_PRECISION / 2.0f));
+    GLvector2f center((o->pos().x) - (o->w() / 2.0f), (o->pos().y) - (o->h() / 2.0f));
     Polygon p;
     Polygon::reverse_iterator vit;
     for(vit = o->collision().rbegin(); vit != o->collision().rend(); vit++) {
@@ -146,8 +146,8 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
       for(vit = p.begin(); vit != p.end(); vit++) {
         IntPoint current = *vit, next;
         if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
-        GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
-        GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
+        GLvector2f A(current.X, current.Y);
+        GLvector2f B(next.X, next.Y);
         GLvector2f baseproj = A - pos;
         GLvector2f destproj = B - pos;
         GLvector2f bproj = A + baseproj.normal() * (radius);
@@ -302,7 +302,7 @@ void Map::genCirclePolygon(GLvector2f pos, GLfloat size, Polygon & polygon, bool
   GLfloat delta = 2.0f * M_PI / segments;
   for(GLfloat angle = 0.0f; angle < (2.0f * M_PI); angle += delta) {
     p = pos + (radius.rotate(angle) * (random?(0.9f + frand()/5):1.0f));
-    polygon.push_back(IntPoint((long64)(p.x * CLIPPER_PRECISION), (long64)(p.y * CLIPPER_PRECISION)));
+    polygon.push_back(IntPoint((long64)(p.x), (long64)(p.y)));
   }
 }
 
@@ -435,8 +435,8 @@ void Map::collision()
     for(vit = p.begin(); vit != p.end(); vit++) {
       IntPoint current = *vit, next;
       if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
-      GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
-      GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
+      GLvector2f A(current.X, current.Y);
+      GLvector2f B(next.X, next.Y);
 
       plane->bordered = true;
       plane->base = A;
@@ -453,13 +453,13 @@ void Map::collision()
       IntPoint current = *vit, next;
       if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
       
-      GLvector2f center((o->pos().x * CLIPPER_PRECISION) - (o->w() * CLIPPER_PRECISION / 2.0f), (o->pos().y * CLIPPER_PRECISION) - (o->h() * CLIPPER_PRECISION / 2.0f));
+      GLvector2f center((o->pos().x) - (o->w() / 2.0f), (o->pos().y) - (o->h() / 2.0f));
       current.X += center.x;
       current.Y += center.y;
       next.X += center.x;
       next.Y += center.y;
-      GLvector2f A(current.X / CLIPPER_PRECISION, current.Y / CLIPPER_PRECISION);
-      GLvector2f B(next.X / CLIPPER_PRECISION, next.Y / CLIPPER_PRECISION);
+      GLvector2f A(current.X, current.Y);
+      GLvector2f B(next.X, next.Y);
       plane->bordered = false;
       plane->base = A;
       plane->dest = B;
