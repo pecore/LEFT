@@ -51,7 +51,7 @@ private:
 
   GLSprite * mBodySprite;
   RobotRocketEffect * mRocketEffect;
-  RobotStabilizeEffect * mStablizeEffect;
+  RobotStabilizeEffect * mStabilizeEffect;
   GLSprite * mWeaponArmSprite;
 
   GLfloat mAlpha;
@@ -59,7 +59,6 @@ private:
   GLfloat mAngle;
   GLfloat mWeaponAngle;
   bool mStable;
-  bool mReset;
   GLfloat mTurbo;
   bool mTurboReady;
   bool mKeyCooldown[256];

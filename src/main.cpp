@@ -1091,7 +1091,11 @@ DWORD WINAPI run(void * lh)
     left->map->setCallback(&collide, left);
 
     left->robot = new RobotModel(left->map);
+#ifndef _DEBUG
     GLvector2f spawn = left->map->randomSpawn();
+#else
+      GLvector2f spawn = GLvector2f(1000.0f, 1000.0f);
+#endif
     left->robot->moveTo(spawn.x, spawn.y);
     left->map->addCollidable(left->robot);
     left->robotlight = new LightSource(left->robot->pos(), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
@@ -1103,9 +1107,15 @@ DWORD WINAPI run(void * lh)
     left->house->moveTo(2000.0f, 2000.0f);
 
     left->cross = new GLParticle(50, 50, 1.0f, 1.0f, 1.0f, 1.0f, glpCross);
+#ifndef _DEBUG
     for(int i = 0; i < 64; i++) {
       left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
       GLvector2f spawn = left->map->randomSpawn(300.0f);
+#else
+    for(int i = 0; i < 2; i++) {
+      left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
+      GLvector2f spawn = GLvector2f(1000.0f, 1000.0f);
+#endif
       left->balls[i]->moveTo(spawn.x, spawn.y);
       left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
       left->lightballs[i] = new LightSource(left->balls[i]->pos(), left->balls[i]->getColor(), 0.3f, glpLight);

@@ -252,9 +252,10 @@ void Map::generate()
   c.AddPolygons(p, ptSubject);
   c.AddPolygons(q, ptClip);
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
-
+#ifndef _DEBUG
   for(int shots = 0; shots < 64; shots++)
     addCirclePolygon(GLvector2f(frand() * 8000.0f, frand() * 5000.0f), 500.0f, 30);
+#endif
 }                           
 
 GLfloat Map::getOpacity(GLvector2f pos)

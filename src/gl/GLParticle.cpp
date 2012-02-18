@@ -82,11 +82,6 @@ void GLParticle::generate()
   }
 }
 
-void GLParticle::colorMask()
-{
-   glColor4f(mr, mg, mb, ma);
-}
-
 bool GLParticle::collide(GLvector2f n, GLfloat distance)
 {
   mPos -= n * ((mWidth / 2.0f) - distance);

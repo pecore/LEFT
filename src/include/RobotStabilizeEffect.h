@@ -12,28 +12,23 @@
 #include "GLDefines.h"
 #include "GLParticleEffect.h"
 
-#define STABILIZE_PARTICLE_COUNT 1000
+#define STABILIZE_PARTICLE_COUNT 750
 
 class RobotStabilizeEffect : public GLParticleEffect {
 public:
-  RobotStabilizeEffect(GLfloat x, GLfloat y, GLfloat radius);
+  RobotStabilizeEffect(GLfloat x, GLfloat y);
   ~RobotStabilizeEffect();
 
   void moveTo(GLfloat x, GLfloat y);
+  void setAngle(GLfloat a) { mAngle = a; }
   void reset();
 
+  void integrate(GLfloat dt);
   void draw();
 
 private:
   GLvector2f mPos;
-
-  void spawn(GLParticleDummy * p, int i);
-  int mDirection[STABILIZE_PARTICLE_COUNT];
-
-  GLfloat mWidth;
-  GLfloat mHeight;
-
-  void reset(int i);
+  GLfloat mAngle;
 };
 
 #endif

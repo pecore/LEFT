@@ -39,6 +39,7 @@ public:
     mButtons.push_back(new HUDButton("data\\btn_grenade_inactive.png", "data\\btn_grenade_active.png"));
     mButtons.push_back(new HUDButton("data\\btn_bfg_inactive.png", "data\\btn_bfg_active.png"));
     mTurboIcon = new HUDButton("data\\turbo_loading.png", "data\\turbo.png");
+    mTurboBar = new GLParticle(35, 100, 0.0f, 0.8f, 0.3f, 1.0f, glpSolid);
     mTurboOpacity = 1.0f;
     mTurboLoading = false;
     mFont = gResources->getFont("data\\euphemia.fnt")->font;
@@ -53,9 +54,11 @@ public:
     delete mTurboIcon;
   }
 
+  GLParticle * mTurboBar;
+
   unsigned int count() { return mButtons.size(); }
 
-  void setTurboOpacity(GLfloat o) { mTurboOpacity = o; }
+  void setTurboOpacity(GLfloat o) { mTurboBar->setSize(20.0f, 100 * o); }
   void setTurboLoading(bool loading) { mTurboLoading = loading; }
 
   void setActive(unsigned int a) { mActive = (a >= 1 && a <= mButtons.size()) ? a : mActive; }
@@ -67,29 +70,33 @@ public:
   GLfloat getHealth() { return mHealth; }
 
   void draw(GLfloat * opacity) {
-    GLfloat offset = 150.0f;
+    GLfloat offset = 100.0f;
     HUDButton * b = 0;
     unsigned int i = 1;
     foreach(std::list<HUDButton *>, b, mButtons) {
-      GLSprite * s = (i == mActive) ? b->active : b->inactive;
-      s->moveTo(GL_SCREEN_BOTTOMLEFT.x + s->w() / 2.0f, GL_SCREEN_BOTTOMLEFT.y + offset);
-      offset += s->h() + 10.0f;
-      if(i != mActive) { 
-        s->setAlpha(0.5f);
-      } else {
-        s->setAlpha(opacity[i-1]);
+      if((i == mActive)) {
+        GLvector3f turbocolor(0.0f, 0.8f, 0.3f);
+        if(mTurboLoading) {
+          turbocolor = GLvector3f(0.6f, 0.0f, 0.0f);
+        }
+        mTurboBar->setColor(turbocolor, 1.0f);
+        mTurboBar->moveTo(GL_SCREEN_BOTTOMLEFT.x + 15.0f, GL_SCREEN_BOTTOMLEFT.y + offset + b->active->h() / 2.0f + mTurboBar->h() / 2.0f);
+        mTurboBar->draw();
+        b->active->moveTo(GL_SCREEN_BOTTOMLEFT.x + b->active->w() / 2.0f, GL_SCREEN_BOTTOMLEFT.y + offset);
+        b->active->draw();
       }
-      s->draw();
       i++;
     }
     glColor3f(0.3f, 0.6f, 0.9f);
     glFontPrint(mFont, GLvector2f(20.0f, 20.0f), "%3.0f", mHealth);
 
+#if 0
     mTurboIcon->inactive->moveTo(GL_SCREEN_BOTTOMLEFT.x + 50.0f, GL_SCREEN_BOTTOMLEFT.y + 85.0f);
     mTurboIcon->inactive->draw();
     mTurboIcon->active->setAlpha(mTurboOpacity);
     mTurboIcon->active->moveTo(GL_SCREEN_BOTTOMLEFT.x + 50.0f, GL_SCREEN_BOTTOMLEFT.y + 85.0f);
     mTurboIcon->active->draw();
+#endif
   }
 
 private:

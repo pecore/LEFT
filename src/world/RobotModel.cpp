@@ -29,7 +29,8 @@ RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(m
   mWeaponArmSprite->moveTo(mPos.x, mPos.y);
 
   mRocketEffect = new RobotRocketEffect(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f, ROCKET_EFFECT_WIDTH, ROCKET_EFFECT_HEIGHT, 8, 500);
-  mStablizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y, 40.0f);
+  mStabilizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y);
+  mStabilizeEffect->reset();
 
   mDrawHUD = true;
   mAlpha = 1.0f;
@@ -54,8 +55,8 @@ RobotModel::~RobotModel()
   if(mRocketEffect) {
     delete mRocketEffect;
   }
-  if(mStablizeEffect) {
-    delete mStablizeEffect;
+  if(mStabilizeEffect) {
+    delete mStabilizeEffect;
   }
   if(mWeaponArmSprite) {
     delete mWeaponArmSprite;
@@ -145,7 +146,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   if(!keydown['M'] && mKeyCooldown['M']) mKeyCooldown['M'] = false;
 
   if(keydown[VK_SHIFT] && mTurboReady) {
-    mVelocity += (mousepos - mPos) * 0.016f;
+    mVelocity += (mousepos - mPos) * 0.2f;
     mTurbo -= 0.015f;
     if(mTurbo <= 0.0f) {
       mVelocity *= 0.5f;
@@ -155,34 +156,43 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     if(mTurbo >= 1.0f) {
       mTurboReady = true;
     } else {
-      mTurbo += 0.01f;
+      if(mTurboReady) {
+        mTurbo += 0.02f;
+      } else {
+        mTurbo += 0.005f;
+      }
     }
   }
 
   mHUD->setTurboLoading(!mTurboReady);
-  mHUD->setTurboOpacity(mTurboReady ? mTurbo : 0.0f);
+  mHUD->setTurboOpacity(mTurbo);
 
   if(keydown['A']) mVelocity.x -= 1.0f;
   if(keydown['D']) mVelocity.x += 1.0f;
-  mStable = keydown['S'] || keydown[VK_SPACE];
-  mStablizeEffect->moveTo(mPos.x, mPos.y);
-  if(mStable) {
+  bool mStableButton = keydown['S'] || keydown[VK_SPACE];
+  if(mStableButton) {
+    if(mVelocity.len() > 5.0f) {
+      GLfloat delta = mVelocity.len() - 5.0f;
+      GLfloat color = 0.4f + (delta / 150.0f);
+      mBodySprite->setColor4f(color/2, color, 1.0f, 1.0f);
+      mWeaponArmSprite->setColor4f(color, color, 1.0f, 1.0f);
+      mVelocity *= 0.9f;
+      mVelocity += gravity * -0.1f;
+    } else {
+      mStable = true;
+      mVelocity = GLvector2f(0.0f, 0.0f);
+    }
     mRocketBoost = 0.0f;
-    if(mVelocity.len() > 0.1f) {
-      mVelocity *= 0.95f;
-    }
-    mVelocity += gravity * -0.1f;
-    if(!mReset) {
-      mStablizeEffect->reset();
-      mReset = true;
-    }
   } else {
-    mReset = false;
+    mBodySprite->setColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    mWeaponArmSprite->setColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    mStable = false;
   }
-
-  if(!mStable) {
+  if(!mStable) { 
     // Turn Robot
-    mAngle = ((mousepos - mPos).angle() / M_PI) * 180.0f - 90.0f;
+    if(!(mousestate & MK_RBUTTON)) {
+      mAngle = ((mousepos - mPos).angle() / M_PI) * 180.0f - 90.0f;
+    }
 
     // Control Boost
     if(keydown['W'] && mRocketBoost < 4.0f) {
@@ -192,7 +202,12 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
       mRocketBoost -= 0.5f;
     }
   }
-  mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * (mRocketBoost / 4.0f));
+
+  GLfloat rocketeffectsize = mRocketBoost / 4.0f;
+  if(keydown[VK_SHIFT] && mTurboReady && mTurbo < 1.0f) {
+    rocketeffectsize = 1.2f;
+  }
+  mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * (rocketeffectsize));
 
   mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
   return result;
@@ -208,12 +223,18 @@ bool RobotModel::collide(GLvector2f n, GLfloat distance)
 
 void RobotModel::integrate(GLfloat dt)
 { 
+  if(mStable) {
+    mStabilizeEffect->moveTo(mPos.x, mPos.y);
+    mStabilizeEffect->setAngle(mAngle);
+    mStabilizeEffect->integrate(dt);
+    return;
+  }
   mBodySprite->moveTo(mPos.x, mPos.y);
   mWeaponArmSprite->moveTo(mPos.x, mPos.y);
   mRocketEffect->moveTo(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f + 3.0f);
   mBodySprite->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mAngle);
   mRocketEffect->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mAngle);
-
+  
   mVelocity += mRocketEffect->direction().normal() * -9.0f * mRocketBoost * dt;
   if(mWeaponAngle != 0.0f) {
     mWeaponArmSprite->setRotation(mPos.x, mPos.y, mWeaponAngle);
@@ -229,7 +250,7 @@ void RobotModel::integrate(GLfloat dt)
 void RobotModel::moveTo(GLfloat x, GLfloat y)
 { 
   mPos.x = x; 
-  mPos.y = y; 
+  mPos.y = y;
 }
 
 void RobotModel::draw()
@@ -241,7 +262,7 @@ void RobotModel::draw()
   mBodySprite->draw();
   mWeaponArmSprite->draw();
   if(mStable) {
-    mStablizeEffect->draw();
+    mStabilizeEffect->draw();
   } else {
     mRocketEffect->draw();
   }

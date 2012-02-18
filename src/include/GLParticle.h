@@ -25,11 +25,7 @@ public:
   GLParticle(int width, int height, GLfloat r = 1.0f, GLfloat g = 1.0f, GLfloat b = 1.0f, GLfloat a = 1.0f, particle_t form = glpCircle);
   ~GLParticle();
 
-  GLvector2f velocity() { return mVelocity; };
-
-  void setColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a) { mr = r; mg = g; mb = b; ma = a; };
-  void setColor(GLvector3f & c, GLfloat a) { mr = c.x; mg = c.y; mb = c.z; ma = a; };
-  GLvector3f getColor() { return GLvector3f(mr, mg, mb); }
+  GLvector2f velocity() { return mVelocity; }
   int getForm() { return mForm; }
 
   void move() { mPos += mVelocity; };
@@ -40,17 +36,11 @@ public:
   void draw() { this->GLSprite::draw(); };
 
 protected:
-  GLvector2f mVelocity;
-
-  GLfloat mr;
-  GLfloat mg;
-  GLfloat mb;
-  
+  GLvector2f mVelocity;  
   int mForm;
 
   void generate();
   unsigned char getAlpha(int x, int y);
-  void colorMask();
 };
 
 #endif

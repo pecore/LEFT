@@ -110,6 +110,7 @@ public:
   void draw();
   void drawProjectiles();
   void drawAnimations();  
+  void playAnimation(GLAnimatedSprite * sprite);
 
   void addCollidable(Collidable * c);
   void removeCollidable(Collidable * c);
@@ -117,8 +118,7 @@ public:
   void removeProjectile(Projectile * proj);
   void deleteProjectile(Projectile * proj);
   bool isProjectile(Collidable * c);
-  void playAnimation(GLAnimatedSprite * sprite);
-
+  
   MapObjectList & MapObjects() { return mMapObjects; }
   LightSourceList & LightSources() { return mLightSources; }
   ProjectileList & Projectiles() { return mProjectiles; }

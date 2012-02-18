@@ -33,8 +33,13 @@ public:
 
   void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   void setRotation(GLfloat x, GLfloat y, GLfloat angle) { mRotation.x = x; mRotation.y = y; mAngle = angle; };
-  void setAlpha(GLfloat alpha) { ma = alpha; }
   virtual void draw();
+
+  void setColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a) { mr = r; mg = g; mb = b; ma = a; };
+  void setColor(GLvector3f & c, GLfloat a) { mr = c.x; mg = c.y; mb = c.z; ma = a; };
+  GLvector3f getColor() { return GLvector3f(mr, mg, mb); }
+  void setAlpha(GLfloat alpha) { ma = alpha; }
+  
 
 protected:
   GLSprite();
@@ -44,6 +49,10 @@ protected:
   GLvector2f mPos;
   GLvector2f mRotation;
   GLfloat mAngle;
+
+  GLfloat mr;
+  GLfloat mg;
+  GLfloat mb;
   GLfloat ma;
 
   const char * mFilename;
@@ -65,6 +74,7 @@ public:
   GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloat width, GLfloat height);
   ~GLAnimatedSprite();
 
+  void moveTo(GLfloat x, GLfloat y) { mPos.x = x; mPos.y = y; };
   bool draw(int index);
 
 private:

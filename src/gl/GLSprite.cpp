@@ -19,6 +19,10 @@ GLSprite::GLSprite()
   mAngle = 0.0f;
   mRotation.x = 0.0f;
   mRotation.y = 0.0f;
+  
+  mr = 1.0f;
+  mg = 1.0f;
+  mb = 1.0f; 
   ma = 1.0f;
 
   mpData = 0;
@@ -54,6 +58,9 @@ GLSprite::GLSprite(const char * filename, int width, int height)
   mAngle = 0.0f;
   mRotation.x = 0.0f;
   mRotation.y = 0.0f;
+  mr = 1.0f;
+  mg = 1.0f;
+  mb = 1.0f; 
   ma = 1.0f;
 }
 
@@ -68,7 +75,7 @@ GLSprite::~GLSprite()
 
 void GLSprite::colorMask()
 {
-  glColor4f(1.0f, 1.0f, 1.0f, ma);
+  glColor4f(mr, mg, mb, ma);
 }
 
 bool GLSprite::prepare()
@@ -171,6 +178,7 @@ GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloa
 
     glNewList(mDisplayLists + index, GL_COMPILE);
     glBindTexture(GL_TEXTURE_2D, mSprite->texture());
+    GL_ASSERT();
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
 		  glTexCoord2f(tindex.x, tindex.y); 
