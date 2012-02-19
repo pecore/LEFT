@@ -6,7 +6,7 @@
     Jan Christian Meyer
 */
 
-#define LEFT_VERSION "0.68"
+#define LEFT_VERSION "0.69"
 
 #define _WIN32_WINNT 0x0601
 #define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
@@ -40,7 +40,14 @@ SoundThreadList SoundPlayer::mThreads;
 
 typedef struct {
   bool running;
-  
+
+  struct {
+    HANDLE render;
+    HANDLE tcp;
+    HANDLE msg;
+    bool msgrunning;
+  } threads;
+
   Settings * settings;
   GLResources * resources;
   GLWindow * window;
@@ -108,6 +115,15 @@ std::list<Debug::DebugVectorType> Debug::DebugVectors;
 bool Debug::DebugActive = false;
 void * Debug::DebugMutex;
 GLfloat gDebugValue;
+
+void stop(left_handle * left)
+{
+  left->threads.msgrunning = false;
+  if(left->net.client) left->net.client->wakeup();
+  server->wakeup();
+  WaitForSingleObject(left->threads.msg, INFINITE);
+  left->running = false;
+}
 
 void cprintf(left_handle * left, const char * fmt, ...) 
 {
@@ -203,7 +219,7 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, Projectile * p)
         frag = true;
       }
       left_net_message_pool->del(m);
-    } else if(c == left->robot && !left->dead) {
+    } else if(c == left->robot && !left->dead && left->robot->getHUD()) {
       left->robot->getHUD()->addHealth(- getDamage(p->type));
       if(left->robot->getHUD()->getHealth() <= 0.0f) {
         left_message * m = new_message(LEFT_NET_MSG_DEAD);
@@ -343,14 +359,14 @@ void renderScene(left_handle * left)
   left->robotlight->angle = ((left->control.mousepos - left->robot->pos()).angle() / M_PI) * 180.0f;
   left->cross->moveTo(left->control.mousepos.x, left->control.mousepos.y);
   gScreen = left->robot->pos() - GLvector2f(GL_SCREEN_FWIDTH / 2.0f, GL_SCREEN_FHEIGHT / 2.0f);
-  left->map->drawShadows(left->window->getGaussianShader(), left->window->getGaussDirLoc());
+  left->map->drawShadows();
 
   left->map->draw();
   left->map->collision();
   left->map->drawProjectiles();
   left->map->drawAnimations();
 
-  if(left->dead && !left->net.client) {
+  if(left->dead && !left->net.client && left->robot->getHUD()) {
     left->robot->getHUD()->addHealth(0.1f);
     if(left->robot->getHUD()->getHealth() >= 100.0f) {
       left->dead = false;
@@ -698,7 +714,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
     left->control.keydown[wParam] = true;
     switch(wParam) {
     case VK_ESCAPE:
-      left->running = false;
+      stop(left);
       PostQuitMessage(0);
       break;
     case VK_F1:
@@ -778,7 +794,8 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
 DWORD WINAPI run_messages(void * data)
 {
   left_handle * left = (left_handle *) data;
-  while(left->running) {
+  left->threads.msgrunning = true;
+  while(left->threads.msgrunning) {
     if(left->net.client && !left->net.client->isconnected()) {
       int timeout = 1000; // 1 sec
       cprintf(left, "> connecting");
@@ -793,18 +810,20 @@ DWORD WINAPI run_messages(void * data)
         delete left->net.client;
         left->net.client = 0;
         cprintf(left, "> disconnected from server");
+        left->console.recent++;
       }
     }
     
     left_message * m = 0;
     if(left->net.client) {
+      left->net.client->wait();
       m = left->net.client->get_message();
     } else {
+      server->wait();
       m = server->get_message();
     }
 
     if(!m) {
-      Sleep(0);    
       continue;
     }
 
@@ -865,8 +884,11 @@ DWORD WINAPI run_messages(void * data)
             p += sizeof(int);
           }
           score->header.size = p - (uintptr) &score->msg;
-          server->send_message(score, m->header.sender);
-          server->push(score);
+          if(m->header.sender != 0) {
+            server->send_message(score, m->header.sender);
+          } else {
+            server->push(score);
+          }
           left_net_message_pool->del(score);
         } break;
       case LEFT_NET_MSG_SCORE: {
@@ -932,7 +954,7 @@ DWORD WINAPI run_messages(void * data)
         }
         break;
       case LEFT_NET_MSG_UPDATE_STATS:{
-          if(left->net.client) {
+          if(left->net.client && left->robot->getHUD()) {
             left->robot->getHUD()->setHealth(m->msg.stats.health);
             if(left->robot->getHUD()->getHealth() <= 0.0f) {
               left->dead = true;
@@ -963,7 +985,8 @@ DWORD WINAPI run_messages(void * data)
           left->map->addProjectile(p);
         } break;
       case LEFT_NET_MSG_BYE:
-        cprintf(left, "> client disconnected from server");
+        cprintf(left, "> %s disconnected from server", left->net.friends[m->header.sender].name);
+        left->console.recent++;
         removePlayer(left, m->header.sender);
         break;
       case LEFT_NET_MSG_CHAT:
@@ -973,11 +996,10 @@ DWORD WINAPI run_messages(void * data)
       case LEFT_NET_MSG_UPDATE_POS: {
           Lock(left->net.friendmutex);
           if(!left->net.friends[m->header.sender].model) {
-            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png");
+            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png", true);
             left->net.friends[m->header.sender].robotlight = new LightSource(GLvector2f(m->msg.position.xpos, m->msg.position.ypos), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
             left->map->LightSources().push_back(left->net.friends[m->header.sender].robotlight);
             left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
-            left->net.friends[m->header.sender].model->setHUD(false);
             left->map->addCollidable(left->net.friends[m->header.sender].model);
           }
           GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
@@ -1154,7 +1176,6 @@ DWORD WINAPI run(void * lh)
 
 int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-  HANDLE renderThread, tcpThread, msgThread;
 	MSG msg;
   timeBeginPeriod(1);
   srand( (unsigned int)GetTickCount() );
@@ -1199,28 +1220,19 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     if(left->running) {
       SetWindowLongPtr(left->window->hWnd(), GWLP_USERDATA, (LONG_PTR) left);
       wglMakeCurrent(0, 0);
-      renderThread = CreateThread(0, 0, &run, left, 0, 0);
-      if(renderThread == INVALID_HANDLE_VALUE) {
-        delete left->window;
-        return 0;
-      }
-      tcpThread = CreateThread(0, 0, &run_asio, left, 0, 0);
-      if(tcpThread == INVALID_HANDLE_VALUE) {
-        delete left->window;
-        return 0;
-      }
-      msgThread = CreateThread(0, 0, &run_messages, left, 0, 0);
-      if(msgThread == INVALID_HANDLE_VALUE) {
-        delete left->window;
-        return 0;
-      }
+      left->threads.render = CreateThread(0, 0, &run, left, 0, 0);
+      left->threads.tcp = CreateThread(0, 0, &run_asio, left, 0, 0);
+      left->threads.msg = CreateThread(0, 0, &run_messages, left, 0, 0);
+      assert(left->threads.render != INVALID_HANDLE_VALUE);
+      assert(left->threads.tcp != INVALID_HANDLE_VALUE);
+      assert(left->threads.msg != INVALID_HANDLE_VALUE);
     }
   }
 
 	while(left->running) {
     while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
       if(msg.message == WM_QUIT) {
-        left->running = false;
+        stop(left);
         break;
       }
       if(left->consoleactive || left->inputactive) TranslateMessage(&msg);
@@ -1228,13 +1240,13 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
     Sleep(16);
 	}
-  WaitForSingleObject(msgThread, INFINITE);
-  WaitForSingleObject(renderThread, INFINITE);
+  
   left->net.io_service->stop();
-  WaitForSingleObject(tcpThread, INFINITE);
-  CloseHandle(Debug::DebugMutex);
+  WaitForSingleObject(left->threads.render, INFINITE);
+  WaitForSingleObject(left->threads.tcp, INFINITE);
   CloseHandle(left->console.mutex);
   CloseHandle(left->net.friendmutex);
+  CloseHandle(Debug::DebugMutex);
 
   for(int i = 0; i < 1024; i++) {
     if(left->net.friends[i].model) {
@@ -1244,6 +1256,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   if(left->net.client) {
     delete left->net.client;
   }
+  delete server;
   delete left_net_message_pool;
   delete left->window;
   delete left->settings;

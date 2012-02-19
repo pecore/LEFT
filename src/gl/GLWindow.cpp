@@ -45,19 +45,18 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
   }
 
   if(result) {
-	  if(fullscreen) {
-		  DEVMODE dmScreenSettings;								
-		  memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
-		  dmScreenSettings.dmSize=sizeof(dmScreenSettings);
-		  dmScreenSettings.dmPelsWidth	= width;
-		  dmScreenSettings.dmPelsHeight	= height;
-		  dmScreenSettings.dmBitsPerPel	= bits;
-		  dmScreenSettings.dmFields=DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
+	  DEVMODE dmScreenSettings;								
+	  memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
+	  dmScreenSettings.dmSize=sizeof(dmScreenSettings);
+	  dmScreenSettings.dmPelsWidth	= width;
+	  dmScreenSettings.dmPelsHeight	= height;
+	  dmScreenSettings.dmBitsPerPel	= bits;
+	  dmScreenSettings.dmFields=DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
 
-		  ChangeDisplaySettings(&dmScreenSettings,CDS_FULLSCREEN);
+    if(fullscreen) {
+		  ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 		  dwExStyle = WS_EX_APPWINDOW;
-		  dwStyle = WS_POPUP;					
-		  ShowCursor(FALSE);	
+		  dwStyle = WS_POPUP;
 	  }	else {
 		  dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		  dwStyle = WS_OVERLAPPEDWINDOW;					
@@ -155,7 +154,6 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
 
 GLWindow::~GLWindow()
 {
-  glDeleteProgram(mGaussianShader);
   free();
 }
 
@@ -166,78 +164,6 @@ bool GLWindow::initOpenGL()
   if(glewInit()) {
     result = false;
   }
-
-// shader
-#if 0
-  GLuint fragmentShader;
-  static const char * fragmentShaderSource =
-    "#version 120\n"
-    "uniform sampler2D tex;"
-    "uniform vec2 u_direction;"
-    ""
-    "const vec2 gaussFilter[7] = const vec2[7]("
-    "  -3.0,	0.015625,"
-    "  -2.0,	0.09375 ,"
-    "  -1.0,	0.234375,"
-    "   0.0,	0.3125  ,"
-    "   1.0,	0.234375,"
-    "   2.0,	0.09375 ,"
-    "   3.0,	0.015625"
-    ");"
-    ""
-    "void main()"
-    "{"
-    "  vec4 color;"
-    "  color = vec4(0.0, 0.0, 0.0, 0.0);"
-    "  for(int i = 0; i < 7; i++) {"
-    "    color += texture2D( tex, vec2( gl_TexCoord[0].x + gaussFilter[i].x * u_direction.x,"
-    "                                   gl_TexCoord[0].y + gaussFilter[i].x * u_direction.y ) ) * gaussFilter[i].y;"
-    "  }"
-    ""
-    "  gl_FragColor = color;"
-    "}"
-    "";
-
-  if(result) {
-    GLint length = strlen(fragmentShaderSource);
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, (const GLcharARB **) &fragmentShaderSource, &length);
-    glCompileShader(fragmentShader);
-
-    GLint compiled;
-    glGetObjectParameterivARB(fragmentShader, GL_COMPILE_STATUS, &compiled);
-    if(!compiled) {
-      GLchar* log = new GLchar[2048];
-      glGetShaderInfoLog(fragmentShader, 2048, NULL, log);
-      Debug::Log("Could not compile:\n %s", log);
-      delete[] log;
-
-      glDeleteShader(fragmentShader);
-      result = false;
-    }
-  }
-
-  if(result) {
-    mGaussianShader = glCreateProgram();
-    glAttachShader(mGaussianShader, fragmentShader);
-    glLinkProgram(mGaussianShader);    
-
-    GLint linked;
-    glGetProgramiv(mGaussianShader, GL_LINK_STATUS, &linked);
-    if(!linked) {
-      Debug::Log("Could not link, saving log.");
-      GLchar* log = new GLchar[65636];
-      glGetProgramInfoLog(mGaussianShader, 65636, NULL, log);
-      Debug::LogToFile("linkerlog.txt", "Could not link:\n %s", log);
-      result = false;
-      delete[] log;
-    } else {
-      mGaussDirLoc = glGetUniformLocation(mGaussianShader, "u_direction");
-      GL_ASSERT();
-    }
-    glDeleteShader(fragmentShader);
-  }
-#endif
 
   if(result) {
     glMatrixMode(GL_PROJECTION);		

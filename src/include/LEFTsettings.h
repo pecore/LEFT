@@ -87,9 +87,15 @@ private:
 
   void init()
   {
+#if 1
     set("r_xsize", 1066);
     set("r_ysize",  600);
     set("r_fullscreen", 0);
+#else 
+    set("r_xsize", 1920);
+    set("r_ysize",  1080);
+    set("r_fullscreen", 1);
+#endif
     set("r_volume", 0.01f);
 
     set("p_name", "pecore");

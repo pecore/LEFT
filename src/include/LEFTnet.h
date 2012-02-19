@@ -312,8 +312,25 @@ public:
   tcp_server(boost::asio::io_service& io_service, std::string _name) : acceptor_(io_service, tcp::endpoint(tcp::v4(), 40155)), next_id(1), name(_name)
   {
     mutex = CreateMutex(0, FALSE, "LeftServerMsgMutex");
+    msgevent = CreateEvent(0, FALSE, FALSE, "LeftServerMsgEvent");
     next_id = 1;
     start_accept();
+  }
+
+  ~tcp_server()
+  {
+    wakeup();
+    CloseHandle(mutex);
+    CloseHandle(msgevent);
+  }
+  
+  void wakeup()
+  {
+    PulseEvent(msgevent);
+  }
+  void wait()
+  {
+    WaitForSingleObject(msgevent, INFINITE);
   }
 
   left_message * get_message()
@@ -373,6 +390,7 @@ public:
   {
     Lock(mutex);
     messages.push(new_message(m));
+    wakeup();
     Unlock(mutex);
   }
 
@@ -393,6 +411,7 @@ private:
   }
 
   HANDLE mutex;
+  HANDLE msgevent;
   std::string name;
   unsigned int next_id;
   tcp::acceptor acceptor_;
@@ -413,13 +432,29 @@ public:
   tcp_client(boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iterator) : io_service_(io_service), socket_(io_service)
   {
     mutex = CreateMutex(0, FALSE, "LeftClientMsgMutex");
+    msgevent = CreateEvent(0, FALSE, FALSE, "LeftClientMsgEvent");
     connected = false;
     boost::asio::async_connect(socket_, endpoint_iterator,
           boost::bind(&tcp_client::handle_connect, this,
           boost::asio::placeholders::error));
   }
 
+  ~tcp_client()
+  {
+    wakeup();
+    CloseHandle(mutex);
+    CloseHandle(msgevent);
+  }
+
   bool isconnected() { return connected; }
+  void wakeup()
+  {
+    PulseEvent(msgevent);
+  }
+  void wait()
+  {
+    WaitForSingleObject(msgevent, INFINITE);
+  }
 
   left_message * get_message()
   {
@@ -481,6 +516,7 @@ private:
     }
     Lock(mutex);
     messages.push(new_message(&recv));
+    wakeup();
     Unlock(mutex);
     //memset(&recv, 0, sizeof(left_message));
     next_header();
@@ -497,11 +533,13 @@ private:
 
   void handle_error()
   {
+    wakeup();
     connected = false;
   }
 
   bool connected;
   HANDLE mutex;
+  HANDLE msgevent;
   left_message recv;
   left_message send;
   message_fifo messages;

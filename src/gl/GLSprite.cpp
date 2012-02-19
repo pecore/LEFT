@@ -164,6 +164,17 @@ GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloa
   mHeight = height;
   mPos = pos;
 
+  mInitialized = false;
+}
+
+GLAnimatedSprite::~GLAnimatedSprite()
+{
+  glDeleteLists(mDisplayLists, mCount);
+  delete mSprite;
+}
+
+bool GLAnimatedSprite::prepare()
+{
   int colcount = (int)(mSprite->w() / mWidth);
   int rowcount = (int)(mSprite->h() / mHeight);
   mCount = colcount * rowcount;
@@ -182,30 +193,30 @@ GLAnimatedSprite::GLAnimatedSprite(const char * filename, GLvector2f pos, GLfloa
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
 		  glTexCoord2f(tindex.x, tindex.y); 
-      glVertex3f(-(width / 2), -(height / 2),  0.0f);
+      glVertex3f(-(mWidth / 2), -(mHeight / 2),  0.0f);
   		
       glTexCoord2f(tindex.x + tsize.x, tindex.y);
-      glVertex3f(+(width / 2), -(height / 2),  0.0f);
+      glVertex3f(+(mWidth / 2), -(mHeight / 2),  0.0f);
 
       glTexCoord2f(tindex.x + tsize.x, tindex.y + tsize.y); 
-      glVertex3f(+(width / 2), +(height / 2),  0.0f);
+      glVertex3f(+(mWidth / 2), +(mHeight / 2),  0.0f);
   		
       glTexCoord2f(tindex.x, tindex.y + tsize.y); 
-      glVertex3f(-(width / 2), +(height / 2),  0.0f);
+      glVertex3f(-(mWidth / 2), +(mHeight / 2),  0.0f);
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);
     glEndList();
   }
-}
 
-GLAnimatedSprite::~GLAnimatedSprite()
-{
-  glDeleteLists(mDisplayLists, mCount);
-  delete mSprite;
+  return true;
 }
 
 bool GLAnimatedSprite::draw(int index)
 {
+  if(!mInitialized) {
+    mInitialized = prepare();
+  } assert(mInitialized);
+
   if(index >= mCount) return false;
   GLvector2f pos = mPos - GL_SCREEN_BOTTOMLEFT;
   GLvector2f rot = mRotation - GL_SCREEN_BOTTOMLEFT;

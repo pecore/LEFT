@@ -100,22 +100,7 @@ public:
 };
 
 typedef std::list<GLplane *> GLplaneList;
-typedef std::list<GLtriangle *> GLtriangleList;
 typedef std::list<GLvector2f *> GLpolygon;
-
-static inline void drawTriangleList(GLvector2f offset, GLtriangleList & triangles, GLvector3f color, GLfloat alpha)
-{
-  glBegin(GL_TRIANGLES);
-  GLtriangle * t = 0;
-  foreach(GLtriangleList, t, triangles) {
-    glColor4f(color.x, color.y, color.z, alpha);
-    glVertex3f(offset.x + t->A.x, offset.y + t->A.y, 0.0f);
-    glVertex3f(offset.x + t->B.x, offset.y + t->B.y, 0.0f);
-    glVertex3f(offset.x + t->C.x, offset.y + t->C.y, 0.0f);
-  }
-  glColor3f(1.0f, 1.0f, 1.0f);
-  glEnd();
-}
 
 static GLvector3f red(1.0f, 0.0f, 0.0f);
 static GLvector3f yellow(1.0f, 0.7f, 0.0f);

@@ -18,8 +18,14 @@ Map::Map()
   mCollidableMutex = CreateMutex(NULL, FALSE, "LeftMapCollidableMutex");
   mSpot = new GLParticle(1280, 1280, 1.0f, 1.0f, 1.0f, 1.0f, glpLight);
   
-  mMinimap = false;
-  mMinimapZoom = 10.0f;
+  mMinimap.clear();
+  mMinimapZoom = 20.0f;
+  mMinimapParticle = new GLParticle(5, 5, 0.0f, 1.0f, 0.0f, 1.0f, glpSolid);
+  mMinimapMask.resize(1);
+  genCirclePolygon(GLvector2f(0.0f, 0.0f), 2000.0f, mMinimapMask[0], false, 64);
+  
+  mGaussShader = new GLGaussShader();
+  assert(mGaussShader->initialized());
 
   glGenTextures(1, &mFramebufferTexture);
   glBindTexture(GL_TEXTURE_2D, mFramebufferTexture);
@@ -79,6 +85,12 @@ Map::~Map()
   if(mSpot) {
     delete mSpot;
   }
+  if(mMinimapParticle) {
+    delete mMinimapParticle;
+  }
+  if(mGaussShader) {
+    delete mGaussShader;
+  }
 
   glDeleteLists(mFramebufferList, 1);
   glDeleteRenderbuffersEXT(1, &mRenderbuffer);
@@ -95,7 +107,34 @@ void Map::draw()
   }
 }
 
-void Map::drawShadows(GLuint shader, GLint dirloc)
+void Map::drawMinimap()
+{
+  updateMinimap();
+  GLvector2f center = GLvector2f(GL_SCREEN_FWIDTH - 100.0f, 100.0f);
+  mMinimapParticle->moveTo(GL_SCREEN_BOTTOMLEFT.x + center.x, GL_SCREEN_BOTTOMLEFT.y + center.y);
+  mMinimapParticle->draw();
+  Polygons::iterator pit;
+  for(pit = mMinimap.begin(); pit != mMinimap.end(); pit++) {
+    Polygon p = *pit;
+    Polygon::iterator vit;
+    for(vit = p.begin(); vit != p.end(); vit++) {
+      IntPoint current = *vit, next;
+      if(++vit != p.end()) next = *vit; else next = *p.begin(); vit--;
+      GLvector2f A(current.X, current.Y);
+      GLvector2f B(next.X, next.Y);
+      A = ((A - GL_SCREEN_CENTER) / mMinimapZoom) + center;
+      B = ((B - GL_SCREEN_CENTER) / mMinimapZoom) + center;
+      glLineWidth(1.0f);
+      glBegin(GL_LINES);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glVertex2f(A.x, A.y);
+        glVertex2f(B.x, B.y);
+      glEnd();
+    }
+  }
+}
+
+void Map::drawShadows()
 {
   Lock(mMutex);
   Polygons copy = mCMap;
@@ -126,7 +165,7 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
     } else {
       spot = mSpot;
     }
-    
+
     if(pos.x < GL_SCREEN_BOTTOMLEFT.x - spot->w() / 2.0f ||
        pos.x > GL_SCREEN_BOTTOMLEFT.x + 1.5f * spot->w() ||
        pos.y < GL_SCREEN_BOTTOMLEFT.y - spot->h() / 2.0f ||
@@ -196,19 +235,26 @@ void Map::drawShadows(GLuint shader, GLint dirloc)
       glEnd();
     }
 
-// shader
+    renderTarget(false);
+
 #if 0
-    glUseProgram(shader);
-    glUniform2f(dirloc, 1.0f, 0.0f);
-    glUseProgram(shader);
-    glUniform2f(dirloc, 0.0f, 1.0f);
+    mGaussShader->use();
+    mGaussShader->setUniform2f("u_size", GL_SCREEN_FWIDTH, GL_SCREEN_FHEIGHT);
+    mGaussShader->setUniform2f("u_direction", 1.0f, 0.0f);;
+    
+    mGaussShader->use();
+    mGaussShader->setUniform2f("u_size", GL_SCREEN_FWIDTH, GL_SCREEN_FHEIGHT);
+    mGaussShader->setUniform2f("u_direction", 0.0f, 1.0f);
 #endif
 
-    renderTarget(false);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
     glCallList(mFramebufferList);
     glDisable(GL_BLEND);
+
+#if 0    
+    mGaussShader->unuse();
+#endif
   }
 }
 
@@ -340,6 +386,31 @@ void Map::addPolygons(Polygons & p)
   Unlock(mMutex);
 }
 
+void Map::updateMinimap()
+{
+  Clipper c;
+  Polygons p;
+  p.resize(1);
+#if 0
+  IntPoint base(GL_SCREEN_CENTER.x - 2000, GL_SCREEN_CENTER.y - 2000);
+  p[0].push_back(IntPoint(base.X      , base.Y));
+  p[0].push_back(IntPoint(base.X + 4000, base.Y));
+  p[0].push_back(IntPoint(base.X + 4000, base.Y + 4000));
+  p[0].push_back(IntPoint(base.X      , base.Y + 4000));
+#else
+  Polygon::iterator vit;
+  for(vit = mMinimapMask[0].begin(); vit != mMinimapMask[0].end(); vit++) {
+    IntPoint current = *vit;
+    current.X += GL_SCREEN_CENTER.x;
+    current.Y += GL_SCREEN_CENTER.y;
+    p[0].push_back(current);
+  }
+#endif
+  c.AddPolygons(mCMap, ptSubject);
+  c.AddPolygons(p, ptClip);
+  c.Execute(ctIntersection, mMinimap, pftEvenOdd, pftEvenOdd);
+}
+
 void Map::collideProjectiles()
 {
   Projectile * proj = 0;
@@ -384,19 +455,6 @@ void Map::collide(GLplane * p)
       glVertex2f(base.x, base.y);
       glVertex2f(dest.x, dest.y);
     glEnd();
-    if(mMinimap) {
-      GLvector2f base = p->base;
-      GLvector2f dest = p->dest;
-      GLvector2f center = GL_SCREEN_SIZE / 2.0f;
-      base = ((base - GL_SCREEN_CENTER) / mMinimapZoom) + center;
-      dest = ((dest - GL_SCREEN_CENTER) / mMinimapZoom) + center;
-      glLineWidth(2.0f);
-      glBegin(GL_LINES);
-        glColor3f(1.0f, 1.0f, 1.0f);
-        glVertex2f(base.x, base.y);
-        glVertex2f(dest.x, dest.y);
-      glEnd();
-    }
   }
 
   Lock(mCollidableMutex);

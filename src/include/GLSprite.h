@@ -78,6 +78,7 @@ public:
   bool draw(int index);
 
 private:
+  bool mInitialized;
   GLSprite * mSprite;
   GLuint mDisplayLists;
   unsigned int mCount;
@@ -88,6 +89,8 @@ private:
   GLvector2f mPos;
   GLvector2f mRotation;
   GLfloat mAngle;
+
+  bool prepare();
 };
 
 #endif

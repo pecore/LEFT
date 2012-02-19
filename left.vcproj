@@ -207,6 +207,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\GLShader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\GLSprite.h"
 				>
 			</File>
@@ -280,6 +284,10 @@
 			</File>
 			<File
 				RelativePath=".\src\gl\GLParticleEffect.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\gl\GLShader.cpp"
 				>
 			</File>
 			<File

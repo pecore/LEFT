@@ -17,9 +17,10 @@
 #define ROCKET_EFFECT_WIDTH 18.0f
 #define ROCKET_EFFECT_HEIGHT 48.0f
 
-RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(map)
+RobotModel::RobotModel(Map * map, const char * model, const char * arm, bool external) : mMap(map)
 {
-  mHUD = new HUD();
+  if(!external) mHUD = new HUD(map);
+  else mHUD = 0;
   mBodySprite = new GLSprite(model);
   mWeaponArmSprite = new GLSprite(arm);
 
@@ -32,7 +33,6 @@ RobotModel::RobotModel(Map * map, const char * model, const char * arm) : mMap(m
   mStabilizeEffect = new RobotStabilizeEffect(mPos.x, mPos.y);
   mStabilizeEffect->reset();
 
-  mDrawHUD = true;
   mAlpha = 1.0f;
   mMass = 1.0f;
   mRocketBoost = 1.0f;
@@ -69,6 +69,7 @@ RobotModel::~RobotModel()
 ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, unsigned int mousestate)
 {
   ProjectileList result;
+  if(!mHUD) return result;
   static bool shotgun = false;
   if(shotgun && mWeaponTimeout[1] <= 0.6f) {
     SoundPlayer::play(gResources->getSound("data\\shotgun-reload.wav")->sound);
@@ -139,11 +140,6 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     mKeyCooldown['Q'] = true;
   }
   if(!keydown['Q'] && mKeyCooldown['Q']) mKeyCooldown['Q'] = false;
-  if(keydown['M'] && !mKeyCooldown['M']) {
-    mMap->toggleMinimap();
-    mKeyCooldown['M'] = true;
-  }
-  if(!keydown['M'] && mKeyCooldown['M']) mKeyCooldown['M'] = false;
 
   if(keydown[VK_SHIFT] && mTurboReady) {
     mVelocity += (mousepos - mPos) * 0.2f;
@@ -154,6 +150,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     }
   } else {
     if(mTurbo >= 1.0f) {
+      mTurbo = 1.0f;
       mTurboReady = true;
     } else {
       if(mTurboReady) {
@@ -165,10 +162,8 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   }
 
   mHUD->setTurboLoading(!mTurboReady);
-  mHUD->setTurboOpacity(mTurbo);
+  mHUD->setTurboCharge(mTurbo);
 
-  if(keydown['A']) mVelocity.x -= 1.0f;
-  if(keydown['D']) mVelocity.x += 1.0f;
   bool mStableButton = keydown['S'] || keydown[VK_SPACE];
   if(mStableButton) {
     if(mVelocity.len() > 5.0f) {
@@ -190,6 +185,8 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   }
   if(!mStable) { 
     // Turn Robot
+    if(keydown['A']) mAngle += 6.0f;
+    if(keydown['D']) mAngle -= 6.0f;
     if(!(mousestate & MK_RBUTTON)) {
       mAngle = ((mousepos - mPos).angle() / M_PI) * 180.0f - 90.0f;
     }
@@ -208,8 +205,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     rocketeffectsize = 1.2f;
   }
   mRocketEffect->setHeight(ROCKET_EFFECT_HEIGHT * (rocketeffectsize));
-
-  mWeaponArmSprite->setRotation(mPos.x, mPos.y, ((mousepos - mPos).angle() / M_PI) * 180.0f);
+  mWeaponAngle = ((mousepos - mPos).angle() / M_PI) * 180.0f;
   return result;
 }
 
@@ -229,22 +225,22 @@ void RobotModel::integrate(GLfloat dt)
     mStabilizeEffect->integrate(dt);
     return;
   }
+  update(dt);
+  mVelocity += mRocketEffect->direction().normal() * -9.0f * mRocketBoost * dt;
+  if(mVelocity.len() > 150.0f)  {
+    mVelocity = mVelocity.normal() * 150.0f;
+  }
+  mPos += mVelocity * dt;
+
   mBodySprite->moveTo(mPos.x, mPos.y);
   mWeaponArmSprite->moveTo(mPos.x, mPos.y);
   mRocketEffect->moveTo(mPos.x - (ROCKET_EFFECT_WIDTH / 2.0f), mPos.y - mBodySprite->h() / 2.0f + 3.0f);
+  
   mBodySprite->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mAngle);
   mRocketEffect->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mAngle);
-  
-  mVelocity += mRocketEffect->direction().normal() * -9.0f * mRocketBoost * dt;
   if(mWeaponAngle != 0.0f) {
-    mWeaponArmSprite->setRotation(mPos.x, mPos.y, mWeaponAngle);
+    mWeaponArmSprite->setRotation(mBodySprite->pos().x, mBodySprite->pos().y, mWeaponAngle);
   }
-
-  const GLfloat maxspeed = 150.0f;
-  if(mVelocity.len() > maxspeed) mVelocity = mVelocity.normal() * maxspeed;
-
-  update(dt);
-  mPos += mVelocity * dt;
 }
 
 void RobotModel::moveTo(GLfloat x, GLfloat y)
@@ -266,5 +262,5 @@ void RobotModel::draw()
   } else {
     mRocketEffect->draw();
   }
-  if(mDrawHUD) mHUD->draw(mButtonOpacity);
+  if(mHUD) mHUD->draw(mButtonOpacity);
 }

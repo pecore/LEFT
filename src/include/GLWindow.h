@@ -20,9 +20,6 @@ public:
   HGLRC RC() { return mhRC; };
   HWND hWnd() { return mhWnd; };
 
-  GLuint getGaussianShader() { return mGaussianShader; }
-  GLint getGaussDirLoc() { return mGaussDirLoc; }
-
   bool initOpenGL();
   void swapBuffers() { SwapBuffers(mhDC); };
   bool isInitialized() { return mInitialized; };
@@ -36,9 +33,6 @@ private:
   HWND mhWnd;
   HINSTANCE	mhInstance;
   bool mInitialized;
-
-  GLuint mGaussianShader;
-  GLint mGaussDirLoc;
 
   int mScreenX;
   int mScreenY;

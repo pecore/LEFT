@@ -15,6 +15,7 @@
 #include "Collidable.h"
 #include "Projectile.h"
 #include "GLParticle.h"
+#include "GLShader.h"
 
 struct Animation {
   int frameCount;
@@ -105,7 +106,7 @@ public:
   void unlock() { Unlock(mMutex); }
 
   void collision();
-  void drawShadows(GLuint shader, GLint dirloc);
+  void drawShadows();
 
   void draw();
   void drawProjectiles();
@@ -130,8 +131,8 @@ public:
   void setUpdate(bool u) { mUpdate = u; }
   void setCallback(CollisionCallback cb, void * ud) { mCallback = cb; mCallbackUserData = ud; }
   
-  void toggleMinimap() { mMinimap = !mMinimap; }
-  void addMinimapZoom(GLfloat z) { if((mMinimapZoom > 2.0f && z < 0.0f) || (mMinimapZoom < 20.0f && z > 0.0f)) mMinimapZoom += z; }
+  void drawMinimap();
+  void addMinimapZoom(GLfloat z) { return; if((mMinimapZoom > 2.0f && z < 0.0f) || (mMinimapZoom < 20.0f && z > 0.0f)) mMinimapZoom += z; }
 
   GLfloat getOpacity(GLvector2f pos);
 
@@ -139,6 +140,7 @@ private:
   HANDLE mMutex;
   HANDLE mCollidableMutex;
 
+  GLGaussShader * mGaussShader;
   GLuint mFramebufferTexture;
   GLuint mFramebuffer;
   GLuint mRenderbuffer;
@@ -155,8 +157,11 @@ private:
   GLplaneList mExtraShadows;
   bool mUpdate;
 
-  bool mMinimap;
+  Polygons mMinimap;
+  Polygons mMinimapMask;
+  GLParticle * mMinimapParticle;
   GLfloat mMinimapZoom;
+  void updateMinimap();
 
   CollisionCallback mCallback;
   void * mCallbackUserData;

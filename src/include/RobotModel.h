@@ -17,7 +17,7 @@
 
 class RobotModel : public RigidBody {
 public:
-  RobotModel(Map * map, const char * model = "data\\robotv3.png", const char * arm = "data\\arm.png");
+  RobotModel(Map * map, const char * model = "data\\robotv3.png", const char * arm = "data\\arm.png", bool external = false);
   ~RobotModel();
 
   GLfloat angle() { return mAngle; }
@@ -40,12 +40,10 @@ public:
   void draw();
 
   HUD * getHUD() { return mHUD; }
-  void setHUD(bool draw) { mDrawHUD = draw; }
 
 private:
   Map * mMap;
   HUD * mHUD;
-  bool mDrawHUD;
   GLfloat mButtonOpacity[4];
   GLfloat mWeaponTimeout[4];
 
