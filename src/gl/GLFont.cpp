@@ -17,14 +17,20 @@ void bmfont_infoblock(FILE * f, bm_font * font, int size);
 void bmfont_commonblock(FILE * f, bm_font * font, int size);
 void bmfont_charsblock(FILE * f, bm_font * font, int size);
 
+#ifndef DWORD
 #define DWORD int
+#endif
+#ifndef WORD
 #define WORD  short
+#endif
+#ifndef BYTE
 #define BYTE  char
+#endif
 
 void glFontCreate(const char * name, bm_font ** pfont)
 {
   char filename[128];
-  sprintf(filename, "data\\%s.fnt", name);
+  sprintf(filename, GL_RESOURCE_DATAPATH "%s.fnt", name);
   (*pfont) = new bm_font;
   bmfont_load(filename, (*pfont));
 }
@@ -79,10 +85,9 @@ void glFontDestroy(bm_font * font)
 
 int bmfont_load(const char * filename, bm_font * font)
 {
-  FILE * f = 0;
-  fopen_s(&f, filename, "rb");
-	char magicString[4];
-	fread(magicString, 4, 1, f);
+  FILE * f = fopen(filename, "rb");
+	char magicString[8];
+	size_t len = fread(magicString, 4, 1, f);
 	if( strncmp(magicString, "BMF\003", 4) != 0 ) {
 		fclose(f);
 		return -1;
@@ -91,10 +96,10 @@ int bmfont_load(const char * filename, bm_font * font)
 	// Read each block
 	char blockType;
 	int blockSize;
-	while( fread(&blockType, 1, 1, f) )
+	while( (len = fread(&blockType, 1, 1, f)) )
 	{
 		// Read the blockSize
-		fread(&blockSize, 4, 1, f);
+		len = fread(&blockSize, 4, 1, f);
 		switch( blockType ) {
 		case 1: // info
 			bmfont_infoblock(f, font, blockSize);
@@ -109,7 +114,7 @@ int bmfont_load(const char * filename, bm_font * font)
     case 5: // kerning pairs
       { // skip
         char *buffer = new char[blockSize];
-	      fread(buffer, blockSize, 1, f);
+	      len = fread(buffer, blockSize, 1, f);
 	      delete[] buffer;
       } break;
     default:
@@ -148,7 +153,7 @@ struct infoBlock
 #pragma pack(pop)
 
 	char *buffer = new char[size];
-	fread(buffer, size, 1, f);
+	size_t len = fread(buffer, size, 1, f);
 	infoBlock *blk = (infoBlock*)buffer;
   // outline
 	delete[] buffer;
@@ -175,7 +180,7 @@ struct commonBlock
 #pragma pack(pop)
 
 	char *buffer = new char[size];
-	fread(buffer, size, 1, f);
+	size_t len = fread(buffer, size, 1, f);
 	commonBlock *blk = (commonBlock*)buffer;
   font->base =  blk->base;
   font->line_h = blk->lineHeight; 
@@ -207,7 +212,7 @@ struct charsBlock
 };
 #pragma pack(pop)
 	char *buffer = new char[size];
-	fread(buffer, size, 1, f);
+	size_t len = fread(buffer, size, 1, f);
 	charsBlock *blk = (charsBlock*)buffer;
   font->chars = (BMchar *) malloc(256 * sizeof(BMchar));
 	for( int n = 0; n < 256 && int(n*sizeof(charsBlock::charInfo)) < size; n++ )

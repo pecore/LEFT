@@ -92,7 +92,8 @@ void RobotRocketEffect::spawn(GLParticleDummy * p, int i)
     GLvector2f target = dest - src;
     GLfloat k = (1.0f + frand()) * 5.0f;
 
-    p->setVelocity(target.normal() * k);
+    GLvector2f velocity = target.normal() * k;
+    p->setVelocity(velocity);
     mLifeTime[i] = mMaxDistance / k;
     distance = 0.0f;
   }
@@ -100,7 +101,8 @@ void RobotRocketEffect::spawn(GLParticleDummy * p, int i)
   // 10 % RED
   if(distance == 0.0f) {
     GLfloat k = distance / (mMaxDistance * 0.1f);
-    p->setColor(red + (mColor[0] * k), 1.0f);
+    GLvector3f color = red + (mColor[0] * k);
+    p->setColor(color, 1.0f);
     if(distance > 0.0) 
       k = k;
   } else 
@@ -108,13 +110,15 @@ void RobotRocketEffect::spawn(GLParticleDummy * p, int i)
   // 40 % YELLOW
   if(distance < (mMaxDistance * 0.5f)) {
     GLfloat k = (distance - (mMaxDistance * 0.1f)) / (mMaxDistance * 0.4f);
-    p->setColor(yellow + (mColor[1] * k), 1.0f);
+    GLvector3f color = yellow + (mColor[1] * k); 
+    p->setColor(color, 1.0f);
   } else 
 
   // 50 % BLUE
   if(distance > (mMaxDistance * 0.5f)) {
     GLfloat k = (distance - (mMaxDistance * 0.5f)) / (mMaxDistance * 0.5f);
-    p->setColor(blue + (mColor[2] * k), 1.0f - k);
+    GLvector3f color = blue + (mColor[2] * k);
+    p->setColor(color, 1.0f - k);
   }
 }
 
@@ -131,7 +135,8 @@ void RobotRocketEffect::moveTo(GLfloat x, GLfloat y)
     GLvector2f dest = mdestA + (mdestAB * frand());
 
     p->moveTo(pos.x - diff.x, pos.y - diff.y);
-    p->setVelocity((dest - pos).normal() * frand() * 6.0f);  
+    GLvector2f velocity = (dest - pos).normal() * frand() * 6.0f;
+    p->setVelocity(velocity);  
   }
 }
 

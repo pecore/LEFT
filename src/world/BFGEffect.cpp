@@ -65,7 +65,8 @@ void BFGEffect::draw()
       group->particles[i]->moveTo(group->pos.x + group->radius[i] * cos(group->angle[i]), group->pos.y + group->radius[i] * sin(group->angle[i]));
       
       GLfloat r = frand(); 
-      group->particles[i]->setColor(GLvector3f(1.0f, 1.0f, 1.0f) - GLvector3f(r * 0.7f, r * 0.4f, r * 0.1f), 0.7f);
+      GLvector3f color = GLvector3f(1.0f, 1.0f, 1.0f) - GLvector3f(r * 0.7f, r * 0.4f, r * 0.1f);
+      group->particles[i]->setColor(color, 0.7f);
       group->particles[i]->draw();
       coeff *= -1.0f;
     }

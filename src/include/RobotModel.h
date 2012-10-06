@@ -17,7 +17,7 @@
 
 class RobotModel : public RigidBody {
 public:
-  RobotModel(Map * map, const char * model = "data\\robotv3.png", const char * arm = "data\\arm.png", bool external = false);
+  RobotModel(Map * map, const char * model = GL_RESOURCE_DATAPATH "robotv3.png", const char * arm = GL_RESOURCE_DATAPATH "arm.png", bool external = false);
   ~RobotModel();
 
   GLfloat angle() { return mAngle; }

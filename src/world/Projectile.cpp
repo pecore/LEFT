@@ -11,7 +11,7 @@
 #include "Map.h"
 #include "GLSprite.h"
 #include "RobotRocketEffect.h"
-#include "SoundPlayer.h"
+//#include "SoundPlayer.h"
 #include "BFGEffect.h"
 #include "Debug.h"
 
@@ -45,7 +45,8 @@ void ShotgunProjectile::init()
 {
   if(mInitialized) return;
   mInitialized = true;
-  mShadow = new GLplane(mPos, GLplane(mPos, mVelocity).n().normal() * mHeight);
+  GLvector2f shadow = GLplane(mPos, mVelocity).n().normal() * mHeight;
+  mShadow = new GLplane(mPos, shadow);
   mMap->shadows().push_back(mShadow);
   mParticle = new GLParticle(8, 6, 0.6f, 0.6f, 0.0f, 0.8f, glpSolid);
 }
@@ -105,13 +106,13 @@ RocketProjectile::~RocketProjectile()
 void RocketProjectile::init()
 {
   if(mInitialized) return;
-  mSprite = new GLSprite("data\\rocketprojectile.png");
+  mSprite = new GLSprite(GL_RESOURCE_DATAPATH "rocketprojectile.png");
   mRocketEffect = new RobotRocketEffect(mPos.x, mPos.y, 14.0f, 18.0f, 4, 20);
   mLight = new LightSource(mPos, GLvector3f(1.0f, 1.0f, 0.0f), 0.1, glpLight);
   mMap->LightSources().push_back(mLight);
   mWidth = mSprite->w();
   mHeight = mSprite->h();
-  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
+//  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
   mInitialized = true; 
 }
 
@@ -119,8 +120,8 @@ bool RocketProjectile::collide(GLvector2f n, GLfloat distance)
 {
   if(!mInitialized) return true;
   mMap->addCirclePolygon(mPos, 100.0f);
-  mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
-  SoundPlayer::play(mExplosionSound);
+  mMap->playAnimation(new GLAnimatedSprite(GL_RESOURCE_DATAPATH "explode.png", mPos, 64, 64));
+//  SoundPlayer::play(mExplosionSound);
   return false;
 }
 
@@ -172,8 +173,8 @@ void BFGProjectile::init()
   mLight = new LightSource(mPos, GLvector3f(1.0f, 1.0f, 1.0f), 0.8, glpLight);
   mMap->LightSources().push_back(mLight);
   mWidth = mHeight = 20.0f;
-  mBFGSound = ((GLSoundResource *) gResources->get("data\\bfg.wav"))->sound;
-  SoundPlayer::play(mBFGSound);
+//  mBFGSound = ((GLSoundResource *) gResources->get("data\\bfg.wav"))->sound;
+//  SoundPlayer::play(mBFGSound);
   mInitialized = true;
 }
 
@@ -220,10 +221,10 @@ GrenadeProjectile::~GrenadeProjectile()
 void GrenadeProjectile::init()
 {
   if(mInitialized) return;
-  mSprite = new GLSprite("data\\grenade.png");
+  mSprite = new GLSprite(GL_RESOURCE_DATAPATH "grenade.png");
   mWidth = mSprite->w();
   mHeight = mSprite->h();
-  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
+//  mExplosionSound = ((GLSoundResource *) gResources->get("data\\bomb.wav"))->sound;
   mInitialized = true;
 }
 
@@ -231,8 +232,8 @@ bool GrenadeProjectile::collide(GLvector2f n, GLfloat distance)
 {
   if(!mInitialized) return true; 
   mMap->addCirclePolygon(mPos, 300.0f);
-  mMap->playAnimation(new GLAnimatedSprite("data\\explode.png", mPos, 64, 64));
-  SoundPlayer::play(mExplosionSound);
+  mMap->playAnimation(new GLAnimatedSprite(GL_RESOURCE_DATAPATH "explode.png", mPos, 64, 64));
+//  SoundPlayer::play(mExplosionSound);
   return false;
 }
 
@@ -277,12 +278,13 @@ void NailProjectile::init()
   if(mInitialized) return;
   mInitialized = true;
   char sound_filename[32];
-  sprintf(sound_filename, "data\\ric%d.wav", (int)(frand() * 100.0f) % 3);
-  GLSoundResource * res = gResources->getSound(sound_filename);
-  if(res) SoundPlayer::play(res->sound);
+  sprintf(sound_filename, GL_RESOURCE_DATAPATH "ric%d.wav", (int)(frand() * 100.0f) % 3);
+//  GLSoundResource * res = gResources->getSound(sound_filename);
+//  if(res) SoundPlayer::play(res->sound);
 
 
-  mShadow = new GLplane(mPos, mVelocity.normal() * mWidth);
+  GLvector2f shadow = mVelocity.normal() * mWidth;
+  mShadow = new GLplane(mPos, shadow);
   mMap->shadows().push_back(mShadow);
   mParticle = new GLParticle(mWidth, mHeight, 0.6f, 0.6f, 0.6f, 1.0f, glpSolid);
 }

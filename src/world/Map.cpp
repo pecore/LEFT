@@ -71,8 +71,8 @@ Map::Map()
 
 Map::~Map()
 {
-  CloseHandle(mMutex);
-  CloseHandle(mCollidableMutex);
+  CloseMutex(mMutex);
+  CloseMutex(mCollidableMutex);
 
   LightSource * s = 0;
   foreach(LightSourceList, s, mLightSources) {
@@ -175,7 +175,8 @@ void Map::drawShadows()
 
     renderTarget(true);
     GLfloat radius = sqrt(spot->w() * spot->w() + spot->h() * spot->h());
-    spot->setColor(GLvector3f(0.4f, 0.3f, 0.3f) + s->rgb, s->intensity);
+    GLvector3f spotcolor(0.4f + s->rgb.x, 0.3f + s->rgb.y, 0.3f + s->rgb.z);
+    spot->setColor(spotcolor, s->intensity);
     spot->setRotation(pos.x , pos.y, s->angle);
     spot->moveTo(pos.x, pos.y);
     spot->draw();
@@ -194,8 +195,9 @@ void Map::drawShadows()
         GLvector2f bproj = A + baseproj.normal() * (radius);
         GLvector2f dproj = B + destproj.normal() * (radius);  
 
-        if(baseproj.len() > radius && destproj.len() > radius) continue; 
-        GLplane plane(A, B - A); GLvector2f n = plane.n(); if(n.dot(baseproj) <= 0.0f && n.dot(destproj) <= 0.0f) continue;
+        if(baseproj.len() > radius && destproj.len() > radius) continue;
+        GLvector2f AB = B - A;
+        GLplane plane(A, AB); GLvector2f n = plane.n(); if(n.dot(baseproj) <= 0.0f && n.dot(destproj) <= 0.0f) continue;
 
         A -= GL_SCREEN_BOTTOMLEFT;
         B -= GL_SCREEN_BOTTOMLEFT;
@@ -300,7 +302,7 @@ void Map::generate()
   c.Execute(ctUnion, mCMap, pftEvenOdd, pftEvenOdd);
 #ifndef _DEBUG
   for(int shots = 0; shots < 64; shots++)
-    addCirclePolygon(GLvector2f(frand() * 8000.0f, frand() * 5000.0f), 500.0f, 30);
+    addCirclePolygon(GLvector2f(frand() * 8000.0f, frand() * 5000.0f), 350.0f, 30);
 #endif
 }                           
 
@@ -421,20 +423,21 @@ void Map::collideProjectiles()
 
     if((proj->maxdistance() > 0.0f) && ((proj->start() - proj->pos()).len() >= proj->maxdistance())) {
       deleteProjectile(proj);
-      removeCollidable(proj);
+      removeCollidable(proj, true);
       foreach_erase(proj, mProjectiles);
       continue;
     }
 
     Collidable * c = 0;
     foreach(CollidableList, c, mCollidables) {
-      if(proj == c || isProjectile(c) || c == proj->owner) continue;
+      if(proj == c || isProjectile(c, true) || c == proj->owner) continue;
       GLfloat distance = (c->pos() - proj->pos()).len();
       if(distance < c->h()) {
         proj->collide(GLvector2f(0.0f, 0.0f), distance);
-        if(mCallback) (*mCallback)(mCallbackUserData, Polygon(), c, proj);
+        Polygon polygon;
+        if(mCallback) (*mCallback)(mCallbackUserData, polygon, c, proj);
         deleteProjectile(proj);
-        removeCollidable(proj);
+        removeCollidable(proj, true);
         foreach_erase(proj, mProjectiles);
         break;
       }
@@ -476,7 +479,9 @@ void Map::collide(GLplane * p)
     if(planedistance >= 0.0f && planedistance <= p->dir.len()) {
       if((distance > -radius && distance <= 0.0f) || (distance > 0.0f && distance <= radius)) {
         if(!c->collide(n, distance)) {
-          if(isProjectile(c)) removeProjectile((Projectile *) c);
+          if(isProjectile(c, true)) {
+            removeProjectile((Projectile *) c, true);
+          }
           foreach_erase(c, mCollidables);
           continue;
         }
@@ -537,34 +542,34 @@ void Map::collision()
   delete plane;
 }
 
-void Map::addCollidable(Collidable * c)
+void Map::addCollidable(Collidable * c, bool locked)
 { 
-  Lock(mCollidableMutex);
+  if(!locked) Lock(mCollidableMutex);
   mCollidables.push_back(c);
-  Unlock(mCollidableMutex);
+  if(!locked) Unlock(mCollidableMutex);
 }
 
-void Map::removeCollidable(Collidable * c)
+void Map::removeCollidable(Collidable * c, bool locked)
 {
-  Lock(mCollidableMutex);
+  if(!locked) Lock(mCollidableMutex);
   mCollidables.remove(c);
-  Unlock(mCollidableMutex);
+  if(!locked) Unlock(mCollidableMutex);
 }
 
-void Map::addProjectile(Projectile * proj)
+void Map::addProjectile(Projectile * proj, bool locked)
 {
-  Lock(mCollidableMutex);
+  if(!locked) Lock(mCollidableMutex);
   mProjectiles.push_back(proj);
-  addCollidable((Collidable *) proj);
-  Unlock(mCollidableMutex);
+  addCollidable((Collidable *) proj, true);
+  if(!locked) Unlock(mCollidableMutex);
 }
 
-void Map::removeProjectile(Projectile * proj)
+void Map::removeProjectile(Projectile * proj, bool locked)
 {
-  Lock(mCollidableMutex);
+  if(!locked) Lock(mCollidableMutex);
   mProjectiles.remove(proj);
   deleteProjectile(proj);
-  Unlock(mCollidableMutex);
+  if(!locked) Unlock(mCollidableMutex);
 }
 
 void Map::deleteProjectile(Projectile * proj)
@@ -578,11 +583,11 @@ void Map::deleteProjectile(Projectile * proj)
   }
 }
 
-bool Map::isProjectile(Collidable * c)
+bool Map::isProjectile(Collidable * c, bool locked)
 {
-  Lock(mCollidableMutex);
+  if(!locked) Lock(mCollidableMutex);
   ProjectileList::iterator iter = std::find(mProjectiles.begin(), mProjectiles.end(), c);
-  Unlock(mCollidableMutex);
+  if(!locked) Unlock(mCollidableMutex);
   return iter != mProjectiles.end();
 }
 

@@ -7,11 +7,35 @@
 */
 
 #include "GLWindow.h"
-#include "GLDefines.h"
+#include "GLResources.h"
 #include "Debug.h"
+
+#ifndef _WIN32
+static int attrListSgl[] =                                             
+{                                                                      
+    GLX_RGBA, GLX_RED_SIZE, 4,                                         
+    GLX_GREEN_SIZE, 4,                                                 
+    GLX_BLUE_SIZE, 4,                                                  
+    GLX_DEPTH_SIZE, 16,                                                
+    None                                                               
+};                                                                     
+ 
+/* attributes for a double buffered visual in RGBA format with at least
+ * 4 bits per color and a 16 bit depth buffer */                       
+static int attrListDbl[] =                                             
+{                                                                      
+    GLX_RGBA, GLX_DOUBLEBUFFER,                                        
+    GLX_RED_SIZE, 4,                                                   
+    GLX_GREEN_SIZE, 4,                                                 
+    GLX_BLUE_SIZE, 4,                                                  
+    GLX_DEPTH_SIZE, 16,                                                
+    None                                                               
+};   
+#endif
 
 GLWindow::GLWindow(const char * title, int width, int height, int bits, bool fullscreen, WNDPROC wndproc)
 {
+#ifdef _WIN32
 	GLuint PixelFormat;			            // Holds The Results After Searching For A Match
 	WNDCLASS wc;						            // Windows Class Structure
 	DWORD dwExStyle;				            // Window Extended Style
@@ -150,6 +174,100 @@ GLWindow::GLWindow(const char * title, int width, int height, int bits, bool ful
   }
 
   mInitialized = result;
+#else            
+  XVisualInfo *vi;
+  Colormap cmap;  
+  int i, dpyWidth, dpyHeight;
+  int glxMajor, glxMinor, vmMajor, vmMinor;
+  XF86VidModeModeInfo **modes;             
+  int modeNum, bestMode;                   
+  Atom wmDelete;                           
+  Window winDummy;                         
+  unsigned int borderDummy;                
+
+  mFullscreen = fullscreen;
+
+  /* set best mode to current */
+  bestMode = 0;                 
+  /* get a connection */        
+  mDisplay = XOpenDisplay(0);    
+  mScreen = DefaultScreen(mDisplay);
+  XF86VidModeQueryVersion(mDisplay, &vmMajor, &vmMinor);
+  XF86VidModeGetAllModeLines(mDisplay, mScreen, &modeNum, &modes);       
+  /* save desktop-resolution before switching modes */                 
+  mDeskMode = *modes[0];
+  /* look for mode with requested resolution */                        
+  for (i = 0; i < modeNum; i++)                                        
+  {                                                                    
+      if ((modes[i]->hdisplay == width) && (modes[i]->vdisplay == height))
+          bestMode = i;                                                   
+  }                                                                       
+  /* get an appropriate visual */                                         
+  vi = glXChooseVisual(mDisplay, mScreen, attrListDbl);                     
+  if (vi == NULL)                                                         
+  {                                                                       
+      vi = glXChooseVisual(mDisplay, mScreen, attrListSgl);                 
+      mDoubleBuffered = False;                                             
+  }                                                                                   
+  else                                                                                
+  {                                                                                   
+      mDoubleBuffered = True;                                                                                        
+  }                                                                                   
+  glXQueryVersion(mDisplay, &glxMajor, &glxMinor);                                     
+  Debug::Log("GLX-Version %d.%d\n", glxMajor, glxMinor); 
+  /* create a GLX context */                                                          
+  mCtx = glXCreateContext(mDisplay, vi, 0, GL_TRUE);                                
+  /* create a color map */                                                            
+  cmap = XCreateColormap(mDisplay, RootWindow(mDisplay, vi->screen),                    
+      vi->visual, AllocNone);                                                         
+  mWinAttr.colormap = cmap;                                                            
+  mWinAttr.border_pixel = 0;                                                           
+
+  if(fullscreen)
+  {              
+      /* switch to fullscreen */
+      XF86VidModeSwitchToMode(mDisplay, mScreen, modes[bestMode]);
+      XF86VidModeSetViewPort(mDisplay, mScreen, 0, 0);            
+      dpyWidth = modes[bestMode]->hdisplay;                     
+      dpyHeight = modes[bestMode]->vdisplay;                          
+      XFree(modes);                                             
+
+      /* set window attributes */
+      mWinAttr.override_redirect = True;
+      mWinAttr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
+          StructureNotifyMask;                                            
+      mWindow = XCreateWindow(mDisplay, RootWindow(mDisplay, vi->screen),    
+          0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
+          CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,   
+          &mWinAttr);                                                       
+      XWarpPointer(mDisplay, None, mWindow, 0, 0, 0, 0, 0, 0);               
+              XMapRaised(mDisplay, mWindow);                                 
+      XGrabKeyboard(mDisplay, mWindow, True, GrabModeAsync,                  
+          GrabModeAsync, CurrentTime);                                     
+      XGrabPointer(mDisplay, mWindow, True, ButtonPressMask,                 
+          GrabModeAsync, GrabModeAsync, mWindow, None, CurrentTime);        
+  }                                                                        
+  else                                                                     
+  {                                                                        
+      /* create a window in window mode*/                                  
+      mWinAttr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | 
+          StructureNotifyMask;                                             
+      mWindow = XCreateWindow(mDisplay, RootWindow(mDisplay, vi->screen),        
+          0, 0, width, height, 0, vi->depth, InputOutput, vi->visual,      
+          CWBorderPixel | CWColormap | CWEventMask, &mWinAttr);             
+      /* only set window title and handle wm_delete_events if in windowed mode */
+      wmDelete = XInternAtom(mDisplay, "WM_DELETE_WINDOW", True);                 
+      XSetWMProtocols(mDisplay, mWindow, &wmDelete, 1);                            
+      XSetStandardProperties(mDisplay, mWindow, title,                             
+          title, None, NULL, 0, NULL);                                           
+      XMapRaised(mDisplay, mWindow);                                               
+  }                                                                              
+  /* connect the glx-context to the window */                                    
+  glXMakeCurrent(mDisplay, mWindow, mCtx);                                                                                
+  initOpenGL();
+
+  mInitialized = true;    
+#endif
 }
 
 GLWindow::~GLWindow()
@@ -161,10 +279,12 @@ bool GLWindow::initOpenGL()
 {
   bool result = true;
 
+#ifdef _WIN32
   if(glewInit()) {
     result = false;
   }
-
+#endif
+  
   if(result) {
     glMatrixMode(GL_PROJECTION);		
     glLoadIdentity();									
@@ -182,11 +302,13 @@ bool GLWindow::initOpenGL()
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
   }
 
-  return result;										
-}
+  return result;
+}                                                                                  
+
 
 void GLWindow::free()
 {
+#ifdef _WIN32
   if(mhRC) {									
 		if(!wglMakeCurrent(NULL, NULL)) {
 		}
@@ -206,4 +328,23 @@ void GLWindow::free()
 	if(!UnregisterClass("OpenGL", mhInstance)) {
 		mhInstance = 0;
 	}
+#else
+  if(mCtx)    
+  {
+      if(!glXMakeCurrent(mDisplay, None, NULL))
+      {                                        
+          printf("Could not release drawing context.\n");
+      }                                                  
+      /* destroy the context */                          
+      glXDestroyContext(mDisplay, mCtx);               
+      mCtx = NULL;                                    
+  }                                                      
+  /* switch back to original desktop resolution if we were in fullscreen */
+  if( mFullscreen )                                                         
+  {                                                                        
+      XF86VidModeSwitchToMode(mDisplay, mScreen, &mDeskMode);              
+      XF86VidModeSetViewPort(mDisplay, mScreen, 0, 0);                       
+  }                                                                        
+  XCloseDisplay(mDisplay);                                                  
+#endif
 }

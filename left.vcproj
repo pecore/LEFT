@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="Left"
 	ProjectGUID="{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}"
 	RootNamespace="Left"
@@ -41,7 +41,7 @@
 				AdditionalOptions="/Zi"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
-				PreprocessorDefinitions="GLEW_STATIC"
+				PreprocessorDefinitions="GLEW_STATIC;_WIN32_WINNT=0x0501"
 				RuntimeLibrary="3"
 				FloatingPointModel="2"
 			/>
@@ -113,7 +113,7 @@
 				FavorSizeOrSpeed="1"
 				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=".\src\include;.\src\png"
-				PreprocessorDefinitions="GLEW_STATIC"
+				PreprocessorDefinitions="GLEW_STATIC WIN32"
 				RuntimeLibrary="2"
 				FloatingPointModel="2"
 			/>
@@ -243,6 +243,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\include\pthread_winapi.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\include\RigidBody.h"
 				>
 			</File>
@@ -322,10 +326,6 @@
 				Name="lib"
 				>
 				<File
-					RelativePath=".\src\al\aldlist.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\src\gl\clipper.cpp"
 					>
 				</File>
@@ -347,14 +347,6 @@
 				</File>
 				<File
 					RelativePath=".\src\gl\GLWindow.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\al\LoadOAL.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\al\SoundPlayer.cpp"
 					>
 				</File>
 				<Filter

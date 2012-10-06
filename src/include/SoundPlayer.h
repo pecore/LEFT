@@ -9,7 +9,11 @@
 #ifndef _SoundPlayer_H_
 #define _SoundPlayer_H_
 
-#include "al.h"
+#ifdef _WIN32
+#include <al.h>
+#else
+#include <AL/al.h>
+#endif
 #include <list>
 
 struct Sound {

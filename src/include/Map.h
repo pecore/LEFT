@@ -52,9 +52,9 @@ class MapObject : public GLSprite {
 public:
   MapObject(const char * name) {
     char filename[256];
-    sprintf(filename, "data\\%s.ply", name);
+    sprintf(filename, GL_RESOURCE_DATAPATH "%s.ply", name);
     mCollision = ((GLPolygonResource *)gResources->get(filename))->polygons[0];
-    sprintf(filename, "data\\%s.png", name);
+    sprintf(filename, GL_RESOURCE_DATAPATH "%s.png", name);
     GLTextureResource * res = (GLTextureResource *) gResources->get(filename);
     assert(res);
     mTexture = res->texture;
@@ -113,12 +113,12 @@ public:
   void drawAnimations();  
   void playAnimation(GLAnimatedSprite * sprite);
 
-  void addCollidable(Collidable * c);
-  void removeCollidable(Collidable * c);
-  void addProjectile(Projectile * proj);
-  void removeProjectile(Projectile * proj);
+  void addCollidable(Collidable * c, bool locked = false);
+  void removeCollidable(Collidable * c, bool locked = false);
+  void addProjectile(Projectile * proj, bool locked = false);
+  void removeProjectile(Projectile * proj, bool locked = false);
   void deleteProjectile(Projectile * proj);
-  bool isProjectile(Collidable * c);
+  bool isProjectile(Collidable * c, bool locked = false);
   
   MapObjectList & MapObjects() { return mMapObjects; }
   LightSourceList & LightSources() { return mLightSources; }

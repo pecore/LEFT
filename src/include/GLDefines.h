@@ -14,16 +14,6 @@
 #include "GLResources.h"
 extern GLResources * gResources;
 
-#ifdef _WIN32
-#include <windows.h>
-#include <gl\glew.h>
-#endif
-
-#ifndef Lock
-#define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
-#define Unlock(mutex) ReleaseMutex(mutex)
-#endif
-
 #define frand() ((GLfloat) rand() / (GLfloat)RAND_MAX)
 #define rfrand(from, to) ((((GLfloat) rand() / (GLfloat)RAND_MAX) + from) * (to - from))
 #define GL_ALPHA_CUTOFF 0.08f

@@ -36,12 +36,12 @@ class HUD {
 public:
   HUD(Map * map) {
     mMap = map;
-    mButtons.push_back(new HUDButton("data\\btn_rocket_inactive.png", "data\\btn_rocket_active.png"));
-    mButtons.push_back(new HUDButton("data\\btn_shotgun_inactive.png", "data\\btn_shotgun_active.png"));
-    mButtons.push_back(new HUDButton("data\\btn_grenade_inactive.png", "data\\btn_grenade_active.png"));
-    mButtons.push_back(new HUDButton("data\\btn_bfg_inactive.png", "data\\btn_bfg_active.png"));
-    mFont = gResources->getFont("data\\couriernew.fnt")->font;
-
+    mButtons.push_back(new HUDButton(GL_RESOURCE_DATAPATH "btn_rocket_inactive.png", "data\\btn_rocket_active.png"));
+    mButtons.push_back(new HUDButton(GL_RESOURCE_DATAPATH "btn_shotgun_inactive.png", "data\\btn_shotgun_active.png"));
+    mButtons.push_back(new HUDButton(GL_RESOURCE_DATAPATH "btn_grenade_inactive.png", "data\\btn_grenade_active.png"));
+    mButtons.push_back(new HUDButton(GL_RESOURCE_DATAPATH "btn_bfg_inactive.png", "data\\btn_bfg_active.png"));
+    mFont = gResources->getFont(GL_RESOURCE_DATAPATH "couriernew.fnt")->font;
+    
     mTurboBar = new GLParticle(16, 16, 0.0f, 0.8f, 0.3f, 1.0f, glpSolid);
     mTurboCharge = 1.0f;
     mTurboLoading = false;

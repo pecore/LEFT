@@ -14,6 +14,7 @@
 #include <ctime>
 #include <iostream>
 #include <queue>
+#include <list>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -29,8 +30,13 @@ using boost::asio::ip::tcp;
 #define LEFT_NET_MSG_UPDATE_POS             FOURCC('U', 'P', 'O', 'S')
   static const unsigned int left_net_modelcount = 2;
   static const char * left_net_models[left_net_modelcount] = {
+#ifdef _WIN32
     "data\\robotv4.png",
     "data\\robotv5.png",
+#else
+    "./data/robotv4.png",
+    "./data/robotv5.png",
+#endif
   };
 #define LEFT_NET_MSG_UPDATE_MAP             FOURCC('U', 'M', 'A', 'P')  
 #define LEFT_NET_MSG_DESTROY_MAP            FOURCC('B', 'O', 'O', 'M')
@@ -320,8 +326,8 @@ public:
   ~tcp_server()
   {
     wakeup();
-    CloseHandle(mutex);
-    CloseHandle(msgevent);
+    CloseMutex(mutex);
+    CloseEvent(msgevent);
   }
   
   void wakeup()
@@ -330,7 +336,7 @@ public:
   }
   void wait()
   {
-    WaitForSingleObject(msgevent, INFINITE);
+    WaitForEvent(msgevent);
   }
 
   left_message * get_message()
@@ -442,8 +448,8 @@ public:
   ~tcp_client()
   {
     wakeup();
-    CloseHandle(mutex);
-    CloseHandle(msgevent);
+    CloseMutex(mutex);
+    CloseEvent(msgevent);
   }
 
   bool isconnected() { return connected; }
@@ -453,7 +459,7 @@ public:
   }
   void wait()
   {
-    WaitForSingleObject(msgevent, INFINITE);
+    WaitForEvent(msgevent);
   }
 
   left_message * get_message()

@@ -1,9 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Left", "Left.vcproj", "{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "polyleft", ".\src\tools\polyleft\polyleft.vcproj", "{5CCA2156-3B41-4BDE-A79E-68D686569750}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Left", "left.vcproj", "{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +13,6 @@ Global
 		{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}.Debug|Win32.Build.0 = Debug|Win32
 		{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}.Release|Win32.ActiveCfg = Release|Win32
 		{0C3C7AE0-5EAE-480C-AD88-7E768FC5A281}.Release|Win32.Build.0 = Release|Win32
-		{5CCA2156-3B41-4BDE-A79E-68D686569750}.Debug|Win32.ActiveCfg = Debug|Win32
-		{5CCA2156-3B41-4BDE-A79E-68D686569750}.Debug|Win32.Build.0 = Debug|Win32
-		{5CCA2156-3B41-4BDE-A79E-68D686569750}.Release|Win32.ActiveCfg = Release|Win32
-		{5CCA2156-3B41-4BDE-A79E-68D686569750}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

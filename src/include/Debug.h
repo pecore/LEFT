@@ -21,7 +21,11 @@ public:
     va_list args;
     va_start(args, fmt);
     vsprintf(msg, fmt, args);
+#ifdef _WIN32    
     MessageBox(0, msg, "Debug", 0);
+#else
+    printf("%s", msg);
+#endif    
     va_end(args);
 #endif
   }
@@ -30,8 +34,7 @@ public:
 #ifdef _DEBUG
     va_list args;
     va_start(args, fmt);
-    FILE * fp = 0;
-    fopen_s(&fp, filename, "w");
+    FILE * fp = fopen(filename, "w");
     if(fp) {
       vfprintf(fp, fmt, args);
       fclose(fp);

@@ -3311,8 +3311,8 @@ std::istream& operator >>(std::istream &s, Polygons &p)
       p.push_back(polygon);
       polygon.clear();
     } else {
-      char * y = 0;
-      char * x = strtok_s(line, " ", &y);
+      char * y = strtok(line, " ");
+      char * x = strtok(NULL, " ");
       if(x && y) {
         point.X = atol(x);
         point.Y = atol(y);

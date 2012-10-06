@@ -7,34 +7,58 @@
 */
 
 #include "GLResources.h"
-#include <windows.h>
 #include "png.h"
 #include <fstream>
 
-#include "SoundPlayer.h"
+//#include "SoundPlayer.h"
 #include "GLFont.h"
+
+#ifndef _WIN32
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
 
 GLResources::GLResources()
 {
+#ifdef _WIN32
   WIN32_FIND_DATA ffd;
-  SoundPlayer::init();
+  //SoundPlayer::init();
 
-  HANDLE hFind = FindFirstFile(".\\data\\*.*", &ffd);
+  HANDLE hFind = FindFirstFile(".\\" GL_RESOURCE_DATAPATH "*.*", &ffd);
   assert(INVALID_HANDLE_VALUE != hFind);
-
+  
   do {
     if(!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+#else
+  struct dirent *dp;
+  struct stat entrystat;
+  const char * dir_path = GL_RESOURCE_DATAPATH;
+  DIR * dir = opendir(dir_path);
+  while((dp=readdir(dir)) != NULL) {
+    // isdir macro unnecessary...      
+    if(stat(dp->d_name, &entrystat)) {
+
+    
+
+#endif
       char filename[256];
       char name[256];
       char ext[4]; 
+#ifdef _WIN32
       strncpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
       strncpy(ext, ffd.cFileName + strlen(ffd.cFileName) - 3, 3);
-      sprintf(filename, "data\\%s", ffd.cFileName);
+      sprintf(filename, GL_RESOURCE_DATAPATH "%s", ffd.cFileName);
+#else
+      strncpy(name, dp->d_name, strlen(dp->d_name) - 4); name[strlen(dp->d_name) - 4] = 0;
+      strncpy(ext, dp->d_name + strlen(dp->d_name) - 3, 3); ext[3] = 0;
+      sprintf(filename, GL_RESOURCE_DATAPATH "%s", dp->d_name);
+#endif
       if(get(filename)) continue;
-
+      
       if(strcmp(ext, "png") == 0) {
         loadTexture(filename);
       }
+#if 0
       if(strcmp(ext, "wav") == 0) {
         Sound * sound = SoundPlayer::load(filename);
         if(sound) {
@@ -44,12 +68,13 @@ GLResources::GLResources()
           mResources.push_back(rp);
         }
       }
+#endif
       if(strcmp(ext, "fnt") == 0) {
         bm_font * font = 0;
         glFontCreate(name, &font);
         if(font) {
           char tfilename[256];
-          sprintf(tfilename, "data\\%s.png", name);
+          sprintf(tfilename, GL_RESOURCE_DATAPATH "%s.png", name);
           font->fontTex = loadTexture(tfilename);
           ResourcePair * rp = new ResourcePair;
           strncpy(rp->path, filename, sizeof(rp->path)-1);
@@ -72,7 +97,11 @@ GLResources::GLResources()
         f.close();
       }
     }
+#ifdef _WIN32
   } while(FindNextFile(hFind, &ffd) != 0);
+#else
+  }
+#endif
 }
 
 GLResources::~GLResources()
@@ -92,7 +121,7 @@ GLResources::~GLResources()
     delete rp->value;
     delete rp;
   }
-  SoundPlayer::clear();
+  //SoundPlayer::clear();
 }
 
 GLResource * GLResources::get(const char * path)
@@ -146,13 +175,14 @@ bool GLResources::load(const char * filename, unsigned char ** data, int & width
   png_infop info_ptr;
   int color_type;
   int bit_depth;
-
-  FILE * fp = 0; fopen_s(&fp, filename, "rb");
+  *data = 0;
+  
+  FILE * fp = fopen(filename, "rb");
   if(!fp) {
     return false;
   }
 
-  fread(header, 1, 8, fp);
+  size_t len = fread(header, 1, 8, fp);
   if(png_sig_cmp(header, 0, 8)) {
     fclose(fp);
     return false;

@@ -23,8 +23,13 @@
  */
 
 #include "aldlist.h"
+#ifdef WIN32
 #include <windows.h>
-#include "alc.h"
+#include <alc.h>
+#else
+#include <AL/alc.h>
+#endif
+
 
 
 /* 

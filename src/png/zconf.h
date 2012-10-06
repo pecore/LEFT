@@ -141,7 +141,7 @@
 #  define WINDOWS
 #endif
 #if defined(_WIN32) || defined(_WIN32_WCE) || defined(__WIN32__)
-#  ifndef WIN32
+#  ifndef _WIN32
 #    define WIN32
 #  endif
 #endif
@@ -295,7 +295,7 @@
      /* No need for _export, use ZLIB.DEF instead. */
      /* For complete Windows compatibility, use WINAPI, not __stdcall. */
 #    define ZEXPORT WINAPI
-#    ifdef WIN32
+#    ifdef _WIN32
 #      define ZEXPORTVA WINAPIV
 #    else
 #      define ZEXPORTVA FAR CDECL

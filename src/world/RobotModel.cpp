@@ -10,7 +10,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "SoundPlayer.h"
+//#include "SoundPlayer.h"
 #include "Map.h"
 #include "Debug.h"
 
@@ -72,10 +72,10 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
   if(!mHUD) return result;
   static bool shotgun = false;
   if(shotgun && mWeaponTimeout[1] <= 0.6f) {
-    SoundPlayer::play(gResources->getSound("data\\shotgun-reload.wav")->sound);
+//    SoundPlayer::play(gResources->getSound("data\\shotgun-reload.wav")->sound);
     shotgun = false;
   }
-  if(mWeaponTimeout[mHUD->getActive()-1] <= 0.0f && mousestate & MK_LBUTTON) {
+  if(mWeaponTimeout[mHUD->getActive()-1] <= 0.0f && mousestate) {
     switch(mHUD->getActive()) {
     case 1: {
         Projectile * p = new RocketProjectile(mPos, (mousepos - mPos).normal() * 5.0f, mMap);
@@ -91,7 +91,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
           result.push_back(p);
           mMap->addProjectile(p);
         }
-        SoundPlayer::play(gResources->getSound("data\\shotgun.wav")->sound);
+//        SoundPlayer::play(gResources->getSound("data\\shotgun.wav")->sound);
         mWeaponTimeout[1] = 1.2f; // in sec
         shotgun = true;
       } break;
@@ -192,7 +192,7 @@ ProjectileList RobotModel::control(const bool * keydown, GLvector2f mousepos, un
     }
 
     // Control Boost
-    if(keydown['W'] && mRocketBoost < 4.0f) {
+    if(keydown['w'] && mRocketBoost < 4.0f) {
       mRocketBoost += 0.8f;
     } else 
     if(mRocketBoost > 0.0f) {
@@ -262,5 +262,5 @@ void RobotModel::draw()
   } else {
     mRocketEffect->draw();
   }
-  if(mHUD) mHUD->draw(mButtonOpacity);
+  //if(mHUD) mHUD->draw(mButtonOpacity);
 }

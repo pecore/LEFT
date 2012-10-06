@@ -1,6 +1,10 @@
+#ifdef _WIN32
 #include <al.h>
 #include <alc.h>
-
+#else
+#include <AL/al.h>
+#include <AL/alc.h>
+#endif
 // Open AL Function table definition
 
 #ifndef _OPENALFNTABLE

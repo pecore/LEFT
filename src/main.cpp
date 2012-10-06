@@ -8,26 +8,31 @@
 
 #define LEFT_VERSION "0.69"
 
-#define _WIN32_WINNT 0x0601
-#define Lock(mutex) WaitForSingleObject(mutex, 0xFFFFFFFF)
-#define Unlock(mutex) ReleaseMutex(mutex)
+#include "pthread_winapi.h"
 #include "LEFTnet.h"
 boost::asio::io_service io_service;
 tcp_server * server;
 message_pool * left_net_message_pool;
 
+#include "pthread_winapi.h"
 #include "LEFTsettings.h"
 #include "GLResources.h"
+#ifdef _WIN32
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+#endif
 #include "GLWindow.h"
 #include "GLDefines.h"
-#include "SoundPlayer.h"
+//#include "SoundPlayer.h"
 #include "RobotModel.h"
 #include "Map.h"
 #include "GLFont.h"
 #include "BFGEffect.h"
 
 #include "Debug.h"
+
+#ifndef _WIN32
+#define SINGLE_THREADED
+#endif
 
 bool gActive;
 GLResources * gResources = 0;
@@ -36,7 +41,7 @@ GLvector2f gScreen;
 GLvector2f gScreenSize;
 const unsigned int gFramerate = 60;
 
-SoundThreadList SoundPlayer::mThreads;
+//SoundThreadList SoundPlayer::mThreads;
 
 typedef struct {
   bool running;
@@ -116,12 +121,97 @@ bool Debug::DebugActive = false;
 void * Debug::DebugMutex;
 GLfloat gDebugValue;
 
+#ifndef _WIN32
+
+// pthread WINAPI
+void * CreateMutex(void * lpMutexAttributes, int bInitialOwner, const char * pName)
+{
+  pthread_mutex_t * result = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+  if(!pthread_mutex_init(result, 0)) {
+    return result;
+  }
+  free(result);
+  return 0;
+}
+
+void CloseMutex(void * mutex)
+{
+  pthread_mutex_destroy((pthread_mutex_t *) mutex);
+  free(mutex);
+}
+
+void * CreateEvent(void * lpEventAttributes, int bManualReset, int bInitialState, const char * pName)
+{
+  pthread_event_t * result = (pthread_event_t *) malloc(sizeof(pthread_event_t));
+  if(!pthread_cond_init(&result->cond, 0)) {
+    if(!pthread_mutex_init(&result->mutex, 0)) {
+      return result;
+    }
+    pthread_cond_destroy(&result->cond);
+  }
+  free(result);
+  return 0;
+}
+
+void CloseEvent(void * vevent)
+{
+  pthread_event_t * event = (pthread_event_t *) vevent;
+  pthread_cond_destroy(&event->cond);
+  pthread_mutex_destroy(&event->mutex);
+  free(event);
+}
+
+void PulseEvent(void * vevent)
+{
+  pthread_event_t * event = (pthread_event_t *) vevent;
+  pthread_cond_broadcast(&event->cond);
+}
+
+void WaitForEvent(void * vevent)
+{
+  pthread_event_t * event = (pthread_event_t *) vevent;
+  Lock(&event->mutex);
+  pthread_cond_wait(&event->cond, &event->mutex);
+  Unlock(&event->mutex);
+}
+
+void QueryPerformanceCounter(LARGE_INTEGER * pCounter)
+{
+  struct timespec tp;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
+  if(pCounter) pCounter->QuadPart = (tp.tv_sec * 1000 + tp.tv_nsec / 1000000); 
+}
+
+void QueryPerformanceFrequency(LARGE_INTEGER * pFreq)
+{
+  if(pFreq) pFreq->QuadPart = 1000;
+}
+
+#define WINAPI *
+#define INVALID_HANDLE_VALUE 0
+void * CreateThread(int lpThreadAttributes, int dwStackSize, unsigned int *(*lpStartAddress)(void*), void * lpParameter, int dwCreationFlags, int lpThreadId)
+{
+  pthread_t * result = (pthread_t *) malloc(sizeof(pthread_t));
+  if(!pthread_create(result, 0, (void* (*)(void*))lpStartAddress, lpParameter)) {
+    return result;
+  }
+  free(result);
+  return 0;
+}
+
+void WaitForThread(void * thread)
+{
+  void * thread_result;
+  pthread_join(*(pthread_t *)thread, &thread_result);
+}
+#endif
+
 void stop(left_handle * left)
 {
   left->threads.msgrunning = false;
   if(left->net.client) left->net.client->wakeup();
   server->wakeup();
-  WaitForSingleObject(left->threads.msg, INFINITE);
+  WaitForThread(left->threads.msg);
   left->running = false;
 }
 
@@ -141,6 +231,7 @@ void cprintf(left_handle * left, const char * fmt, ...)
 
 void updateMousePosition(left_handle * left)
 {
+#ifdef _WIN32
   static int fx = GetSystemMetrics(SM_CXSIZEFRAME);
   static int fy = GetSystemMetrics(SM_CYSIZEFRAME);
   static int sc = GetSystemMetrics(SM_CYCAPTION);
@@ -158,6 +249,14 @@ void updateMousePosition(left_handle * left)
       }
     }
   }
+#else
+  int root_x, root_y;
+  int win_x, win_y;
+  Window window_returned;
+  unsigned int mask_return;
+  XQueryPointer(left->window->display(), left->window->window(), &window_returned, &window_returned, &root_x, &root_y, &win_x, &win_y, &mask_return);
+  left->control.mousepos = GL_SCREEN_BOTTOMLEFT + GLvector2f((GLfloat)win_x, GL_SCREEN_FHEIGHT - (GLfloat)win_y);
+#endif
 }
 
 int isPlayer(left_handle * left, Collidable * c)
@@ -269,7 +368,7 @@ void collide(void * vleft, Polygon & polygon, Collidable * c, Projectile * p)
 
 void drawScore(left_handle * left)
 {
-  bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
+  bm_font * font = left->resources->getFont(GL_RESOURCE_DATAPATH "couriernew.fnt")->font;
 
   GLfloat width = 600.0f, height = 500.0f;
   GLvector2f center = GL_SCREEN_CENTER;
@@ -336,7 +435,7 @@ void renderScene(left_handle * left)
   }
   
   ProjectileList projectiles = left->robot->control(left->control.keydown, left->control.mousepos, left->control.mousebutton);
-  //left->control.mousebutton = 0;
+  left->control.mousebutton = 0;
   
   if(!projectiles.empty()) {
     Projectile * p = 0;
@@ -387,7 +486,8 @@ void renderScene(left_handle * left)
     left->balls[i]->draw();
   left->cross->draw();
 
-  for(int i = 0; i < 1024; i++) {
+  //FIXME
+  if(false) for(int i = 0; i < 1024; i++) {
     Lock(left->net.friendmutex);
     if(left->net.friends[i].model) {
       if(!left->net.friends[i].dead) {
@@ -430,7 +530,7 @@ void renderScene(left_handle * left)
     drawScore(left);
   }
 
-  bm_font * font = left->resources->getFont("data\\couriernew.fnt")->font;
+  bm_font * font = left->resources->getFont(GL_RESOURCE_DATAPATH "couriernew.fnt")->font;
   Lock(left->console.mutex);
   if(left->consoleactive || left->inputactive || left->console.recent > 0) {
     unsigned int count = (left->console.recent > 0 && !left->consoleactive ? left->console.recent : left->console.linecount);
@@ -525,7 +625,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
   if(strcmp(op, "save") == 0) {
     if(pcount == 1) {
       std::ofstream f(param[0]);
-      f << left->map->polygons();
+      //f << left->map->polygons();
       f.close();
     }
   } else
@@ -585,8 +685,8 @@ void parseConsoleCommand(left_handle * left, char * cmd)
           break;
         }
         case GL_RESOURCE_SOUND: {
-          GLSoundResource * sres = (GLSoundResource *) res;
-          cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
+//          GLSoundResource * sres = (GLSoundResource *) res;
+//          cprintf(left, "%d: Sound size:%dkB format:%04x rate:%d [%s]", i, (int)sres->sound->size/1000, (int)sres->sound->format, (int)sres->sound->freq, rp->path);
           break;
         }
         case GL_RESOURCE_FONT: {
@@ -671,6 +771,7 @@ void parseConsoleCommand(left_handle * left, char * cmd)
   left->console.recorder = 0;
 }
 
+#ifdef _WIN32
 LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
 {
   left_handle * left = (left_handle *) GetWindowLongPtr(hWnd, GWLP_USERDATA);
@@ -790,6 +891,104 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,	UINT	uMsg,	WPARAM	wParam,	LPARAM	lParam)
 
   return DefWindowProc(hWnd,uMsg,wParam,lParam);
 }
+#else
+void XEventHandler(left_handle * left)
+{
+  XEvent event;
+  while(XPending(left->window->display()) > 0)        
+  {
+    XNextEvent(left->window->display(), &event);     
+    KeySym keysym;
+    
+    switch(event.type) {                                
+    case Expose:                 
+      if(event.xexpose.count != 0)
+        break;   
+      break;                       
+    case ConfigureNotify:
+#if 0
+      /* call resizeGL only if our window-size changed */
+      if ((event.xconfigure.width != GLWin.width) || (event.xconfigure.height != GLWin.height)) {
+        width = event.xconfigure.width;
+        height = event.xconfigure.height;
+        resizeGL(width, height);
+      }
+#endif
+      break;
+    case ButtonPress:
+      onMouseDown(left, 1, 0, 0);
+      break;
+    case KeyPress:
+      keysym = XLookupKeysym(&event.xkey, 0);
+      if(keysym >= 0x20 && keysym <= 0x80) {
+        left->control.keydown[keysym] = true;
+      }
+      switch(keysym) {
+      case XK_Escape:
+        stop(left);
+        break;
+      case XK_F1:
+        Debug::DebugActive = !Debug::DebugActive;
+        break;
+      case XK_F2:
+        left->consoleactive = !left->consoleactive;
+        left->control.keydown['S'] = left->consoleactive;
+        left->console.recorder = 0;
+        break;
+      case XK_F3:
+        left->inputactive = !left->inputactive;
+        break;
+      case XK_T:
+        if(!left->consoleactive) left->inputactive = true;
+        break;
+      case XK_F5:
+        if(!left->net.client) {
+          tcp::resolver resolver(io_service);
+          tcp::resolver::query query(left->settings->gets("net_host"), left->settings->gets("net_port"));
+          tcp::resolver::iterator iterator = resolver.resolve(query);
+
+          cprintf(left, "> connecting...");
+          left->net.client = new tcp_client(io_service, iterator);
+        }
+        break;
+      case XK_Tab:
+        if(!left->net.showscore) {
+          left_message * m = new_message(LEFT_NET_MSG_GET_SCORE);
+          if(left->net.client) {
+            left->net.client->send_message(m);
+          } else {
+            server->push(m);
+          }
+          left_net_message_pool->del(m);
+        }
+        left->net.showscore = true;
+        break;
+      }
+      break;
+      
+    case KeyRelease:
+      keysym = XLookupKeysym(&event.xkey, 0);
+      if(keysym >= 0x20 && keysym <= 0x80) {
+        left->control.keydown[keysym] = false;
+      }
+      switch(keysym) {
+      case XK_Tab:
+        left->net.showscore = false;
+        break;
+      }
+      break;      
+      
+    case ClientMessage:
+      if(strcmp(XGetAtomName(left->window->display(), event.xclient.message_type), "WM_PROTOCOLS") == 0) {
+        left->running = false;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+}
+#endif
 
 DWORD WINAPI run_messages(void * data)
 {
@@ -996,14 +1195,14 @@ DWORD WINAPI run_messages(void * data)
       case LEFT_NET_MSG_UPDATE_POS: {
           Lock(left->net.friendmutex);
           if(!left->net.friends[m->header.sender].model) {
-            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], "data\\arm_grey.png", true);
+            left->net.friends[m->header.sender].model = new RobotModel(left->map, left_net_models[m->header.sender % left_net_modelcount], GL_RESOURCE_DATAPATH "arm_grey.png", true);
             left->net.friends[m->header.sender].robotlight = new LightSource(GLvector2f(m->msg.position.xpos, m->msg.position.ypos), GLvector3f(0.0f, 0.0f, 0.0f), 1.0f, glpLightCone);
             left->map->LightSources().push_back(left->net.friends[m->header.sender].robotlight);
             left->net.friends[m->header.sender].model->moveTo(m->msg.position.xpos, m->msg.position.ypos);
             left->map->addCollidable(left->net.friends[m->header.sender].model);
           }
-          GLvector2f newpos(m->msg.position.xpos,  m->msg.position.ypos);
-          left->net.friends[m->header.sender].model->setVelocity(newpos - left->net.friends[m->header.sender].model->pos());
+          GLvector2f newvelocity = GLvector2f(m->msg.position.xpos,  m->msg.position.ypos) - left->net.friends[m->header.sender].model->pos();
+          left->net.friends[m->header.sender].model->setVelocity(newvelocity);
           left->net.friends[m->header.sender].model->setWeaponAngle(m->msg.position.weaponangle);
           left->net.friends[m->header.sender].model->setAngle(m->msg.position.robotangle);
           left->net.friends[m->header.sender].robotlight->angle = m->msg.position.weaponangle;
@@ -1075,7 +1274,9 @@ DWORD WINAPI run_messages(void * data)
       left_net_message_pool->del(m);
     }
   };
-
+#ifndef _WIN32
+  pthread_exit(0);
+#endif
   return 0;
 }
 
@@ -1092,23 +1293,28 @@ DWORD WINAPI run_asio(void * data)
   }
 
   assert(!left->running);
+#ifndef _WIN32
+  pthread_exit(0);
+#endif
   return 0;
 }
 
 DWORD WINAPI run(void * lh)
 {
   left_handle * left = (left_handle *) lh;
+#ifndef SINGLE_THREADED  
   srand( (unsigned int)GetTickCount() );
-  wglMakeCurrent(left->window->DC(), left->window->RC());
+  left->window->makeCurrent();
   QueryPerformanceFrequency(&left->timing.performancefrequency);
-
-  if(left->running) {
+#endif
+  
+  if(left->running && !left->resources) {
     left->resources = new GLResources();
     gResources = left->resources;
     left->console.bg = new GLParticle(1, 1, 0.0f, 0.0f, 0.0f, 0.9f, glpSolid);
   }
 
-  if(left->running) {
+  if(left->running && !left->map) {
     left->map = new Map();
     left->map->setCallback(&collide, left);
 
@@ -1138,8 +1344,9 @@ DWORD WINAPI run(void * lh)
       left->balls[i] = new GLParticle(8, 8, frand(), frand(), frand(), 1.0f, glpCircle);
       GLvector2f spawn = GLvector2f(1000.0f, 1000.0f);
 #endif
+      GLvector2f velocity((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f);
       left->balls[i]->moveTo(spawn.x, spawn.y);
-      left->balls[i]->setVelocity(GLvector2f((frand() * 8.0f) - 4.0f, (frand() * 8.0f) - 4.0f));
+      left->balls[i]->setVelocity(velocity);
       left->lightballs[i] = new LightSource(left->balls[i]->pos(), left->balls[i]->getColor(), 0.3f, glpLight);
       left->map->LightSources().push_back(left->lightballs[i]);
       left->map->addCollidable(left->balls[i]);
@@ -1147,39 +1354,76 @@ DWORD WINAPI run(void * lh)
     }
   }
 
+#ifndef SINGLE_THREADED
   while(left->running) {
     if(gActive)	{
+#else
+  if(left->running) {
+#endif
       LARGE_INTEGER begin, end;
       QueryPerformanceCounter(&begin);
       renderScene(left);
       QueryPerformanceCounter(&end);
-      static const unsigned __int64 waitinticks = (left->timing.performancefrequency.QuadPart / 60);
+      static const unsigned long long waitinticks = (left->timing.performancefrequency.QuadPart / 60);
       while(end.QuadPart - begin.QuadPart < waitinticks) {
         Sleep(0);
         QueryPerformanceCounter(&end);
       }
       left->window->swapBuffers();
+#ifndef SINGLE_THREADED
+    }
+#endif
+  }
+  
+#ifdef SINGLE_THREADED
+  if(!left->running) {
+#endif   
+  for(int i = 0; i < left->ballcount; i++) {
+    if(left->balls[i]) {
+      delete left->balls[i];
+      left->balls[i] = 0;
     }
   }
 
-  for(int i = 0; i < left->ballcount; i++) {
-    delete left->balls[i];
-  }
   Debug::clear();
-  delete left->map;
-  delete left->cross;
-  delete left->robot;
-  delete left->resources;
-  delete left->console.bg;
+  if(left->map) {
+    delete left->map;
+    left->map = 0;
+  }
+  if(left->cross) {
+    delete left->cross;
+    left->cross = 0;
+  }
+  if(left->robot) {
+    delete left->robot;
+    left->robot = 0;
+  }
+  if(left->resources) {
+    delete left->resources;
+    left->resources = 0;
+    gResources = 0;
+  }
+  if(left->console.bg) {
+    delete left->console.bg;
+    left->console.bg = 0;
+  }
+#ifdef SINGLE_THREADED
+  }
+#endif
   return 0;
 }
 
+#ifdef _WIN32
 int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	MSG msg;
+  MSG msg;
   timeBeginPeriod(1);
+#else
+int main(int argc, char ** argv)
+{
+  XInitThreads();
+#endif  
   srand( (unsigned int)GetTickCount() );
-
   left_handle * left = new left_handle;
   memset(left, 0, sizeof(left_handle));
   left->console.mutex = CreateMutex(0, FALSE, "LeftConsoleMutex");
@@ -1193,7 +1437,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   server = new tcp_server(io_service, left->settings->gets("p_name"));
   strcpy(left->net.friends[0].name, left->settings->gets("p_name").c_str());
 
-  std::ifstream f("data\\config.cfg");
+  std::ifstream f(GL_RESOURCE_DATAPATH "config.cfg");
   if(f.good()) {
     char line[128];
     while(!f.eof()) {
@@ -1205,31 +1449,48 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   gScreenSize.x = (GLfloat) left->settings->geti("r_xsize");
   gScreenSize.y = (GLfloat) left->settings->geti("r_ysize");
 
+#ifndef _WIN32
+// FIXME
+void * WndProc = 0;
+#endif
+  
   QueryPerformanceFrequency(&left->timing.performancefrequency);
   Debug::DebugMutex = CreateMutex(0, FALSE, "LeftDebugMutex");
   char s[64]; sprintf(s, "LEFT %s", LEFT_VERSION);
   left->window = new GLWindow(s, GL_SCREEN_IWIDTH, GL_SCREEN_IHEIGHT, 32, left->settings->geti("r_fullscreen") != 0, (WNDPROC) WndProc);
   
   if(left->window) {
+#if 0 //def _WIN32
     if(left->settings->geti("r_fullscreen") != 0) {
       wglSwapIntervalEXT(1);
     } else {
       wglSwapIntervalEXT(0);
     }
+#endif
     left->running = left->window->isInitialized();
+
     if(left->running) {
+#ifndef SINGLE_THREADED
+#ifdef _WIN32
       SetWindowLongPtr(left->window->hWnd(), GWLP_USERDATA, (LONG_PTR) left);
       wglMakeCurrent(0, 0);
+#else
+      glXMakeCurrent(left->window->display(), None, 0);
+#endif
       left->threads.render = CreateThread(0, 0, &run, left, 0, 0);
+#endif
       left->threads.tcp = CreateThread(0, 0, &run_asio, left, 0, 0);
       left->threads.msg = CreateThread(0, 0, &run_messages, left, 0, 0);
+#ifndef SINGLE_THREADED
       assert(left->threads.render != INVALID_HANDLE_VALUE);
+#endif
       assert(left->threads.tcp != INVALID_HANDLE_VALUE);
       assert(left->threads.msg != INVALID_HANDLE_VALUE);
     }
   }
 
-	while(left->running) {
+  while(left->running) {
+#ifdef _WIN32    
     while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
       if(msg.message == WM_QUIT) {
         stop(left);
@@ -1238,16 +1499,31 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
       if(left->consoleactive || left->inputactive) TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
-    Sleep(16);
-	}
+#else
+    XEventHandler(left);
+    run(left);
+#endif
+  }
+  
+#ifdef SINGLE_THREADED
+  left->running = false;
+  run(left);
+#endif
   
   left->net.io_service->stop();
-  WaitForSingleObject(left->threads.render, INFINITE);
-  WaitForSingleObject(left->threads.tcp, INFINITE);
-  CloseHandle(left->console.mutex);
-  CloseHandle(left->net.friendmutex);
-  CloseHandle(Debug::DebugMutex);
-
+#ifndef SINGLE_THREADED
+  WaitForThread(left->threads.render);
+#endif
+  WaitForThread(left->threads.tcp);
+  WaitForThread(left->threads.msg);
+#ifndef _WIN32
+  free(left->threads.tcp);
+  free(left->threads.msg);
+#endif
+  CloseMutex(left->console.mutex);
+  CloseMutex(left->net.friendmutex);
+  CloseMutex(Debug::DebugMutex);
+  
   for(int i = 0; i < 1024; i++) {
     if(left->net.friends[i].model) {
       delete left->net.friends[i].model;
@@ -1262,7 +1538,9 @@ int WINAPI WinMain(	HINSTANCE	hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
   delete left->settings;
   delete left;
 
+#ifdef _WIN32
   timeEndPeriod(1);
+#endif
 	return 0;	
 }
 

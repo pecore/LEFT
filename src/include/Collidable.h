@@ -11,7 +11,7 @@
 
 #include "GLDefines.h"
 
-class Collidable abstract {
+class Collidable {
 public:
   virtual void moveTo(GLfloat x, GLfloat y) = 0;
   virtual GLvector2f pos() = 0;

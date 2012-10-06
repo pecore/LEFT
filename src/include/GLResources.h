@@ -9,6 +9,7 @@
 #ifndef _GLRESOURCES_H_
 #define _GLRESOURCES_H_
 
+#ifdef _WIN32
 #ifndef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT 1
 #endif
@@ -16,17 +17,28 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #endif
 
-#ifdef _WIN32
 #include <windows.h>
 #include <mmsystem.h>
 #include <gl\glew.h>
 #include <gl\wglew.h>
-#endif
 #include <gl\gl.h>
 #include <gl\glu.h>
+#else
+#include <X11/Xlib.h>                                                                    
+#include <X11/Xatom.h>                                                             
+#include <X11/keysym.h>                                                                                                                                       
+#include <X11/extensions/xf86vmode.h>
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glx.h>
+#include <GL/glext.h>
+#endif
+
 #include "clipper.hpp"
 using namespace ClipperLib;
 #define Polygon ClipperLib::Polygon
+#include "pthread_winapi.h"
 
 #include <stdarg.h>
 #define _USE_MATH_DEFINES
@@ -48,6 +60,12 @@ using namespace ClipperLib;
 #define GL_RESOURCE_FONT      2
 #define GL_RESOURCE_POLYGON   3
 
+#ifdef _WIN32
+# define GL_RESOURCE_DATAPATH "data\\"
+#else
+# define GL_RESOURCE_DATAPATH "./data/"
+#endif
+
 class GLResource { public: unsigned int type; };
 class GLTextureResource : public GLResource {
 public:
@@ -58,6 +76,7 @@ public:
   GLfloat width;
   GLfloat height;
 };
+#if 0
 struct Sound;
 class GLSoundResource : public GLResource {
 public:
@@ -66,6 +85,7 @@ public:
     { type = GL_RESOURCE_SOUND; }
   Sound * sound;
 };
+#endif
 struct S_bm_font;
 class GLFontResource : public GLResource {
 public:
@@ -93,7 +113,7 @@ public:
   GLResources();
   ~GLResources();
   GLResource * get(const char * path);
-  GLSoundResource * getSound(const char * path) { return (GLSoundResource *) get(path); }
+//  GLSoundResource * getSound(const char * path) { return (GLSoundResource *) get(path); }
   GLTextureResource * getTexture(const char * path) { return (GLTextureResource *) get(path); }
   GLPolygonResource * getPolygon(const char * path) { return (GLPolygonResource *) get(path); }
   GLFontResource * getFont(const char * path) { return (GLFontResource *) get(path); }
